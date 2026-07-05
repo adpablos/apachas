@@ -181,6 +181,22 @@
     stroke-linecap:round;stroke-linejoin:round}
   .enpaz{color:var(--green);text-align:center;font-weight:600;font-size:14.5px;padding:18px 10px 6px}
   .pie-nota{color:var(--muted);font-size:12.5px;text-align:center;margin-top:14px}
+  .micuenta-cifra{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-.4px;line-height:1.1}
+  .micuenta-desglose{color:var(--muted);font-size:13px;margin-top:3px}
+  .micuenta-accion{display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);
+    margin-top:12px;padding-top:11px;font-size:14px}
+  .micuenta-accion .texto{flex:1;min-width:0}
+  .micuenta-accion .btn{flex:none}
+
+  /* ---------- inicio accionable / compartir ---------- */
+  .hero-mini{display:flex;align-items:center;justify-content:center;gap:8px;padding:18px 0 4px;color:var(--sky)}
+  .hero-mini svg{width:26px;height:26px}
+  .hero-mini .marca{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:-.3px;color:var(--ink)}
+  .estado-sync{color:var(--muted);font-size:12.5px;margin-top:8px}
+  .previo{white-space:pre-wrap;overflow-wrap:break-word;background:var(--bg);border:1px solid var(--line);
+    border-radius:11px;padding:12px 13px;font-size:13px;line-height:1.55;max-height:36dvh;overflow-y:auto}
+  .historial-linea{color:var(--muted);font-size:12.5px;text-align:center;margin-top:14px}
+  .centrado{display:block;margin:10px auto 0;text-align:center}
 
   /* ---------- tab bar ---------- */
   nav#tabbar{
@@ -203,6 +219,7 @@
     min-width:16px;height:16px;border-radius:999px;display:flex;align-items:center;justify-content:center;
     font-variant-numeric:tabular-nums;
   }
+  .tab .badge[hidden]{display:none}
 
   /* ---------- sheet ---------- */
   #velo{position:fixed;inset:0;background:var(--velo);z-index:60;opacity:0;
@@ -295,16 +312,39 @@
 const CLAVE = 'a-pachas-v1';
 const CLAVES_VIEJAS = ['el-bote-proto-v2', 'el-bote-proto-v1'];
 const CLAVE_TEMA = 'a-pachas-tema';
+const API = '/api';
+const ahora = () => Date.now();
+
+// v3 -> v4: timestamps de edición (mod) para fusionar sin pisarse, saldados
+// como objetos {hecho,t,por} y papelera de ids borrados. Acepta cualquier
+// estado viejo (localStorage, enlaces AP1/EB1 o el propio servidor).
+function migrar(o){
+  if(!o) return o;
+  o.v = 4;
+  if(typeof o.fiesta === 'string') o.fiesta = {nombre:o.fiesta, fecha:null};
+  if(!o.fiesta.mod) o.fiesta.mod = 0;
+  (o.gente || []).forEach((p,i) => {
+    if(p.admin === undefined) p.admin = i < 2;
+    if(!p.mod) p.mod = 0;
+  });
+  (o.items || []).forEach(it => { if(!it.mod) it.mod = 0; });
+  o.saldados = o.saldados || {};
+  for(const k in o.saldados){
+    if(o.saldados[k] === true) o.saldados[k] = {hecho:true, t:0};
+  }
+  o.papelera = o.papelera || [];
+  return o;
+}
 
 const LOGO = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4.5"><circle cx="24" cy="24" r="19"/><g stroke-linecap="round"><line x1="24" y1="24" x2="24" y2="5"/><line x1="24" y1="24" x2="42.1" y2="18.1"/><line x1="24" y1="24" x2="35.2" y2="39.4"/><line x1="24" y1="24" x2="12.8" y2="39.4"/><line x1="24" y1="24" x2="5.9" y2="18.1"/></g></svg>`;
 const LLAVE = `<svg class="llave" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Admin"><circle cx="8" cy="8" r="4.5"/><path d="M11 11l9 9M17 17l2.5-2.5M14 14l2.5-2.5"/></svg>`;
 
 function demo(){
-  return {
-    v:3,
+  return migrar({
     fiesta: {nombre:'Fiestas de Collado 2026', fecha:null, ejemplo:true},
     yo: null,
     tab: 'fiesta',
+    remota: null,
     gente: [
       {id:'p1', nombre:'Edu',    admin:true},
       {id:'p2', nombre:'Marta',  admin:true},
@@ -322,7 +362,7 @@ function demo(){
       {id:'i7', nombre:'Café y orujo pa después',estado:'pendiente'},
     ],
     saldados: {},
-  };
+  });
 }
 
 let S = null;
@@ -332,19 +372,24 @@ try {
     for(const vieja of CLAVES_VIEJAS){
       const v = JSON.parse(localStorage.getItem(vieja));
       if(v && v.gente){
-        v.v = 3;
         if(typeof v.fiesta === 'string') v.fiesta = {nombre:v.fiesta, fecha:null, ejemplo:true};
-        v.gente.forEach((p,i) => { if(p.admin === undefined) p.admin = i < 2; });
-        if(!['fiesta','lista','pena','cuentas'].includes(v.tab)) v.tab = 'fiesta';
         S = v;
         break;
       }
     }
   }
+  if(S) migrar(S);
   if(S && !['fiesta','lista','pena','cuentas'].includes(S.tab)) S.tab = 'fiesta';
 } catch(e){ S = null; }
 
-function guardar(){ try{ localStorage.setItem(CLAVE, JSON.stringify(S)); }catch(e){} }
+function guardarLocal(){ try{ localStorage.setItem(CLAVE, JSON.stringify(S)); }catch(e){} }
+// Guardar de verdad: al móvil siempre, y si la fiesta está en vivo, al
+// servidor con un pelín de retardo (agrupa toques seguidos).
+function guardar(){
+  guardarLocal();
+  if(S && S.remota && !S.fiesta.ejemplo &&
+     JSON.stringify(estadoCompartido()) !== sync.subido) programarSubida();
+}
 
 /* ================= tema ================= */
 (function(){
@@ -381,6 +426,18 @@ function fechaBonita(f){
   } catch(e){ return null; }
 }
 
+// saldados[k] puede ser true (formato viejo) u {hecho,t,por}
+const hechoBizum = k => { const v = S.saldados[k]; return v === true || !!(v && v.hecho); };
+
+function haceCuanto(t){
+  if(!t) return 'hace nada';
+  const s = Math.max(0, Math.round((ahora() - t) / 1000));
+  if(s < 45) return 'hace un momento';
+  if(s < 3600) return `hace ${Math.round(s/60)} min`;
+  if(s < 86400) return `hace ${Math.round(s/3600)} h`;
+  return `hace ${Math.round(s/86400)} día${Math.round(s/86400)===1?'':'s'}`;
+}
+
 const avatarHtml = (id, mini) => {
   const p = persona(id); if(!p) return '';
   return `<span class="avatar ${mini?'mini':''}">${esc(inicial(p.nombre))}</span>`;
@@ -405,15 +462,22 @@ async function copiar(txt){
   }
 }
 
-/* ================= invitación por enlace ================= */
+/* ================= enlaces ================= */
+// Enlace vivo: #F:<id>:<clave>. Va en el hash a propósito: ni nginx ni
+// Cloudflare ven la clave de escritura. AP1:/EB1: (estado entero embebido)
+// se mantienen como copia local y compatibilidad con enlaces viejos.
+const RE_VIVO = /F:([a-z2-9]{6,}):([a-z2-9]{6,})/i;
+
 function codigoFiesta(){
   const limpio = {...S, yo:null, tab:'fiesta'};
+  delete limpio.remota;
   const json = JSON.stringify(limpio);
   const b64 = btoa(unescape(encodeURIComponent(json)))
     .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   return 'AP1:' + b64;
 }
 function enlaceFiesta(){
+  if(S.remota) return location.origin + location.pathname + '#F:' + S.remota.id + ':' + S.remota.clave;
   return location.origin + location.pathname + '#' + codigoFiesta();
 }
 function decodificar(texto){
@@ -424,15 +488,248 @@ function decodificar(texto){
     while(b64.length % 4) b64 += '=';
     const obj = JSON.parse(decodeURIComponent(escape(atob(b64))));
     if(!obj || !obj.gente || !obj.items || !obj.fiesta) return null;
-    obj.yo = null; obj.tab = 'fiesta'; obj.v = 3;
-    return obj;
+    obj.yo = null; obj.tab = 'fiesta'; obj.remota = null;
+    return migrar(obj);
   } catch(e){ return null; }
 }
+// Antes de pisar la fiesta actual con otra, deja una copia en localStorage
+// (red de seguridad silenciosa; las vivas siguen en el servidor de todos modos).
+function respaldarActual(){
+  if(S && !S.fiesta.ejemplo && (S.items.length || S.gente.length > 1)){
+    try{ localStorage.setItem(CLAVE + '-anterior', JSON.stringify(S)); }catch(e){}
+  }
+}
 function importar(texto){
+  const mv = String(texto).match(RE_VIVO);
+  if(mv){
+    cerrarSheet();
+    abrirEnlaceVivo(mv[1].toLowerCase(), mv[2].toLowerCase());
+    return true;
+  }
   const obj = decodificar(texto);
   if(!obj) return false;
-  S = obj; guardar(); pintar(); sheetIdentidad(true);
+  respaldarActual();
+  S = obj; guardarLocal(); pintar(); sheetIdentidad(true);
   return true;
+}
+
+/* ================= fiesta viva (sincronización) ================= */
+const sync = {
+  subido: null,      // JSON del último estado compartido confirmado en el server
+  timer: null,
+  subiendo: false,
+  otraVez: false,    // llegó un cambio mientras subíamos
+  bajarLuego: false, // llegó la hora de bajar con un sheet abierto
+  ultimo: 0,         // última vez que hablamos con el server con éxito
+  sinRed: false,
+  avisado: false,
+};
+
+async function pedir(metodo, ruta, cuerpo){
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 8000);
+  try {
+    const r = await fetch(API + ruta, {
+      method: metodo,
+      headers: cuerpo ? {'Content-Type':'application/json'} : undefined,
+      body: cuerpo ? JSON.stringify(cuerpo) : undefined,
+      cache: 'no-store',
+      signal: ctl.signal,
+    });
+    let datos = null;
+    try { datos = await r.json(); } catch(e){}
+    return {status: r.status, cuerpo: datos};
+  } finally { clearTimeout(t); }
+}
+
+// Lo que viaja al servidor y en enlaces: la fiesta sin lo local (yo, tab, remota).
+function estadoCompartido(){
+  return {v:4, fiesta:S.fiesta, gente:S.gente, items:S.items,
+    saldados:S.saldados, papelera:S.papelera};
+}
+
+// Fusión por entidad: última edición gana (mod), y la papelera evita que un
+// borrado resucite. a = normalmente el servidor, b = lo local.
+function fusionar(a, b){
+  const mod = x => (x && x.mod) || 0;
+  const pap = new Map();
+  [...(a.papelera||[]), ...(b.papelera||[])].forEach(p => {
+    const previa = pap.get(p.id);
+    if(!previa || p.t > previa.t) pap.set(p.id, p);
+  });
+  const mezcla = (la, lb) => {
+    const enA = new Map(la.map(x=>[x.id,x]));
+    const enB = new Map(lb.map(x=>[x.id,x]));
+    const res = [];
+    for(const x of lb) if(!enA.has(x.id) && !pap.has(x.id)) res.push(x);
+    for(const x of la){
+      if(pap.has(x.id)) continue;
+      const y = enB.get(x.id);
+      res.push(y && mod(y) > mod(x) ? y : x);
+    }
+    return res;
+  };
+  const saldados = {...a.saldados};
+  for(const k in (b.saldados||{})){
+    const va = saldados[k], vb = b.saldados[k];
+    if(!va || ((vb && vb.t) || 0) > ((va && va.t) || 0)) saldados[k] = vb;
+  }
+  return {
+    v: 4,
+    fiesta: mod(b.fiesta) > mod(a.fiesta) ? b.fiesta : a.fiesta,
+    gente: mezcla(a.gente, b.gente),
+    items: mezcla(a.items, b.items),
+    saldados,
+    papelera: [...pap.values()].slice(-300),
+  };
+}
+
+function adoptar(c){
+  S.v = 4; S.fiesta = c.fiesta; S.gente = c.gente; S.items = c.items;
+  S.saldados = c.saldados; S.papelera = c.papelera;
+  if(S.yo && !persona(S.yo)) S.yo = null;
+}
+
+function alDia(){
+  sync.ultimo = ahora(); sync.sinRed = false; sync.avisado = false;
+  refrescarSync();
+}
+function sinRed(){
+  sync.sinRed = true;
+  if(!sync.avisado && S && S.remota){
+    sync.avisado = true;
+    toast('Sin red. Tus cambios quedan apuntados y se subirán solos.');
+  }
+  refrescarSync();
+}
+function textoSync(){
+  if(!S) return '';
+  if(S.fiesta.ejemplo) return 'Fiesta de ejemplo · solo en este móvil';
+  if(!S.remota) return 'Solo en este móvil';
+  if(sync.sinRed) return 'Sin red · los cambios se subirán solos';
+  if(!sync.ultimo) return 'En vivo · poniéndose al día…';
+  return 'En vivo con la peña · al día ' + haceCuanto(sync.ultimo);
+}
+function refrescarSync(){
+  const el = $('#syncEstado');
+  if(el) el.textContent = textoSync();
+}
+
+const sheetAbierto = () => $('#sheet').classList.contains('abierto');
+// No repintamos debajo de los dedos de nadie: sheet abierto o texto a medias.
+// Los inputs de un sheet ya cerrado no cuentan (su DOM se queda ahí).
+function ocupado(){
+  const a = document.activeElement;
+  if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA') &&
+     (!$('#sheet').contains(a) || sheetAbierto())) return true;
+  return ['#inItem','#inPersona','#inEnlace'].some(sel => { const el = $(sel); return el && el.value; });
+}
+
+function programarSubida(){
+  clearTimeout(sync.timer);
+  sync.timer = setTimeout(subir, 600);
+}
+
+async function subir(){
+  if(!S || !S.remota || S.fiesta.ejemplo) return;
+  if(sync.subiendo){ sync.otraVez = true; return; }
+  sync.subiendo = true;
+  try {
+    for(let intento = 0; intento < 4; intento++){
+      const estado = estadoCompartido();
+      const json = JSON.stringify(estado);
+      if(json === sync.subido) break;
+      const r = await pedir('PUT', '/fiestas/' + S.remota.id,
+        {clave: S.remota.clave, rev: S.remota.rev, estado});
+      if(r.status === 200){
+        S.remota.rev = r.cuerpo.rev; sync.subido = json;
+        guardarLocal(); alDia();
+        break;
+      } else if(r.status === 409 && r.cuerpo && r.cuerpo.estado){
+        adoptar(fusionar(migrar(r.cuerpo.estado), estado));
+        S.remota.rev = r.cuerpo.rev;
+        guardarLocal();
+        if(!sheetAbierto() && !ocupado()) pintar();
+        // y a la siguiente vuelta subimos lo fusionado
+      } else if(r.status === 404){
+        desconectarRemota('Esa fiesta ya no está en el servidor. Sigues con tu copia local.');
+        break;
+      } else if(r.status === 403){
+        desconectarRemota('Este enlace ya no puede editar la fiesta. Sigues con tu copia local.');
+        break;
+      } else { sinRed(); break; }
+    }
+  } catch(e){ sinRed(); }
+  sync.subiendo = false;
+  if(sync.otraVez){ sync.otraVez = false; programarSubida(); }
+}
+
+async function bajar(){
+  if(!S || !S.remota || S.fiesta.ejemplo) return;
+  if(sheetAbierto() || ocupado()){ sync.bajarLuego = true; return; }
+  try {
+    const r = await pedir('GET', '/fiestas/' + S.remota.id + '?rev=' + S.remota.rev);
+    if(r.status === 204 || r.status === 304){ alDia(); return; }
+    if(r.status === 200 && r.cuerpo && r.cuerpo.estado){
+      const antes = JSON.stringify(estadoCompartido());
+      const remoto = migrar(r.cuerpo.estado);
+      adoptar(fusionar(remoto, JSON.parse(antes)));
+      S.remota.rev = r.cuerpo.rev;
+      const despues = JSON.stringify(estadoCompartido());
+      if(despues === JSON.stringify(remoto)) sync.subido = despues;
+      else programarSubida(); // la fusión tiene cosas nuestras que el server no vio
+      alDia();
+      if(despues !== antes){ guardarLocal(); pintar(); }
+    } else if(r.status === 404){
+      desconectarRemota('Esa fiesta ya no está en el servidor. Sigues con tu copia local.');
+    }
+  } catch(e){ sinRed(); }
+}
+
+async function crearRemota(){
+  try {
+    const r = await pedir('POST', '/fiestas', {estado: estadoCompartido()});
+    if(r.status === 201 && r.cuerpo && r.cuerpo.id){
+      S.remota = {id: r.cuerpo.id, clave: r.cuerpo.clave, rev: r.cuerpo.rev};
+      sync.subido = JSON.stringify(estadoCompartido());
+      guardarLocal(); alDia();
+      return true;
+    }
+  } catch(e){}
+  return false;
+}
+
+function desconectarRemota(msg){
+  S.remota = null; sync.subido = null;
+  guardarLocal(); toast(msg);
+  if(!sheetAbierto()) pintar();
+}
+
+async function activarVivo(){
+  if(S.remota) return sheetCompartir('invitar');
+  if(await crearRemota()){
+    pintar(); sheetCompartir('invitar');
+  } else {
+    toast('Ahora mismo no hay manera (¿sin red?). La fiesta sigue en tu móvil; prueba luego.');
+  }
+}
+
+async function abrirEnlaceVivo(id, clave){
+  const r = await pedir('GET', '/fiestas/' + id).catch(() => ({status: 0}));
+  if(r.status !== 200 || !r.cuerpo || !r.cuerpo.estado){
+    toast(r.status === 404
+      ? 'Esa fiesta ya no está en el servidor.'
+      : 'No se ha podido abrir la fiesta del enlace. ¿Hay red?');
+    pintar();
+    return;
+  }
+  const mismo = S && S.remota && S.remota.id === id;
+  if(!mismo) respaldarActual();
+  const yo = mismo ? S.yo : null;
+  S = {...migrar(r.cuerpo.estado), yo, tab:'fiesta', remota:{id, clave, rev:r.cuerpo.rev}};
+  sync.subido = JSON.stringify(estadoCompartido());
+  guardarLocal(); alDia(); pintar();
+  if(!S.yo) sheetIdentidad(true);
 }
 
 /* ================= cálculo de cuentas ================= */
@@ -477,6 +774,10 @@ function abrirSheet(html, bloqueado){
 function cerrarSheet(){
   $('#sheet').classList.remove('abierto');
   $('#velo').classList.remove('abierto');
+  // sin esto, un input del sheet se queda con el foco (y el teclado abierto)
+  const a = document.activeElement;
+  if(a && a.blur && $('#sheet').contains(a)) a.blur();
+  if(sync.bajarLuego){ sync.bajarLuego = false; setTimeout(bajar, 250); }
 }
 
 /* --- quién eres --- */
@@ -507,49 +808,67 @@ function sheetIdentidad(forzado){
   };
 }
 
-/* --- apuntar compra / editar --- */
-function sheetCompra(itemId){
-  const it = S.items.find(x=>x.id===itemId); if(!it) return;
-  const editando = it.estado === 'comprada';
-  const marcados = new Set(consumidores(it));
-  let compradorSel = editando ? it.compradorId : (it.pilladorId || S.yo);
-  if(!persona(compradorSel)) compradorSel = S.yo;
+/* --- gasto: directo, marcar comprada o editar (un solo sheet) --- */
+function sheetGasto(itemId){
+  const it = itemId ? S.items.find(x=>x.id===itemId) : null;
+  if(itemId && !it) return;
+  const directo = !it;
+  const editando = !!(it && it.estado === 'comprada');
+  const marcados = new Set(it ? consumidores(it) : S.gente.map(p=>p.id));
+  let compradorSel = editando ? it.compradorId : ((it && it.pilladorId) || S.yo);
+  if(!persona(compradorSel)) compradorSel = persona(S.yo) ? S.yo : null;
 
   const pillsCons = S.gente.map(p => `
     <button class="pill ${marcados.has(p.id)?'on':'off'}" type="button" data-cons="${p.id}">
       ${avatarHtml(p.id,true)}${esc(p.nombre)}
     </button>`).join('');
+  const pillsComp = S.gente.map(p => `
+    <button class="pill pill-sky ${p.id===compradorSel?'on':''}" type="button" data-comp="${p.id}">
+      ${avatarHtml(p.id,true)}${esc(p.nombre)}
+    </button>`).join('');
 
-  const filaComprador = soyAdmin()
-    ? `<span class="label">Pagó</span>
-       <div class="pills">${S.gente.map(p => `
-         <button class="pill pill-sky ${p.id===compradorSel?'on':''}" type="button" data-comp="${p.id}">
-           ${avatarHtml(p.id,true)}${esc(p.nombre)}
-         </button>`).join('')}</div>`
-    : `<p class="sheet-sub" style="margin:14px 0 0">Se apunta como pagada por <strong>${esc(persona(compradorSel)?.nombre || '—')}</strong>.</p>`;
+  let historial = '';
+  if(editando){
+    const creador = it.creadoPor && persona(it.creadoPor);
+    const editor = it.modPor && it.modPor !== it.creadoPor && persona(it.modPor);
+    const trozos = [];
+    if(creador) trozos.push(`La apuntó ${esc(creador.nombre)}${it.creadoEn ? ' ' + haceCuanto(it.creadoEn) : ''}`);
+    if(editor) trozos.push(`tocada por ${esc(editor.nombre)} ${haceCuanto(it.mod)}`);
+    if(trozos.length) historial = `<div class="historial-linea">${trozos.join(' · ')}</div>`;
+  }
 
+  const titulo = directo ? 'Apuntar un gasto' : esc(it.nombre);
+  const sub = directo ? 'Qué fue, cuánto costó y quiénes lo catan.'
+    : editando ? 'Corrige lo que haga falta.'
+    : 'Apunta lo que ha costado y quién la cata.';
   const precioIni = editando && it.precio ? (it.precio/100).toFixed(2).replace('.',',') : '';
   abrirSheet(`
-    <h2 class="sheet-titulo">${esc(it.nombre)}</h2>
-    <p class="sheet-sub">${editando ? 'Corrige el precio, quién pagó o quiénes la catan.' : 'Apunta lo que ha costado y quién la cata.'}</p>
+    <h2 class="sheet-titulo">${titulo}</h2>
+    <p class="sheet-sub">${sub}</p>
+    <label class="label" for="inConcepto" style="margin-top:0">Qué</label>
+    <input type="text" id="inConcepto" placeholder="Hielo, pan, el bar…" maxlength="40"
+      autocomplete="off" value="${it ? esc(it.nombre) : ''}">
     <label class="label" for="inPrecio">Precio</label>
     <div class="precio-input">
       <input type="tel" id="inPrecio" inputmode="decimal" placeholder="0,00" value="${precioIni}" autocomplete="off">
       <span class="eur">€</span>
     </div>
-    <span class="label">¿Quiénes la catan?</span>
+    <span class="label">Pagó</span>
+    <div class="pills">${pillsComp}</div>
+    <span class="label">¿Quiénes lo catan?</span>
     <div class="pills">${pillsCons}</div>
-    ${filaComprador}
     <div class="sheet-botones">
       <button class="btn btn-borde" id="btnCancelar" type="button">Cancelar</button>
-      <button class="btn btn-green" id="btnGuardarCompra" type="button">${editando?'Guardar':'Apuntar la compra'}</button>
+      <button class="btn btn-green" id="btnGuardarCompra" type="button">
+        ${editando ? 'Guardar' : directo ? 'Apuntar el gasto' : 'Apuntar la compra'}</button>
     </div>
-    ${editando ? '<button class="link-borrar" id="btnBorrarItem" type="button">Borrar esta cosa de la lista</button>' : ''}
+    ${editando ? '<button class="link-borrar" id="btnBorrarItem" type="button">Borrar esta compra</button>' : ''}
+    ${historial}
   `);
   document.querySelectorAll('[data-cons]').forEach(b => b.onclick = () => {
     const id = b.dataset.cons;
     if(marcados.has(id)){
-      if(marcados.size === 1) return toast('Alguien la catará, digo yo.');
+      if(marcados.size === 1) return toast('Alguien lo catará, digo yo.');
       marcados.delete(id);
     } else marcados.add(id);
     b.classList.toggle('on', marcados.has(id));
@@ -562,27 +881,46 @@ function sheetCompra(itemId){
   });
   $('#btnCancelar').onclick = cerrarSheet;
   $('#btnGuardarCompra').onclick = () => {
+    const nombre = $('#inConcepto').value.trim();
+    if(!nombre) return toast('Pon qué fue.');
     const bruto = $('#inPrecio').value.trim().replace(',','.');
     const val = Math.round(parseFloat(bruto)*100);
     if(!bruto || isNaN(val) || val<=0) return toast('Ponle precio, que gratis no fue.');
-    it.precio = val;
-    it.consumen = marcados.size === S.gente.length ? null : [...marcados];
-    it.compradorId = compradorSel;
-    if(!editando){
-      it.estado = 'comprada';
-      delete it.pilladorId;
-      toast('Apuntada. Las cuentas ya lo saben.');
+    if(!persona(compradorSel)) return toast('¿Quién lo pagó?');
+    const consumen = marcados.size === S.gente.length ? null : [...marcados];
+    if(directo){
+      S.items.unshift({id:nuevoId('i'), nombre, estado:'comprada', precio:val,
+        compradorId:compradorSel, consumen,
+        creadoEn:ahora(), creadoPor:S.yo || null, mod:ahora(), modPor:S.yo || null});
+      toast('Apuntado. Las cuentas ya lo saben.');
     } else {
-      toast('Guardado');
+      // buscar por id otra vez: la fiesta puede haberse refrescado mientras
+      const vivo = S.items.find(x=>x.id===itemId) || it;
+      vivo.nombre = nombre;
+      vivo.precio = val;
+      vivo.consumen = consumen;
+      vivo.compradorId = compradorSel;
+      vivo.mod = ahora(); vivo.modPor = S.yo || null;
+      if(!editando){
+        vivo.estado = 'comprada';
+        delete vivo.pilladorId;
+        toast('Apuntada. Las cuentas ya lo saben.');
+      } else {
+        toast('Guardado');
+      }
     }
     guardar(); cerrarSheet(); pintar();
   };
   const del = $('#btnBorrarItem');
   if(del) del.onclick = () => {
-    S.items = S.items.filter(x=>x.id!==itemId);
-    guardar(); cerrarSheet(); pintar(); toast('Fuera de la lista');
+    sheetConfirmar('¿Borrar esta compra?',
+      `«${it.nombre}» (${eur(it.precio||0)}) se quita de la lista y de las cuentas.`, () => {
+        S.items = S.items.filter(x=>x.id!==itemId);
+        S.papelera.push({id:itemId, t:ahora()});
+        guardar(); pintar(); toast('Fuera de la lista');
+      });
   };
-  setTimeout(()=>$('#inPrecio').focus(), 250);
+  setTimeout(()=>$(directo ? '#inConcepto' : '#inPrecio').focus(), 250);
 }
 
 /* --- asignar (solo admins) --- */
@@ -602,8 +940,10 @@ function sheetAsignar(itemId){
   `);
   document.querySelectorAll('[data-asig]').forEach(b => b.onclick = () => {
     const id = b.dataset.asig;
-    if(id){ it.estado='pillada'; it.pilladorId=id; toast('Se la lleva ' + persona(id).nombre); }
-    else { it.estado='pendiente'; delete it.pilladorId; toast('Suelta. A ver quién se la pide ahora.'); }
+    const vivo = S.items.find(x=>x.id===itemId) || it;
+    if(id){ vivo.estado='pillada'; vivo.pilladorId=id; toast('Se la lleva ' + persona(id).nombre); }
+    else { vivo.estado='pendiente'; delete vivo.pilladorId; toast('Suelta. A ver quién se la pide ahora.'); }
+    vivo.mod = ahora(); vivo.modPor = S.yo || null;
     guardar(); cerrarSheet(); pintar();
   });
 }
@@ -621,12 +961,16 @@ function sheetPersona(pid){
     ? asignadas.map(i=>`<li>${esc(i.nombre)}</li>`).join('')
     : '<li style="color:var(--muted)">Nada pendiente</li>';
 
+  const s = c.saldo[pid] || 0;
+  const saldoTxt = s === 0 ? 'está en paz' : s > 0 ? `le deben ${eur(s)}` : `debe ${eur(-s)}`;
+
   abrirSheet(`
     <h2 class="sheet-titulo">${esc(p.nombre)}${p.admin?' '+LLAVE:''}${esYo?' <span class="chip-estado chip-sky">tú</span>':''}</h2>
-    <p class="sheet-sub">Ha pagado <strong>${eur(c.pagado[pid]||0)}</strong> en ${compras.length} compra${compras.length===1?'':'s'}.</p>
+    <p class="sheet-sub">Ha pagado <strong>${eur(c.pagado[pid]||0)}</strong> en ${compras.length} compra${compras.length===1?'':'s'} ·
+      le tocaba ${eur(c.debe[pid]||0)} · ${saldoTxt}.</p>
     <span class="label">Le toca traer</span>
     <ul style="margin:0 0 6px;padding-left:20px;font-size:14px;line-height:1.7">${listaAsig}</ul>
-    ${asignadas.length ? `<button class="btn btn-borde btn-mini" id="btnRecordar" type="button" style="margin-top:6px">Copiar recordatorio</button>` : ''}
+    ${!esYo ? `<button class="btn btn-borde btn-mini" id="btnRecordar" type="button" style="margin-top:6px">Mandarle un recordatorio</button>` : ''}
     ${puedoGestionar ? `
       <span class="label">Gestión</span>
       <button class="opcion-menu" id="btnToggleAdmin" type="button">
@@ -639,16 +983,12 @@ function sheetPersona(pid){
       </button>` : ''}
   `);
   const rec = $('#btnRecordar');
-  if(rec) rec.onclick = async () => {
-    const txt = `${p.nombre}, para «${S.fiesta.nombre}» te toca traer:\n` +
-      asignadas.map(i=>'· '+i.nombre).join('\n');
-    await copiar(txt);
-    toast('Recordatorio copiado');
-  };
+  if(rec) rec.onclick = () => sheetCompartir('persona', pid);
   const tog = $('#btnToggleAdmin');
   if(tog) tog.onclick = () => {
     if(p.admin && numAdmins() === 1) return toast('Alguien tiene que quedarse con la llave');
     p.admin = !p.admin;
+    p.mod = ahora();
     guardar(); cerrarSheet(); pintar();
     toast(p.admin ? p.nombre + ' tiene la llave' : p.nombre + ' ya no tiene la llave');
   };
@@ -657,38 +997,113 @@ function sheetPersona(pid){
     if(compras.length) return toast('Tiene compras apuntadas: reasígnalas antes');
     if(p.admin && numAdmins() === 1) return toast('Alguien tiene que quedarse con la llave');
     S.items.forEach(i => {
-      if(i.pilladorId === pid){ i.estado='pendiente'; delete i.pilladorId; }
-      if(i.consumen) i.consumen = i.consumen.filter(x=>x!==pid);
+      if(i.pilladorId === pid){ i.estado='pendiente'; delete i.pilladorId; i.mod = ahora(); }
+      if(i.consumen){ i.consumen = i.consumen.filter(x=>x!==pid); i.mod = ahora(); }
     });
     S.gente = S.gente.filter(x=>x.id!==pid);
+    S.papelera.push({id:pid, t:ahora()});
     guardar(); cerrarSheet(); pintar();
     toast(p.nombre + ' ya no está en la peña');
   };
 }
 
-/* --- invitar por enlace --- */
-async function invitarPorEnlace(){
-  const txt = `Únete a «${S.fiesta.nombre}» en A Pachas:\n${enlaceFiesta()}`;
-  let hecho = false;
-  if(navigator.share){
-    try { await navigator.share({text: txt}); hecho = true; } catch(e){}
+/* --- mandar al grupo: mensajes por momento --- */
+function mensajeCompartir(tipo, pid){
+  const enlace = enlaceFiesta();
+  const n = S.fiesta.nombre;
+  if(tipo === 'invitar'){
+    return `A pachas con los gastos de «${n}».\n` +
+      `Entra, di quién eres y apunta lo que pilles:\n${enlace}`;
   }
-  if(!hecho){
-    hecho = await copiar(txt);
-    toast(hecho ? 'Enlace copiado. Mándalo al grupo.' : 'No se ha podido copiar');
+  if(tipo === 'lista'){
+    const pend = S.items.filter(i=>i.estado==='pendiente');
+    return `Faltan cosas pa «${n}»:\n` +
+      pend.map(i=>'· ' + i.nombre).join('\n') +
+      `\n\nQuien pueda, que se lo pida aquí:\n${enlace}`;
   }
+  if(tipo === 'cuentas'){
+    const c = cuentas();
+    const pendientes = c.bizums.filter(b=>!hechoBizum(b.de+'>'+b.a));
+    const lineas = [`Cuentas de «${n}» — A Pachas`,
+      `Total: ${eur(c.total)} entre ${S.gente.length}`, ''];
+    if(!c.bizums.length){
+      lineas.push('Cuentas en paz. Ni pa ti ni pa mí.');
+    } else {
+      c.bizums.forEach(b => lineas.push(
+        (hechoBizum(b.de+'>'+b.a) ? '✓ ' : '· ') +
+        persona(b.de).nombre + ' → ' + persona(b.a).nombre + ': ' + eur(b.cents)));
+      lineas.push('');
+      lineas.push(pendientes.length
+        ? 'Marca el tuyo cuando lo hagas:' : 'Todo saldado. Cuentas claras y el chocolate espeso.');
+    }
+    lineas.push(enlace);
+    return lineas.join('\n');
+  }
+  if(tipo === 'persona'){
+    const p = persona(pid);
+    const c = cuentas();
+    const asignadas = S.items.filter(i=>i.estado==='pillada' && i.pilladorId===pid);
+    const lineas = [`${p.nombre}, pa «${n}»:`];
+    if(asignadas.length){
+      lineas.push('');
+      lineas.push('Te toca traer:');
+      asignadas.forEach(i => lineas.push('· ' + i.nombre));
+    }
+    const debe = c.bizums.filter(b => b.de === pid && !hechoBizum(b.de+'>'+b.a));
+    const leDeben = c.bizums.filter(b => b.a === pid && !hechoBizum(b.de+'>'+b.a));
+    if(debe.length || leDeben.length){
+      lineas.push('');
+      lineas.push('De cuentas te sale:');
+      debe.forEach(b => lineas.push(`· Bizum de ${eur(b.cents)} a ${persona(b.a).nombre}`));
+      leDeben.forEach(b => lineas.push(`· ${persona(b.de).nombre} te debe ${eur(b.cents)}`));
+    }
+    if(!asignadas.length && !debe.length && !leDeben.length){
+      lineas.push('nada pendiente. Estás al día, máquina.');
+    }
+    lineas.push('');
+    lineas.push('Lo tienes aquí:');
+    lineas.push(enlace);
+    return lineas.join('\n');
+  }
+  return enlace;
 }
-function sheetInvitar(){
+
+function sheetCompartir(tipo, pid){
+  const txt = mensajeCompartir(tipo, pid);
+  const puedeVivo = !S.remota && !S.fiesta.ejemplo;
   abrirSheet(`
-    <h2 class="sheet-titulo">Invitar por enlace</h2>
-    <p class="sheet-sub">Manda el enlace al grupo. Quien lo abra verá la fiesta
-    tal y como está ahora mismo y elegirá quién es.</p>
-    <button class="btn btn-sky btn-block" id="btnCopiarInv" type="button">Copiar el enlace</button>
-    <div class="nota">Cada móvil guarda su propia copia. Para que las cuentas cuadren,
-    que las compras las apunte una misma persona (alguien con llave) y comparta el
-    enlace actualizado al final.</div>
+    <h2 class="sheet-titulo">Mandar al grupo</h2>
+    <p class="sheet-sub">Así queda el mensaje:</p>
+    <div class="previo">${esc(txt)}</div>
+    ${puedeVivo ? `<div class="nota">Esta fiesta va solo en este móvil: el enlace lleva una copia
+      congelada. Ponla en vivo y todos apuntarán en la misma.</div>
+      <button class="btn btn-soft btn-block" id="btnVivoDesdeCompartir" type="button"
+        style="margin-top:10px">Ponerla en vivo primero</button>` : ''}
+    <div class="sheet-botones">
+      <button class="btn btn-borde" id="btnCopiarMsg" type="button">Copiar</button>
+      <button class="btn btn-green" id="btnWhatsAppMsg" type="button">WhatsApp</button>
+    </div>
+    ${navigator.share ? '<button class="link-quieto centrado" id="btnOtraApp" type="button">Mandar con otra app</button>' : ''}
   `);
-  $('#btnCopiarInv').onclick = async () => { await invitarPorEnlace(); cerrarSheet(); };
+  $('#btnCopiarMsg').onclick = async () => {
+    const ok = await copiar(txt);
+    toast(ok ? 'Copiado. Pégalo en el grupo.' : 'No se ha podido copiar');
+    if(ok) cerrarSheet();
+  };
+  $('#btnWhatsAppMsg').onclick = () => {
+    window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank', 'noopener');
+    cerrarSheet();
+  };
+  const vivo = $('#btnVivoDesdeCompartir');
+  if(vivo) vivo.onclick = async () => {
+    vivo.disabled = true;
+    if(await crearRemota()){ pintar(); sheetCompartir(tipo, pid); }
+    else { vivo.disabled = false; toast('Ahora mismo no hay manera (¿sin red?). Prueba luego.'); }
+  };
+  const otra = $('#btnOtraApp');
+  if(otra) otra.onclick = async () => {
+    try { await navigator.share({text: txt}); cerrarSheet(); } catch(e){}
+  };
 }
 
 /* --- unirse pegando enlace --- */
@@ -726,21 +1141,27 @@ function sheetCrear(){
     </div>
     <button class="btn btn-sky btn-block" id="btnCrearFiesta" type="button" style="padding:14px">Crear la fiesta</button>
   `);
-  $('#btnCrearFiesta').onclick = () => {
+  $('#btnCrearFiesta').onclick = async () => {
     const nombre = $('#inFiestaNueva').value.trim();
     const tu = $('#inTuNombre').value.trim();
     if(!nombre) return toast('Ponle nombre a la fiesta');
     if(!tu) return toast('Falta tu nombre');
+    const btn = $('#btnCrearFiesta');
+    btn.disabled = true;
     const pid = nuevoId('p');
+    respaldarActual();
     S = {
-      v:3,
-      fiesta:{nombre, fecha: $('#inFechaNueva').value || null},
-      yo: pid, tab:'lista',
-      gente:[{id:pid, nombre:tu, admin:true}],
-      items:[], saldados:{},
+      v:4,
+      fiesta:{nombre, fecha: $('#inFechaNueva').value || null, mod:ahora()},
+      yo: pid, tab:'fiesta', remota: null,
+      gente:[{id:pid, nombre:tu, admin:true, mod:ahora()}],
+      items:[], saldados:{}, papelera:[],
     };
-    guardar(); cerrarSheet(); pintar();
-    toast('Fiesta creada. Apunta la lista e invita a la peña.');
+    // en vivo desde el minuto uno si hay red; si no, en local y ya se pondrá
+    const viva = await crearRemota();
+    guardarLocal(); cerrarSheet(); pintar();
+    if(viva) sheetCompartir('invitar');
+    else toast('Fiesta creada en este móvil (sin red). Ponla en vivo cuando vuelva.');
   };
 }
 
@@ -766,6 +1187,7 @@ function sheetRenombrar(){
     if(!n) return toast('La fiesta necesita un nombre');
     S.fiesta.nombre = n;
     S.fiesta.fecha = $('#inFechaF').value || null;
+    S.fiesta.mod = ahora();
     guardar(); cerrarSheet(); pintar(); toast('Guardado');
   };
 }
@@ -804,26 +1226,71 @@ function vistaEntrada(){
     </div>`;
 }
 
+function heroMiniHtml(){
+  return `<div class="hero-mini">${LOGO}<span class="marca">A Pachas</span></div>`;
+}
+
 function vistaFiesta(){
   const c = cuentas();
   const yo = persona(S.yo);
   const f = fechaBonita(S.fiesta.fecha);
+  const sinDueno = S.items.filter(i=>i.estado==='pendiente').length;
   const porResolver = S.items.filter(i=>i.estado!=='comprada').length;
-  return `${heroHtml()}
+  const pendBizums = c.bizums.filter(b=>!hechoBizum(b.de+'>'+b.a)).length;
+
+  // qué toca ahora: UNA acción según el estado de la fiesta
+  let accion;
+  if(!S.items.length && !c.total){
+    accion = {txt:'La lista está vacía. Apunta lo que hace falta pa la fiesta.',
+      btn:'Apuntar lo que falta', ir:'lista'};
+  } else if(sinDueno){
+    accion = {txt:`Hay ${sinDueno === 1 ? 'una cosa' : sinDueno + ' cosas'} sin dueño en la lista.`,
+      btn:'Ver la lista', ir:'lista'};
+  } else if(porResolver === 0 && pendBizums){
+    accion = {txt:'Todo comprado. Solo quedan los bizums pa quedar en paz.',
+      btn:'A las cuentas', ir:'cuentas'};
+  } else if(porResolver === 0 && !pendBizums && c.total){
+    accion = {txt:'Todo comprado y todo saldado. Vaya máquinas.',
+      btn:'Ver las cuentas', ir:'cuentas'};
+  } else {
+    accion = {txt:'¿Has pagado algo? Apúntalo y a otra cosa.',
+      btn:'Apuntar un gasto', ir:'gasto'};
+  }
+
+  // tu saldo en una línea
+  let miLinea = '';
+  if(yo && c.total){
+    const s = c.saldo[S.yo] || 0;
+    const cls = s > 0 ? 'saldo-verde' : (s < 0 ? 'saldo-terra' : 'saldo-neutro');
+    const txt = s === 0 ? 'Estás en paz' : s > 0 ? `Te deben ${eur(s)}` : `Debes ${eur(-s)}`;
+    miLinea = `<div class="card yo-fila">
+      <span class="quien"><b class="${cls}">${txt}</b></span>
+      <button class="btn btn-borde btn-mini" id="btnMiCuenta" type="button">Mis cuentas</button>
+    </div>`;
+  }
+
+  return `${heroMiniHtml()}
     <div class="card fiesta-card">
       <span class="label">Tu fiesta</span>
       <div class="titulo">${esc(S.fiesta.nombre)}</div>
       <div class="meta">${f ? esc(f) + ' · ' : ''}${S.gente.length} en la peña · ${S.items.length} cosa${S.items.length===1?'':'s'} en la lista · ${eur(c.total)}</div>
-      <button class="btn btn-sky btn-block" id="btnInvitar" type="button">Invitar por enlace</button>
+      <button class="btn btn-sky btn-block" id="btnInvitar" type="button">Mandar al grupo</button>
+      ${!S.remota && !S.fiesta.ejemplo ? `
+        <button class="btn btn-soft btn-block" id="btnPonerVivo" type="button" style="margin-top:8px">
+          Ponerla en vivo pa que todos apunten</button>` : ''}
+      <div class="estado-sync" id="syncEstado">${esc(textoSync())}</div>
     </div>
+    <div class="card">
+      <span class="label">¿Qué toca?</span>
+      <p style="margin:0 0 11px;font-size:14px;color:var(--muted)">${accion.txt}</p>
+      <button class="btn ${accion.ir==='gasto'?'btn-green':'btn-soft'} btn-block" id="btnAccion"
+        data-ir="${accion.ir}" type="button">${accion.btn}</button>
+    </div>
+    ${miLinea}
     <div class="card yo-fila">
       <span class="quien">${yo ? `Eres <b>${esc(yo.nombre)}</b>` : 'Aún no has dicho quién eres'}</span>
       <button class="btn btn-borde btn-mini" id="btnQuienSoy" type="button">${yo ? 'Cambiar' : '¿Quién eres?'}</button>
     </div>
-    ${porResolver ? `<div class="card yo-fila">
-      <span class="quien">Quedan <b>${porResolver}</b> cosa${porResolver===1?'':'s'} por resolver</span>
-      <button class="btn btn-soft btn-mini" id="btnIrLista" type="button">A la lista</button>
-    </div>` : ''}
     <div style="display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:22px">
       ${soyAdmin() ? '<button class="link-quieto" id="btnRenombrar" type="button">Cambiar nombre o fecha</button>' : ''}
       <button class="link-quieto" id="btnNueva" type="button">Empezar otra fiesta</button>
@@ -890,6 +1357,7 @@ function vistaLista(){
 
   const porComprar = S.items.filter(i=>i.estado!=='comprada');
   const compradas = S.items.filter(i=>i.estado==='comprada');
+  const sinDueno = S.items.filter(i=>i.estado==='pendiente').length;
 
   return `
     <div class="cabecera"><h1>La lista</h1><div class="sub">${sub}</div></div>
@@ -897,8 +1365,15 @@ function vistaLista(){
       <input type="text" id="inItem" placeholder="¿Qué falta? (garrafón no)" maxlength="40" autocomplete="off">
       <button class="btn btn-sky" type="submit">Apuntar</button>
     </form>
+    <button class="crear-dashed" id="btnGastoDirecto" type="button" style="margin-bottom:14px">
+      + Apuntar un gasto ya pagado</button>
     ${!total ? '<div class="vacio">La lista está vacía.<br>Apunta lo primero que haga falta.</div>'
-      : porComprar.map(cardItem).join('') + compradas.map(cardItem).join('')}
+      : porComprar.map(cardItem).join('')
+        + (sinDueno ? `<div style="text-align:center;margin:2px 0 10px">
+            <button class="link-quieto" id="btnMandarLista" type="button">Mandar lo que falta al grupo</button>
+          </div>` : '')
+        + (compradas.length && porComprar.length ? '<span class="label">Ya compradas</span>' : '')
+        + compradas.map(cardItem).join('')}
   `;
 }
 
@@ -928,7 +1403,7 @@ function vistaPena(){
   return `
     <div class="cabecera"><h1>La peña</h1><div class="sub">${S.gente.length} en la cuadrilla</div></div>
     <div class="card" style="padding:4px 14px">${filas}</div>
-    <button class="btn btn-sky btn-block" id="btnInvitar" type="button" style="margin-top:6px">Invitar por enlace</button>
+    <button class="btn btn-sky btn-block" id="btnInvitar" type="button" style="margin-top:6px">Mandar al grupo</button>
     <form class="fila-add" id="formAddPersona" style="margin-top:14px">
       <input type="text" id="inPersona" placeholder="Añadir a alguien a mano" maxlength="20" autocomplete="off">
       <button class="btn btn-borde" type="submit">Añadir</button>
@@ -941,15 +1416,53 @@ function vistaCuentas(){
   if(c.total === 0){
     return `
       <div class="cabecera"><h1>Las cuentas</h1><div class="sub">Bizums mínimos pa quedar en paz</div></div>
-      <div class="vacio">Aún no hay gastos apuntados.<br>En cuanto la peña compre cosas, aquí salen las cuentas.</div>`;
+      <div class="vacio">Aún no hay gastos apuntados.<br>En cuanto la peña compre cosas, aquí salen las cuentas.</div>
+      <div style="text-align:center"><button class="btn btn-green" id="btnGastoDirecto" type="button">Apuntar un gasto</button></div>`;
   }
-  const porCabeza = Math.round(c.total / S.gente.length);
-  const pendientes = c.bizums.filter(b => !S.saldados[b.de+'>'+b.a]);
+
   const flecha = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M14 6l6 6-6 6"/></svg>';
   const check = '<svg viewBox="0 0 24 24"><path d="M4.5 12.5l5 5 10-11"/></svg>';
+  const pendientes = c.bizums.filter(b => !hechoBizum(b.de+'>'+b.a));
+
+  // tu cuenta, lo primero
+  let miCuenta;
+  if(!S.yo){
+    miCuenta = `<div class="card">
+      <span class="label">Tu cuenta</span>
+      <div class="micuenta-accion" style="border-top:none;margin-top:0;padding-top:2px">
+        <span class="texto">Di quién eres y te digo cómo vas.</span>
+        <button class="btn btn-sky btn-mini" id="btnQuienSoy" type="button">¿Quién eres?</button>
+      </div>
+    </div>`;
+  } else {
+    const s = c.saldo[S.yo] || 0;
+    const cls = s > 0 ? 'saldo-verde' : (s < 0 ? 'saldo-terra' : 'saldo-neutro');
+    const titulo = s === 0 ? 'Estás en paz' : s > 0 ? `Te deben ${eur(s)}` : `Debes ${eur(-s)}`;
+    const misBizums = pendientes.filter(b => b.de === S.yo || b.a === S.yo);
+    const acciones = misBizums.map(b => b.de === S.yo
+      ? `<div class="micuenta-accion">
+          <span class="texto">Haz bizum de <b>${eur(b.cents)}</b> a <b>${esc(persona(b.a).nombre)}</b></span>
+          <button class="btn btn-soft btn-mini" data-copiabizum="${b.a}" data-cents="${b.cents}" type="button">Copiar</button>
+        </div>`
+      : `<div class="micuenta-accion">
+          <span class="texto"><b>${esc(persona(b.de).nombre)}</b> te debe <b>${eur(b.cents)}</b></span>
+        </div>`).join('');
+    miCuenta = `<div class="card">
+      <span class="label">Tu cuenta</span>
+      <div class="micuenta-cifra ${cls}">${titulo}</div>
+      <div class="micuenta-desglose">Pagaste ${eur(c.pagado[S.yo]||0)} · te tocaba ${eur(c.debe[S.yo]||0)}</div>
+      ${acciones || (s === 0 ? '<div class="micuenta-accion"><span class="texto">Ni pa ti ni pa mí. Así da gusto.</span></div>' : '')}
+    </div>`;
+  }
+
+  // «por cabeza» solo cuando es verdad (todas las compras entre todos)
+  const uniforme = S.items.every(i => i.estado !== 'comprada' || !i.consumen || !i.consumen.length);
+  const subTotal = uniforme
+    ? `${eur(Math.round(c.total / S.gente.length))} por cabeza`
+    : 'repartido según quién cata cada cosa';
 
   const bizumsHtml = c.bizums.map(b => {
-    const key = b.de+'>'+b.a, hecho = !!S.saldados[key];
+    const key = b.de+'>'+b.a, hecho = hechoBizum(key);
     return `<div class="card bizum-fila ${hecho?'hecho':''}">
       <div class="quien">${esc(persona(b.de).nombre)}${flecha}${esc(persona(b.a).nombre)}</div>
       <span class="cuanto">${eur(b.cents)}</span>
@@ -962,13 +1475,16 @@ function vistaCuentas(){
 
   return `
     <div class="cabecera"><h1>Las cuentas</h1><div class="sub">Bizums mínimos pa quedar en paz</div></div>
+    ${miCuenta}
     <div class="card total-card">
       <div class="cifra">${eur(c.total)}</div>
-      <div class="porcabeza">${eur(porCabeza)} por cabeza</div>
+      <div class="porcabeza">${subTotal}</div>
     </div>
+    ${c.bizums.length ? '<span class="label">Bizums de todos</span>' : ''}
     ${bizumsHtml}
     ${todoEnPaz ? '<div class="enpaz">Cuentas claras y el chocolate espeso.</div>'
-      : '<div class="pie-nota">Marca el círculo cuando el bizum esté hecho.</div>'}
+      : c.bizums.length ? '<div class="pie-nota">Marca el círculo cuando el bizum esté hecho.</div>'
+      : '<div class="enpaz">Cuentas en paz. Ni pa ti ni pa mí.</div>'}
     <button class="btn btn-borde btn-block" id="btnCompartirCuentas" type="button" style="margin-top:14px">
       Mandar las cuentas al grupo</button>
   `;
@@ -986,7 +1502,7 @@ function pintar(){
   document.querySelectorAll('.tab').forEach(t =>
     t.classList.toggle('activa', t.dataset.tab === S.tab));
   const c = cuentas();
-  const pend = c.bizums.filter(b=>!S.saldados[b.de+'>'+b.a]).length;
+  const pend = c.bizums.filter(b=>!hechoBizum(b.de+'>'+b.a)).length;
   const badge = $('#badgeCuentas');
   badge.hidden = pend===0;
   badge.textContent = pend;
@@ -1013,18 +1529,31 @@ function conectarEntrada(v){
 function conectar(v){
   const on = (sel, fn) => { const el = v.querySelector(sel); if(el) el.onclick = fn; };
 
-  /* fiesta */
-  on('#btnInvitar', sheetInvitar);
+  /* fiesta / inicio */
+  on('#btnInvitar', () => sheetCompartir('invitar'));
+  on('#btnPonerVivo', activarVivo);
   on('#btnQuienSoy', () => sheetIdentidad(false));
-  on('#btnIrLista', () => { S.tab='lista'; guardar(); pintar(); });
+  on('#btnMiCuenta', () => { S.tab='cuentas'; guardar(); pintar(); });
+  on('#btnAccion', e => {
+    const ir = v.querySelector('#btnAccion').dataset.ir;
+    if(ir === 'gasto'){
+      if(!S.yo) return sheetIdentidad(true);
+      sheetGasto(null);
+    } else { S.tab = ir; guardar(); pintar(); }
+  });
   on('#btnRenombrar', sheetRenombrar);
   on('#btnNueva', () => sheetConfirmar('¿Empezar otra fiesta?',
-    'Esta se borra de tu móvil. Si quieres conservarla, copia antes el enlace de invitación: sirve de copia de seguridad.', () => {
+    S.remota
+      ? 'Se quita de tu móvil, pero sigue viva en el servidor pa la peña: con el enlace del grupo vuelves cuando quieras.'
+      : 'Esta se borra de tu móvil. Si quieres conservarla, copia antes el enlace de invitación: sirve de copia de seguridad.', () => {
       S = null; localStorage.removeItem(CLAVE); pintar();
     }));
   on('#btnVerEjemplo', () => sheetConfirmar('¿Cargar la fiesta de ejemplo?',
-    'Se borrará la actual de este móvil (la de tus colegas no se toca).', () => {
-      S = demo(); guardar(); pintar(); sheetIdentidad(true);
+    S.remota
+      ? 'La tuya sigue viva en el servidor; el ejemplo va solo en este móvil.'
+      : 'Se borrará la actual de este móvil (la de tus colegas no se toca).', () => {
+      respaldarActual();
+      S = demo(); guardarLocal(); pintar(); sheetIdentidad(true);
     }));
 
   /* lista */
@@ -1033,19 +1562,27 @@ function conectar(v){
     e.preventDefault();
     const n = v.querySelector('#inItem').value.trim();
     if(!n) return toast('Escribe algo, que la lista no adivina.');
-    S.items.unshift({id:nuevoId('i'), nombre:n, estado:'pendiente'});
+    S.items.unshift({id:nuevoId('i'), nombre:n, estado:'pendiente',
+      creadoEn:ahora(), creadoPor:S.yo || null, mod:ahora()});
     guardar(); pintar(); toast('«' + n + '» apuntado');
   };
+  on('#btnGastoDirecto', () => {
+    if(!S.yo) return sheetIdentidad(true);
+    sheetGasto(null);
+  });
+  on('#btnMandarLista', () => sheetCompartir('lista'));
   v.querySelectorAll('[data-pillar]').forEach(b => b.onclick = () => {
     if(!S.yo) return sheetIdentidad(true);
     const it = S.items.find(x=>x.id===b.dataset.pillar);
     it.estado='pillada'; it.pilladorId=S.yo;
+    it.mod = ahora(); it.modPor = S.yo;
     guardar(); pintar(); toast('Apuntado: ' + it.nombre + ' corre de tu cuenta.');
   });
   v.querySelectorAll('[data-soltar]').forEach(b => b.onclick = () => {
     const it = S.items.find(x=>x.id===b.dataset.soltar);
     if(it.pilladorId !== S.yo && !soyAdmin()) return;
     it.estado='pendiente'; delete it.pilladorId;
+    it.mod = ahora(); it.modPor = S.yo || null;
     guardar(); pintar(); toast('Suelta. A ver quién se la pide ahora.');
   });
   v.querySelectorAll('[data-asignar]').forEach(b => b.onclick = () => {
@@ -1054,7 +1591,7 @@ function conectar(v){
   });
   v.querySelectorAll('[data-comprar]').forEach(b => b.onclick = () => {
     if(!S.yo) return sheetIdentidad(true);
-    sheetCompra(b.dataset.comprar);
+    sheetGasto(b.dataset.comprar);
   });
   v.querySelectorAll('[data-editar]').forEach(card => card.onclick = e => {
     if(e.target.closest('button')) return;
@@ -1064,11 +1601,12 @@ function conectar(v){
       const quien = persona(it.compradorId);
       return toast('Solo ' + (quien?quien.nombre:'quien la pagó') + ' o la llave pueden tocarla');
     }
-    sheetCompra(card.dataset.editar);
+    sheetGasto(card.dataset.editar);
   });
   v.querySelectorAll('[data-quitar]').forEach(b => b.onclick = e => {
     e.stopPropagation();
     S.items = S.items.filter(x=>x.id!==b.dataset.quitar);
+    S.papelera.push({id:b.dataset.quitar, t:ahora()});
     guardar(); pintar();
   });
 
@@ -1078,7 +1616,7 @@ function conectar(v){
     e.preventDefault();
     const n = v.querySelector('#inPersona').value.trim();
     if(!n) return;
-    S.gente.push({id:nuevoId('p'), nombre:n, admin:false});
+    S.gente.push({id:nuevoId('p'), nombre:n, admin:false, mod:ahora()});
     guardar(); pintar(); toast(n + ' se une a la peña');
   };
   v.querySelectorAll('[data-persona]').forEach(f => f.onclick = () => sheetPersona(f.dataset.persona));
@@ -1086,33 +1624,22 @@ function conectar(v){
   /* cuentas */
   v.querySelectorAll('[data-bizum]').forEach(b => b.onclick = () => {
     const key = b.dataset.bizum;
-    if(S.saldados[key]) delete S.saldados[key];
-    else {
-      S.saldados[key] = true;
+    const hecho = !hechoBizum(key);
+    S.saldados[key] = {hecho, t:ahora(), por:S.yo || null};
+    if(hecho){
       const c = cuentas();
-      if(c.bizums.every(x=>S.saldados[x.de+'>'+x.a])) toast('Cuentas claras y el chocolate espeso.');
+      if(c.bizums.every(x=>hechoBizum(x.de+'>'+x.a))) toast('Cuentas claras y el chocolate espeso.');
       else toast('Bizum apuntado');
     }
     guardar(); pintar();
   });
-  on('#btnCompartirCuentas', async () => {
-    const c = cuentas();
-    const lineas = ['Cuentas de «' + S.fiesta.nombre + '» — A Pachas',
-      'Total: ' + eur(c.total) + ' entre ' + S.gente.length, ''];
-    c.bizums.forEach(b => lineas.push(
-      (S.saldados[b.de+'>'+b.a]?'✓ ':'· ') +
-      persona(b.de).nombre + ' → ' + persona(b.a).nombre + ': ' + eur(b.cents)));
-    if(!c.bizums.length) lineas.push('Cuentas en paz.');
-    const txt = lineas.join('\n');
-    let compartido = false;
-    if(navigator.share){
-      try { await navigator.share({text: txt}); compartido = true; } catch(e){}
-    }
-    if(!compartido){
-      const ok = await copiar(txt);
-      toast(ok ? 'Cuentas copiadas' : 'No se ha podido copiar');
-    }
+  v.querySelectorAll('[data-copiabizum]').forEach(b => b.onclick = async () => {
+    const quien = persona(b.dataset.copiabizum);
+    const txt = `Bizum de ${eur(Number(b.dataset.cents))} a ${quien ? quien.nombre : '—'} — «${S.fiesta.nombre}»`;
+    const ok = await copiar(txt);
+    toast(ok ? 'Copiado. Al Bizum y arreando.' : 'No se ha podido copiar');
   });
+  on('#btnCompartirCuentas', () => sheetCompartir('cuentas'));
 }
 
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
@@ -1120,19 +1647,46 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
   S.tab = t.dataset.tab; guardar(); pintar();
 }));
 
-/* invitación por enlace (#AP1:… o el antiguo #EB1:…) */
+/* arranque: enlace vivo (#F:id:clave), snapshot (#AP1:/#EB1:) o lo guardado */
 (function(){
-  if(location.hash && location.hash.length > 4){
-    const obj = decodificar(decodeURIComponent(location.hash.slice(1)));
+  const hash = location.hash ? decodeURIComponent(location.hash) : '';
+  const limpiarHash = () => {
+    try { history.replaceState(null,'',location.pathname + location.search); } catch(e){}
+  };
+
+  const vivo = hash.match(RE_VIVO);
+  if(vivo){
+    limpiarHash();
+    pintar();
+    if(!S) toast('Abriendo la fiesta del grupo…');
+    abrirEnlaceVivo(vivo[1].toLowerCase(), vivo[2].toLowerCase());
+    return;
+  }
+
+  if(hash.length > 4){
+    const obj = decodificar(hash);
     if(obj){
-      S = obj; guardar();
-      try { history.replaceState(null,'',location.pathname + location.search); } catch(e){}
+      respaldarActual();
+      S = obj; guardarLocal();
+      limpiarHash();
     }
   }
+  pintar();
+  if(S && !S.yo) sheetIdentidad(true);
+  if(S && S.remota) bajar();
 })();
 
-pintar();
-if(S && !S.yo) sheetIdentidad(true);
+/* la fiesta viva se mantiene al día sola */
+setInterval(() => {
+  if(document.visibilityState !== 'visible' || !S || !S.remota) return;
+  refrescarSync();
+  bajar();
+  if(sync.sinRed || JSON.stringify(estadoCompartido()) !== sync.subido) subir();
+}, 12000);
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible') bajar();
+});
+window.addEventListener('online', () => { subir(); bajar(); });
 </script>
 </body>
 </html>

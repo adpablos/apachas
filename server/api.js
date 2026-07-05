@@ -171,7 +171,8 @@ async function api(req, res, url) {
     if (req.method === 'GET') {
       const doc = leerFiesta(id);
       if (!doc) return json(res, 404, { error: 'No hay tal fiesta' });
-      if (url.searchParams.get('rev') === String(doc.rev)) return json(res, 304);
+      // 204 y no 304: fetch trata mejor un "no hay cambios" explícito
+      if (url.searchParams.get('rev') === String(doc.rev)) return json(res, 204);
       return json(res, 200, { rev: doc.rev, estado: doc.estado, updatedAt: doc.updatedAt });
     }
 

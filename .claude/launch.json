@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "apachas",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server/api.js"],
+      "port": 8010
+    }
+  ]
+}
