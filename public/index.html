@@ -1313,9 +1313,20 @@ function mensajeCompartir(tipo, pid){
   return enlace;
 }
 
-function sheetCompartir(tipo, pid){
+async function sheetCompartir(tipo, pid){
+  // si hay cambios sin subir, un último empujón antes de componer el mensaje
+  // (con tope: sin red no vamos a tener el sheet colgado 8 segundos)
+  if(S.remota && S.pendienteSubida && !S.fiesta.ejemplo){
+    clearTimeout(sync.timer);
+    await Promise.race([subir(), new Promise(res => setTimeout(res, 1500))]);
+  }
   const txt = mensajeCompartir(tipo, pid);
   const puedeVivo = !S.remota && !S.fiesta.ejemplo;
+  // si aun así queda algo sin subir, que quien comparte lo sepa: el enlace
+  // vivo enseña lo que hay en el servidor, no lo de este móvil
+  const avisoPendiente = S.remota && S.pendienteSubida
+    ? `<div class="nota">Hay cambios tuyos aún sin subir (¿sin red?). Quien abra
+      el enlace no los verá hasta que se suban solos.</div>` : '';
   // en modo local el enlace lleva la fiesta entera dentro: en la vista
   // previa se abrevia (lo que se manda/copia lleva el enlace completo)
   const vista = txt.replace(/(#(?:AP1|EB1):)[A-Za-z0-9_-]{24,}/g,
@@ -1324,6 +1335,7 @@ function sheetCompartir(tipo, pid){
     <h2 class="sheet-titulo">Mandar al grupo</h2>
     <p class="sheet-sub">Así queda el mensaje:</p>
     <div class="previo">${esc(vista)}</div>
+    ${avisoPendiente}
     ${puedeVivo ? `<div class="nota">Esta fiesta va solo en este móvil: el enlace lleva una copia
       congelada. Ponla en vivo y todos apuntarán en la misma.</div>
       <button class="btn btn-soft btn-block" id="btnVivoDesdeCompartir" type="button"
