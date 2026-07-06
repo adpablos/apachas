@@ -1203,7 +1203,10 @@ function sheetPersona(pid){
       </button>` : ''}
   `);
   const rec = $('#btnRecordar');
-  if(rec) rec.onclick = () => sheetCompartir('persona', pid);
+  if(rec) rec.onclick = () => {
+    if(!persona(pid)){ cerrarSheet(); pintar(); return toast('Esa persona ya no está en la peña.'); }
+    sheetCompartir('persona', pid);
+  };
   // los handlers rebuscan por id y reconfirman la llave: la fiesta puede
   // haberse fusionado por debajo mientras el sheet estaba abierto
   const tog = $('#btnToggleAdmin');
@@ -1270,6 +1273,7 @@ function mensajeCompartir(tipo, pid){
   }
   if(tipo === 'persona'){
     const p = persona(pid);
+    if(!p) return enlace; // se fue de la peña con el sheet abierto
     const c = cuentas();
     const asignadas = S.items.filter(i=>i.estado==='pillada' && i.pilladorId===pid);
     const lineas = [`${p.nombre}, pa «${n}»:`];
