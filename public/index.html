@@ -673,12 +673,18 @@ function fusionar(a, b){
     if(!prev || mod(p) > mod(prev)) candidatos.set(p.id, p);
   });
   for(const it of items){
-    for(const ref of [it.compradorId, it.pilladorId]){
+    for(const ref of [it.compradorId, it.pilladorId, ...(it.consumen || [])]){
       if(ref && !presentes.has(ref) && candidatos.has(ref)){
         gente.push(candidatos.get(ref));
         presentes.add(ref);
       }
     }
+  }
+  // la llave no puede desaparecer: si dos llaves se la quitan mutuamente a
+  // la vez, la fusión dejaría a la peña sin admin y sin manera de arreglarlo.
+  // La hereda el id más bajo (determinista: todos los móviles eligen igual).
+  if(gente.length && !gente.some(p => p.admin)){
+    [...gente].sort((x,y) => x.id < y.id ? -1 : 1)[0].admin = true;
   }
   const vivos = new Set([...gente, ...items].map(x => x.id));
   return {
