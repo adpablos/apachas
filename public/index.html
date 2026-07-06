@@ -754,7 +754,9 @@ async function subir(){
         guardarLocal(); alDia();
         break;
       } else if(r.status === 409 && r.cuerpo && r.cuerpo.estado){
-        adoptar(fusionar(migrar(r.cuerpo.estado), estado));
+        // fusionar contra lo compartido de AHORA, no contra la foto de antes
+        // del PUT: lo editado mientras la petición volaba no se puede perder
+        adoptar(fusionar(migrar(r.cuerpo.estado), estadoCompartido()));
         S.remota.rev = r.cuerpo.rev;
         guardarLocal();
         pintarOLuego();
