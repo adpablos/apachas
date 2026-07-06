@@ -358,6 +358,8 @@ function migrar(o){
   o.v = 4;
   if(typeof o.fiesta === 'string') o.fiesta = {nombre:o.fiesta, fecha:null};
   if(!o.fiesta.mod) o.fiesta.mod = 0;
+  // la fecha acaba en un value="...": o es AAAA-MM-DD o no es nada
+  if(o.fiesta.fecha != null && !/^\d{4}-\d{2}-\d{2}$/.test(o.fiesta.fecha)) o.fiesta.fecha = null;
   o.gente = (o.gente || []).filter(p => p && typeof p.id === 'string' && ID_OK.test(p.id));
   o.gente.forEach((p,i) => {
     if(p.admin === undefined) p.admin = i < 2;
@@ -650,6 +652,23 @@ function fusionar(a, b){
   }
   const gente = mezcla(a.gente, b.gente);
   const items = mezcla(a.items, b.items);
+  // un gasto vivo mantiene vivo a quien lo pagó o lo trae: si no, borrar a
+  // una persona con compras que sobreviven dejaría cuentas descuadradas
+  // (se cobra a los que catan y el crédito del pagador se esfuma)
+  const presentes = new Set(gente.map(p => p.id));
+  const candidatos = new Map();
+  [...(a.gente||[]), ...(b.gente||[])].forEach(p => {
+    const prev = candidatos.get(p.id);
+    if(!prev || mod(p) > mod(prev)) candidatos.set(p.id, p);
+  });
+  for(const it of items){
+    for(const ref of [it.compradorId, it.pilladorId]){
+      if(ref && !presentes.has(ref) && candidatos.has(ref)){
+        gente.push(candidatos.get(ref));
+        presentes.add(ref);
+      }
+    }
+  }
   const vivos = new Set([...gente, ...items].map(x => x.id));
   return {
     v: 4,
@@ -1296,7 +1315,7 @@ function sheetRenombrar(){
     </div>
     <div class="campo">
       <label class="label" for="inFechaF">Fecha (opcional)</label>
-      <input type="date" id="inFechaF" value="${S.fiesta.fecha || ''}">
+      <input type="date" id="inFechaF" value="${esc(S.fiesta.fecha || '')}">
     </div>
     <div class="sheet-botones">
       <button class="btn btn-borde" id="btnCancelarRen" type="button">Cancelar</button>

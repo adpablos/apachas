@@ -109,7 +109,9 @@ function estadoValido(estado) {
   const f = estado.fiesta;
   if (!f || typeof f !== 'object' || typeof f.nombre !== 'string' ||
       !f.nombre.trim() || f.nombre.length > 80) return null;
-  if (f.fecha != null && (typeof f.fecha !== 'string' || f.fecha.length > 20)) return null;
+  // la fecha se interpola en un value="..." del cliente: AAAA-MM-DD o nada
+  if (f.fecha != null && f.fecha !== '' &&
+      !(typeof f.fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f.fecha))) return null;
   if (!numOpc(f.mod)) return null;
 
   if (!Array.isArray(estado.gente) || estado.gente.length > 100) return null;
