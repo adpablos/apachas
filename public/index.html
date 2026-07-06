@@ -426,12 +426,15 @@ try {
 function guardarLocal(){ try{ localStorage.setItem(CLAVE, JSON.stringify(S)); }catch(e){} }
 // Guardar de verdad: al móvil siempre, y si la fiesta está en vivo, al
 // servidor con un pelín de retardo (agrupa toques seguidos).
+// S.pendienteSubida (local, persistido) recuerda entre sesiones que hay
+// cambios sin subir: al reabrir no se confunden con estar al día.
 function guardar(){
-  guardarLocal();
   if(S && S.remota && !S.fiesta.ejemplo && estadoJson() !== sync.subido){
+    S.pendienteSubida = true;
     sync.rechazado = false; // cambio nuevo: otra oportunidad de subir
     programarSubida();
   }
+  guardarLocal();
 }
 
 /* ================= tema ================= */
@@ -469,10 +472,16 @@ function fechaBonita(f){
   } catch(e){ return null; }
 }
 
-// saldados[k] puede ser true (formato viejo) u {hecho,t,por}
-const hechoBizum = k => { const v = S.saldados[k]; return v === true || !!(v && v.hecho); };
+// saldados[k] puede ser true (formato viejo) u {hecho,t,por,cents}. La marca
+// guarda el importe que se pagó: si luego las cuentas cambian el bizum entre
+// esa misma pareja, el nuevo importe vuelve a salir como pendiente.
 const claveBizum = b => b.de + '>' + b.a;
-const bizumsPendientes = c => c.bizums.filter(b => !hechoBizum(claveBizum(b)));
+const hechoBizum = b => {
+  const v = S.saldados[claveBizum(b)];
+  if(v === true) return true; // marca legada sin importe: se respeta
+  return !!(v && v.hecho && (v.cents == null || v.cents === b.cents));
+};
+const bizumsPendientes = c => c.bizums.filter(b => !hechoBizum(b));
 const claseSaldo = s => s > 0 ? 'saldo-verde' : (s < 0 ? 'saldo-coral' : 'saldo-neutro');
 
 // sello de última edición: de esto vive la fusión entre móviles
@@ -771,6 +780,7 @@ async function subir(){
       if(!S || !S.remota || S.remota.id !== fiestaPedida) break;
       if(r.status === 200){
         S.remota.rev = r.cuerpo.rev; sync.subido = json;
+        if(json === estadoJson()) S.pendienteSubida = false;
         guardarLocal(); alDia();
         break;
       } else if(r.status === 409 && r.cuerpo && r.cuerpo.estado){
@@ -810,17 +820,28 @@ async function bajar(){
     const r = await pedir('GET', '/fiestas/' + fiestaPedida + '?rev=' + S.remota.rev);
     // si durante el vuelo se cambió de fiesta, esta respuesta es de la anterior
     if(!S || !S.remota || S.remota.id !== fiestaPedida) return;
-    if(r.status === 204){ alDia(); return; }
+    if(r.status === 204){
+      // el server está en nuestra revisión: si no arrastramos cambios sin
+      // subir, lo local ES lo subido (evita un PUT de churn al reabrir)
+      if(sync.subido === null && !S.pendienteSubida) sync.subido = estadoJson();
+      alDia(); return;
+    }
     if(r.status === 200 && r.cuerpo && r.cuerpo.estado){
       const antes = estadoJson();
       const remoto = migrar(r.cuerpo.estado);
       adoptar(fusionar(remoto, estadoCompartido()));
       S.remota.rev = r.cuerpo.rev;
       const despues = estadoJson();
-      if(despues === JSON.stringify(compartidoDe(remoto))) sync.subido = despues;
-      else programarSubida(); // la fusión tiene cosas nuestras que el server no vio
+      if(despues === JSON.stringify(compartidoDe(remoto))){
+        sync.subido = despues;
+        S.pendienteSubida = false;
+      } else {
+        S.pendienteSubida = true;
+        programarSubida(); // la fusión tiene cosas nuestras que el server no vio
+      }
       alDia();
       if(despues !== antes){ guardarLocal(); pintarOLuego(); }
+      else guardarLocal(); // persistir al menos rev/pendienteSubida
     } else if(r.status === 404){
       desconectarRemota('Esa fiesta ya no está en el servidor. Sigues con tu copia local.');
     } else if(r.status >= 500){
@@ -840,9 +861,10 @@ async function crearRemota(){
     if(r.status === 201 && r.cuerpo && r.cuerpo.id){
       S.remota = {id: r.cuerpo.id, clave: r.cuerpo.clave, rev: r.cuerpo.rev};
       sync.subido = json;
-      guardarLocal(); alDia();
       // lo editado mientras el POST volaba se sube ahora
-      if(estadoJson() !== json) programarSubida();
+      if(estadoJson() !== json){ S.pendienteSubida = true; programarSubida(); }
+      else S.pendienteSubida = false;
+      guardarLocal(); alDia();
       return true;
     }
   } catch(e){}
@@ -881,8 +903,14 @@ async function abrirEnlaceVivo(id, clave){
   const base = mismo ? fusionar(remoto, estadoCompartido()) : remoto;
   S = {...base, yo, tab:'fiesta', remota:{id, clave, rev:r.cuerpo.rev}};
   const json = estadoJson();
-  if(json === JSON.stringify(compartidoDe(remoto))) sync.subido = json;
-  else { sync.subido = JSON.stringify(compartidoDe(remoto)); programarSubida(); }
+  if(json === JSON.stringify(compartidoDe(remoto))){
+    sync.subido = json;
+    S.pendienteSubida = false;
+  } else {
+    sync.subido = JSON.stringify(compartidoDe(remoto));
+    S.pendienteSubida = true;
+    programarSubida();
+  }
   guardarLocal(); alDia(); pintar();
   if(!S.yo) sheetIdentidad(true);
   return true;
@@ -1214,7 +1242,7 @@ function mensajeCompartir(tipo, pid){
       lineas.push('Cuentas en paz. Ni pa ti ni pa mí.');
     } else {
       c.bizums.forEach(b => lineas.push(
-        (hechoBizum(claveBizum(b)) ? '✓ ' : '· ') +
+        (hechoBizum(b) ? '✓ ' : '· ') +
         persona(b.de).nombre + ' → ' + persona(b.a).nombre + ': ' + eur(b.cents)));
       lineas.push('');
       lineas.push(pendientes.length
@@ -1661,7 +1689,7 @@ function vistaCuentas(c){
     : 'repartido según quién cata cada cosa';
 
   const bizumsHtml = c.bizums.map(b => {
-    const key = claveBizum(b), hecho = hechoBizum(key);
+    const key = claveBizum(b), hecho = hechoBizum(b);
     return `<div class="card bizum-fila ${hecho?'hecho':''}">
       <div class="quien">${esc(persona(b.de).nombre)}${flecha}${esc(persona(b.a).nombre)}</div>
       <span class="cuanto">${eur(b.cents)}</span>
@@ -1839,11 +1867,15 @@ function conectar(v){
   /* cuentas */
   v.querySelectorAll('[data-bizum]').forEach(b => b.onclick = () => {
     const key = b.dataset.bizum;
-    const hecho = !hechoBizum(key);
-    S.saldados[key] = {hecho, t:ahora(), por:S.yo || null};
+    const c = cuentas();
+    const bz = c.bizums.find(x => claveBizum(x) === key);
+    if(!bz) return pintar(); // las cuentas han cambiado por debajo
+    const hecho = !hechoBizum(bz);
+    // la marca lleva el importe pagado: si el bizum cambia luego de cuantía,
+    // el nuevo importe vuelve a salir pendiente
+    S.saldados[key] = {hecho, t:ahora(), por:S.yo || null, cents: bz.cents};
     if(hecho){
-      const c = cuentas();
-      if(c.bizums.every(x=>hechoBizum(x.de+'>'+x.a))) toast('Cuentas claras y el chocolate espeso.');
+      if(c.bizums.every(x => claveBizum(x) === key || hechoBizum(x))) toast('Cuentas claras y el chocolate espeso.');
       else toast('Bizum apuntado');
     }
     guardar(); pintar();

@@ -144,7 +144,7 @@ function estadoValido(estado) {
       if (partes.length !== 2 || !idValido(partes[0]) || !idValido(partes[1])) return null;
       const v = estado.saldados[k];
       if (v !== true && !(v && typeof v === 'object' && !Array.isArray(v) &&
-          idOpc(v.por) && numOpc(v.t))) return null;
+          idOpc(v.por) && numOpc(v.t) && numOpc(v.cents))) return null;
     }
   }
 
