@@ -1029,6 +1029,14 @@ function sheetGasto(itemId){
         vivo = it;
         S.items.unshift(vivo);
         S.papelera = S.papelera.filter(t=>t.id!==itemId);
+      } else if(!editando && vivo.estado === 'comprada'){
+        // otro la ha comprado mientras el sheet estaba abierto: no se pisa
+        // su pago con este formulario (ni se salta el permiso de edición)
+        cerrarSheet(); pintar();
+        return toast('Alguien la ha apuntado ya como comprada: revísala antes de corregirla.');
+      } else if(editando && !soyAdmin() && vivo.compradorId !== S.yo){
+        cerrarSheet(); pintar();
+        return toast('Esa compra acaba de cambiar de manos: solo quien la pagó o la llave pueden tocarla.');
       }
       vivo.nombre = nombre;
       vivo.precio = val;
