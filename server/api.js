@@ -95,13 +95,64 @@ function leerCuerpo(req) {
 }
 
 // El estado compartido de una fiesta, sin campos locales del cliente y con
-// forma mínima verificada. Devuelve null si aquello no parece una fiesta.
+// la forma verificada a fondo. Devuelve null si aquello no parece una fiesta.
+// Los ids se validan estrictos porque el cliente los interpola en atributos
+// del DOM: un id con comillas sería una inyección servida a toda la peña.
+const ID_ENT_RE = /^[A-Za-z0-9_-]{1,40}$/;
+const idValido = (x) => typeof x === 'string' && ID_ENT_RE.test(x);
+const numOpc = (x) => x == null || (typeof x === 'number' && isFinite(x));
+const idOpc = (x) => x == null || idValido(x);
+const ESTADOS_ITEM = ['pendiente', 'pillada', 'comprada'];
+
 function estadoValido(estado) {
   if (!estado || typeof estado !== 'object' || Array.isArray(estado)) return null;
   const f = estado.fiesta;
-  if (!f || typeof f !== 'object' || typeof f.nombre !== 'string' || !f.nombre.trim()) return null;
+  if (!f || typeof f !== 'object' || typeof f.nombre !== 'string' ||
+      !f.nombre.trim() || f.nombre.length > 80) return null;
+  if (f.fecha != null && (typeof f.fecha !== 'string' || f.fecha.length > 20)) return null;
+  if (!numOpc(f.mod)) return null;
+
   if (!Array.isArray(estado.gente) || estado.gente.length > 100) return null;
+  for (const p of estado.gente) {
+    if (!p || typeof p !== 'object' || !idValido(p.id)) return null;
+    if (typeof p.nombre !== 'string' || !p.nombre.trim() || p.nombre.length > 40) return null;
+    if (!numOpc(p.mod)) return null;
+  }
+
   if (!Array.isArray(estado.items) || estado.items.length > 500) return null;
+  for (const it of estado.items) {
+    if (!it || typeof it !== 'object' || !idValido(it.id)) return null;
+    if (typeof it.nombre !== 'string' || !it.nombre.trim() || it.nombre.length > 80) return null;
+    if (!ESTADOS_ITEM.includes(it.estado)) return null;
+    if (it.precio != null &&
+        !(Number.isInteger(it.precio) && it.precio >= 0 && it.precio <= 100000000)) return null;
+    if (!idOpc(it.compradorId) || !idOpc(it.pilladorId) ||
+        !idOpc(it.creadoPor) || !idOpc(it.modPor)) return null;
+    if (it.consumen != null && (!Array.isArray(it.consumen) ||
+        it.consumen.length > 100 || !it.consumen.every(idValido))) return null;
+    if (!numOpc(it.mod) || !numOpc(it.creadoEn)) return null;
+  }
+
+  if (estado.saldados != null) {
+    if (typeof estado.saldados !== 'object' || Array.isArray(estado.saldados)) return null;
+    const claves = Object.keys(estado.saldados);
+    if (claves.length > 500) return null;
+    for (const k of claves) {
+      const partes = k.split('>');
+      if (partes.length !== 2 || !idValido(partes[0]) || !idValido(partes[1])) return null;
+      const v = estado.saldados[k];
+      if (v !== true && !(v && typeof v === 'object' && !Array.isArray(v) &&
+          idOpc(v.por) && numOpc(v.t))) return null;
+    }
+  }
+
+  if (estado.papelera != null) {
+    if (!Array.isArray(estado.papelera) || estado.papelera.length > 500) return null;
+    for (const l of estado.papelera) {
+      if (!l || typeof l !== 'object' || !idValido(l.id) || !numOpc(l.t)) return null;
+    }
+  }
+
   const limpio = { ...estado };
   delete limpio.yo;
   delete limpio.tab;

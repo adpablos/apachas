@@ -349,21 +349,28 @@ const ahora = () => Date.now();
 // v3 -> v4: timestamps de edición (mod) para fusionar sin pisarse, saldados
 // como objetos {hecho,t,por} y papelera de ids borrados. Acepta cualquier
 // estado viejo (localStorage, enlaces AP1/EB1 o el propio servidor).
+// Los ids se sanean porque acaban interpolados en atributos del DOM: un id
+// raro de un estado envenenado no puede colarse en el HTML.
+const ID_OK = /^[A-Za-z0-9_-]{1,40}$/;
+const CLAVE_SALDADO_OK = /^[A-Za-z0-9_-]{1,40}>[A-Za-z0-9_-]{1,40}$/;
 function migrar(o){
   if(!o) return o;
   o.v = 4;
   if(typeof o.fiesta === 'string') o.fiesta = {nombre:o.fiesta, fecha:null};
   if(!o.fiesta.mod) o.fiesta.mod = 0;
-  (o.gente || []).forEach((p,i) => {
+  o.gente = (o.gente || []).filter(p => p && typeof p.id === 'string' && ID_OK.test(p.id));
+  o.gente.forEach((p,i) => {
     if(p.admin === undefined) p.admin = i < 2;
     if(!p.mod) p.mod = 0;
   });
-  (o.items || []).forEach(it => { if(!it.mod) it.mod = 0; });
+  o.items = (o.items || []).filter(it => it && typeof it.id === 'string' && ID_OK.test(it.id));
+  o.items.forEach(it => { if(!it.mod) it.mod = 0; });
   o.saldados = o.saldados || {};
   for(const k in o.saldados){
+    if(!CLAVE_SALDADO_OK.test(k)){ delete o.saldados[k]; continue; }
     if(o.saldados[k] === true) o.saldados[k] = {hecho:true, t:0};
   }
-  o.papelera = o.papelera || [];
+  o.papelera = (o.papelera || []).filter(l => l && typeof l.id === 'string' && ID_OK.test(l.id));
   return o;
 }
 
@@ -470,7 +477,7 @@ const claseSaldo = s => s > 0 ? 'saldo-verde' : (s < 0 ? 'saldo-coral' : 'saldo-
 function tocar(x){ x.mod = ahora(); x.modPor = S.yo || null; return x; }
 
 const pillPersona = (p, attr, clases) =>
-  `<button class="pill ${clases}" type="button" data-${attr}="${p.id}">${avatarHtml(p.id,true)}${esc(p.nombre)}</button>`;
+  `<button class="pill ${clases}" type="button" data-${attr}="${esc(p.id)}">${avatarHtml(p.id,true)}${esc(p.nombre)}</button>`;
 
 // precio a céntimos entendiendo la notación española: coma decimal y
 // puntos de miles («1.000» son mil euros, no uno)
@@ -609,7 +616,10 @@ const estadoCompartido = () => compartidoDe(S);
 const estadoJson = () => JSON.stringify(estadoCompartido());
 
 // Fusión por entidad: última edición gana (mod), y la papelera evita que un
-// borrado resucite. a = normalmente el servidor, b = lo local.
+// borrado resucite. Una lápida solo entierra si es más nueva que la última
+// edición de la entidad: si alguien re-apunta una compra después del borrado
+// de otro, el pago (real) sobrevive y la lápida perdedora se descarta.
+// a = normalmente el servidor, b = lo local.
 function fusionar(a, b){
   const mod = x => (x && x.mod) || 0;
   const pap = new Map();
@@ -617,15 +627,19 @@ function fusionar(a, b){
     const previa = pap.get(p.id);
     if(!previa || p.t > previa.t) pap.set(p.id, p);
   });
+  const enterrado = x => {
+    const l = pap.get(x.id);
+    return !!l && (l.t || 0) >= mod(x);
+  };
   const mezcla = (la, lb) => {
     const enA = new Map(la.map(x=>[x.id,x]));
     const enB = new Map(lb.map(x=>[x.id,x]));
     const res = [];
-    for(const x of lb) if(!enA.has(x.id) && !pap.has(x.id)) res.push(x);
+    for(const x of lb) if(!enA.has(x.id) && !enterrado(x)) res.push(x);
     for(const x of la){
-      if(pap.has(x.id)) continue;
       const y = enB.get(x.id);
-      res.push(y && mod(y) > mod(x) ? y : x);
+      const gana = y && mod(y) > mod(x) ? y : x;
+      if(!enterrado(gana)) res.push(gana);
     }
     return res;
   };
@@ -634,14 +648,19 @@ function fusionar(a, b){
     const va = saldados[k], vb = b.saldados[k];
     if(!va || ((vb && vb.t) || 0) > ((va && va.t) || 0)) saldados[k] = vb;
   }
+  const gente = mezcla(a.gente, b.gente);
+  const items = mezcla(a.items, b.items);
+  const vivos = new Set([...gente, ...items].map(x => x.id));
   return {
     v: 4,
     fiesta: mod(b.fiesta) > mod(a.fiesta) ? b.fiesta : a.fiesta,
-    gente: mezcla(a.gente, b.gente),
-    items: mezcla(a.items, b.items),
+    gente,
+    items,
     saldados,
-    // el tope se come las lápidas más viejas, no las últimas en llegar
-    papelera: [...pap.values()].sort((x,y)=>(x.t||0)-(y.t||0)).slice(-300),
+    // fuera las lápidas que han perdido contra una edición más nueva, y el
+    // tope se come las más viejas, no las últimas en llegar
+    papelera: [...pap.values()].filter(l => !vivos.has(l.id))
+      .sort((x,y)=>(x.t||0)-(y.t||0)).slice(-300),
   };
 }
 
@@ -1420,7 +1439,7 @@ function vistaLista(){
     // comprada: check verde a la izquierda, se toca para editar
     if(comprada){
       const n = consumidores(it).length;
-      return `<div class="card item-card comprada-card" data-editar="${it.id}">
+      return `<div class="card item-card comprada-card" data-editar="${esc(it.id)}">
         <div class="fila" style="align-items:center">
           <span class="check-comprada" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4.5 12.5l5 5 10-11"/></svg></span>
           <div style="flex:1;min-width:0">
@@ -1439,17 +1458,18 @@ function vistaLista(){
     else if(p) chip = `<span class="chip-estado chip-primary">La trae ${esc(p.nombre)}</span>`;
     else chip = '<span class="chip-estado chip-neutro">Sin dueño</span>';
 
+    const id = esc(it.id);
     let acciones = '';
     if(esMia){
-      acciones = `<button class="btn btn-green btn-mini" data-comprar="${it.id}" type="button">Ya está comprada</button>
-        <button class="link-quieto" data-soltar="${it.id}" type="button">soltar</button>`;
+      acciones = `<button class="btn btn-green btn-mini" data-comprar="${id}" type="button">Ya está comprada</button>
+        <button class="link-quieto" data-soltar="${id}" type="button">soltar</button>`;
     } else if(!p){
-      acciones = `<button class="btn btn-soft btn-mini" data-pillar="${it.id}" type="button">Me lo pido</button>
-        <button class="link-quieto" data-comprar="${it.id}" type="button">ya comprada</button>
-        ${admin ? `<button class="btn btn-borde btn-mini" data-asignar="${it.id}" type="button">Asignar</button>` : ''}`;
+      acciones = `<button class="btn btn-soft btn-mini" data-pillar="${id}" type="button">Me lo pido</button>
+        <button class="link-quieto" data-comprar="${id}" type="button">ya comprada</button>
+        ${admin ? `<button class="btn btn-borde btn-mini" data-asignar="${id}" type="button">Asignar</button>` : ''}`;
     } else if(admin){
-      acciones = `<button class="link-quieto" data-soltar="${it.id}" type="button">soltar</button>
-        <button class="link-quieto" data-comprar="${it.id}" type="button">apuntar precio</button>`;
+      acciones = `<button class="link-quieto" data-soltar="${id}" type="button">soltar</button>
+        <button class="link-quieto" data-comprar="${id}" type="button">apuntar precio</button>`;
     }
 
     const puedeQuitar = admin || !p;
@@ -1461,7 +1481,7 @@ function vistaLista(){
         </div>
         <div style="display:flex;align-items:center;gap:4px">
           ${chip}
-          ${puedeQuitar ? `<button class="quitar" data-quitar="${it.id}" type="button" aria-label="Quitar ${esc(it.nombre)}">✕</button>` : ''}
+          ${puedeQuitar ? `<button class="quitar" data-quitar="${id}" type="button" aria-label="Quitar ${esc(it.nombre)}">✕</button>` : ''}
         </div>
       </div>
     </div>`;
@@ -1499,7 +1519,7 @@ function vistaPena(c){
     if(p.admin) subs.push('Organiza la fiesta');
     if(asignadas) subs.push(`trae ${asignadas} cosa${asignadas===1?'':'s'}`);
     return `
-    <div class="persona-fila" data-persona="${p.id}">
+    <div class="persona-fila" data-persona="${esc(p.id)}">
       ${avatarHtml(p.id)}
       <div class="centro">
         <div class="nombre">${esc(p.nombre)}${p.id===S.yo?' (tú)':''}${p.admin?LLAVE:''}</div>
@@ -1552,7 +1572,7 @@ function vistaCuentas(c){
     const acciones = misBizums.map(b => b.de === S.yo
       ? `<div class="micuenta-accion">
           <span class="texto">Haz bizum de <b>${eur(b.cents)}</b> a <b>${esc(persona(b.a).nombre)}</b></span>
-          <button class="btn btn-soft btn-mini" data-copiabizum="${b.a}" data-cents="${b.cents}" type="button">Copiar</button>
+          <button class="btn btn-soft btn-mini" data-copiabizum="${esc(b.a)}" data-cents="${b.cents}" type="button">Copiar</button>
         </div>`
       : `<div class="micuenta-accion">
           <span class="texto"><b>${esc(persona(b.de).nombre)}</b> te debe <b>${eur(b.cents)}</b></span>
@@ -1576,7 +1596,7 @@ function vistaCuentas(c){
     return `<div class="card bizum-fila ${hecho?'hecho':''}">
       <div class="quien">${esc(persona(b.de).nombre)}${flecha}${esc(persona(b.a).nombre)}</div>
       <span class="cuanto">${eur(b.cents)}</span>
-      <button class="check ${hecho?'on':''}" data-bizum="${key}" type="button"
+      <button class="check ${hecho?'on':''}" data-bizum="${esc(key)}" type="button"
         aria-label="${hecho?'Deshacer':'Marcar'} bizum de ${esc(persona(b.de).nombre)} a ${esc(persona(b.a).nombre)}">${check}</button>
     </div>`;
   }).join('');
