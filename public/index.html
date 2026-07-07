@@ -539,6 +539,23 @@ function enterrar(coleccion, ent){
 
 const elItem = id => S && S.items.find(x => x.id === id);
 
+// las marcas de bizum no pueden crecer sin freno ni referirse a gente que ya
+// no está (el servidor rechaza estados con más de 500 claves): se poda al
+// fusionar Y al marcar (el camino normal de un solo móvil nunca fusiona).
+// Determinista: con el mismo estado, todos los móviles podan igual.
+function podarSaldados(saldados, gente){
+  const vivos = new Set(gente.map(p => p.id));
+  for(const k of Object.keys(saldados)){
+    const par = k.split('>');
+    if(!vivos.has(par[0]) || !vivos.has(par[1])) delete saldados[k];
+  }
+  const claves = Object.keys(saldados);
+  if(claves.length > 400){
+    claves.sort((x, y) => ((saldados[x].t || 0) - (saldados[y].t || 0)));
+    for(const k of claves.slice(0, claves.length - 400)) delete saldados[k];
+  }
+}
+
 // abortar una acción de sheet cuya premisa ya no vale (la fiesta cambió
 // por debajo): cerrar, repintar la verdad y avisar — siempre igual
 function abortarSheet(msg){ cerrarSheet(); pintar(); toast(msg); }
@@ -746,19 +763,6 @@ function fusionar(a, b){
   }
   const gente = mezcla(a.gente, b.gente);
   const items = mezcla(a.items, b.items);
-  // saldados no puede crecer sin freno (el servidor rechaza >500 claves):
-  // fuera las parejas con gente que ya no está y, si aún sobra, las marcas
-  // más viejas. Determinista: todos los móviles podan igual.
-  const idsDeGente = new Set(gente.map(p => p.id));
-  for(const k of Object.keys(saldados)){
-    const par = k.split('>');
-    if(!idsDeGente.has(par[0]) || !idsDeGente.has(par[1])) delete saldados[k];
-  }
-  const clavesSaldados = Object.keys(saldados);
-  if(clavesSaldados.length > 400){
-    clavesSaldados.sort((x, y) => ((saldados[x].t || 0) - (saldados[y].t || 0)));
-    for(const k of clavesSaldados.slice(0, clavesSaldados.length - 400)) delete saldados[k];
-  }
   // un gasto vivo mantiene vivo a quien lo pagó o lo trae: si no, borrar a
   // una persona con compras que sobreviven dejaría cuentas descuadradas
   // (se cobra a los que catan y el crédito del pagador se esfuma)
@@ -790,6 +794,10 @@ function fusionar(a, b){
   if(gente.length && !gente.some(p => p.admin)){
     [...gente].sort((x,y) => x.id < y.id ? -1 : 1)[0].admin = true;
   }
+  // podar DESPUÉS de las resurrecciones: las marcas de alguien que vuelve
+  // por estar referenciado no pueden borrarse (sus bizums saldados saldrían
+  // otra vez como pendientes)
+  podarSaldados(saldados, gente);
   const vivos = new Set([...gente, ...items].map(x => x.id));
   return {
     v: 4,
@@ -2053,6 +2061,7 @@ function conectar(v){
     // la marca lleva el importe pagado: si el bizum cambia luego de cuantía,
     // el nuevo importe vuelve a salir pendiente
     S.saldados[key] = {hecho, t:ahora(), por:S.yo || null, cents: bz.cents};
+    podarSaldados(S.saldados, S.gente); // que no crezca sin freno por aquí
     if(hecho){
       if(c.bizums.every(x => claveBizum(x) === key || hechoBizum(x))) toast('Cuentas claras y el chocolate espeso.');
       else toast('Bizum apuntado');
