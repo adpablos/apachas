@@ -1,6 +1,6 @@
-# Copia este fichero a /etc/collados-party/cloudflared/config.yml en el server
-# y sustituye <tunnel-id> por el id real del túnel "collados".
-# Las credenciales JSON del túnel van en el mismo directorio.
+# Copy this file to /etc/collados-party/cloudflared/config.yml on the server
+# and replace <tunnel-id> with the real "collados" tunnel id.
+# The tunnel JSON credentials live in the same directory.
 tunnel: <tunnel-id>
 credentials-file: /etc/cloudflared/<tunnel-id>.json
 protocol: quic

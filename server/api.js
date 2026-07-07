@@ -1,16 +1,16 @@
 #!/usr/bin/env node
-// API mínima de fiestas compartidas para A Pachas. Un JSON por fiesta,
-// control de revisión optimista y cero dependencias (solo stdlib de Node).
+// Minimal shared-party API for A Pachas. One JSON document per party,
+// optimistic revision control, and zero dependencies beyond Node stdlib.
 //
 //   POST /api/fiestas            {estado}              -> 201 {id, clave, rev}
-//   GET  /api/fiestas/:id[?rev=] -> 200 {rev, estado, updatedAt} | 204 (sin cambios)
+//   GET  /api/fiestas/:id[?rev=] -> 200 {rev, estado, updatedAt} | 204 (unchanged)
 //   PUT  /api/fiestas/:id        {clave, rev, estado}  -> 200 {rev, updatedAt}
 //                                   | 409 {rev, estado} | 403 | 404 | 413
 //   GET  /api/salud              -> 200
 //
-// En local (`node server/api.js`) sirve también public/ para probar la app
-// entera en http://localhost:8010; en producción nginx sirve lo estático y
-// solo pasa /api/ aquí. Ver docs/despliegue.md.
+// In local development (`node server/api.js`) this also serves public/ so the
+// whole app can run at http://localhost:8010. In production, nginx serves
+// static assets and only proxies /api/ here. See docs/despliegue.md.
 'use strict';
 
 const http = require('node:http');
@@ -22,19 +22,19 @@ const PUERTO = Number(process.env.PUERTO || 8010);
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const STATIC_DIR = process.env.STATIC_DIR || path.join(__dirname, '..', 'public');
 
-const MAX_BODY = 256 * 1024;          // una fiesta grande son ~30 KB; esto sobra
-const CADUCIDAD_MS = 240 * 24 * 3600 * 1000; // fiestas sin tocar 8 meses se purgan
-// Cupo en puntos por IP y minuto: leer vale 1, escribir 5. Toda la peña suele
-// compartir la IP del WiFi del pueblo, así que tiene que dar para ~30 móviles
-// sondeando cada 12 s (~150 puntos/min) con margen de sobra.
+const MAX_BODY = 256 * 1024;          // A large party is ~30 KB; this is plenty.
+const CADUCIDAD_MS = 240 * 24 * 3600 * 1000; // Untouched parties expire after 8 months.
+// Point budget per IP per minute: reads cost 1, writes cost 5. The whole group
+// often shares the village Wi-Fi IP, so this must support ~30 phones polling
+// every 12 seconds (~150 points/min) with headroom.
 const RATE_MAX = 600;
-const MAX_FIESTAS = 5000;             // freno a bots minando fiestas en disco
-const ALFABETO = 'abcdefghjkmnpqrstuvwxyz23456789'; // sin i/l/o/0/1
+const MAX_FIESTAS = 5000;             // Guardrail against bots filling disk.
+const ALFABETO = 'abcdefghjkmnpqrstuvwxyz23456789'; // No i/l/o/0/1.
 const ID_RE = new RegExp(`^[${ALFABETO}]{10}$`);
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
-/* ---------- utilidades ---------- */
+/* ---------- utilities ---------- */
 
 function aleatorio(n) {
   const bytes = crypto.randomBytes(n);
@@ -47,9 +47,9 @@ function fichero(id) {
   return path.join(DATA_DIR, id + '.json');
 }
 
-// este proceso es el único escritor: cabe cachear rev/clave por fiesta para
-// que el sondeo (la petición más frecuente, casi siempre «sin cambios»)
-// conteste 204 sin tocar disco ni parsear el documento entero
+// This process is the only writer, so party rev/key metadata can be cached.
+// Polling is the most frequent request and usually unchanged, so this lets us
+// return 204 without touching disk or parsing the full document.
 const meta = new Map(); // id -> { rev, clave }
 
 function leerFiesta(id) {
@@ -85,8 +85,8 @@ function leerCuerpo(req) {
     const trozos = [];
     req.on('data', (t) => {
       total += t.length;
-      // se sigue drenando sin guardar: destruir el socket dejaría al
-      // cliente con un reset en vez del 413
+      // Keep draining without storing; destroying the socket would give the
+      // client a reset instead of a 413 response.
       if (total > MAX_BODY) {
         pasado = true;
         trozos.length = 0;
@@ -102,10 +102,10 @@ function leerCuerpo(req) {
   });
 }
 
-// El estado compartido de una fiesta, sin campos locales del cliente y con
-// la forma verificada a fondo. Devuelve null si aquello no parece una fiesta.
-// Los ids se validan estrictos porque el cliente los interpola en atributos
-// del DOM: un id con comillas sería una inyección servida a toda la peña.
+// Shared party state, excluding client-local fields and with strict shape
+// validation. Returns null if the payload does not look like a party. IDs are
+// strict because the client interpolates them into DOM attributes; a quoted ID
+// would become an injection served to the whole group.
 const ID_ENT_RE = /^[A-Za-z0-9_-]{1,40}$/;
 const idValido = (x) => typeof x === 'string' && ID_ENT_RE.test(x);
 const numOpc = (x) => x == null || (typeof x === 'number' && isFinite(x));
@@ -117,7 +117,7 @@ function estadoValido(estado) {
   const f = estado.fiesta;
   if (!f || typeof f !== 'object' || typeof f.nombre !== 'string' ||
       !f.nombre.trim() || f.nombre.length > 80) return null;
-  // la fecha se interpola en un value="..." del cliente: AAAA-MM-DD o nada
+  // The client interpolates this date into value="...": YYYY-MM-DD or nothing.
   if (f.fecha != null && f.fecha !== '' &&
       !(typeof f.fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f.fecha))) return null;
   if (!numOpc(f.mod)) return null;
@@ -164,10 +164,10 @@ function estadoValido(estado) {
     }
   }
 
-  // reconstrucción por LISTA BLANCA: los campos desconocidos no se guardan.
-  // Sin esto, cualquiera con la clave podría colar cientos de KB de lastre
-  // que los clientes honestos re-subirían para siempre hasta reventar el
-  // tope de tamaño y dejar la fiesta de solo lectura.
+  // Whitelist rebuild: unknown fields are not stored. Without this, anyone
+  // with the write key could inject hundreds of KB of ballast that honest
+  // clients would keep re-uploading until the size cap turns the party
+  // effectively read-only.
   const limpio = {
     v: 4,
     fiesta: {
@@ -207,7 +207,7 @@ function estadoValido(estado) {
   return limpio;
 }
 
-/* ---------- rate limit por IP, best effort ---------- */
+/* ---------- best-effort IP rate limit ---------- */
 
 const cupos = new Map();
 function pasaCupo(req) {
@@ -221,17 +221,17 @@ function pasaCupo(req) {
   }
   c.n += (req.method === 'GET' || req.method === 'HEAD') ? 1 : 5;
   if (cupos.size > 5000) {
-    // primero fuera lo caducado; solo si sigue desbordado se vacía todo
+    // Drop expired buckets first; clear everything only if still overflowing.
     for (const [k, v] of cupos) if (ahora > v.hasta) cupos.delete(k);
     if (cupos.size > 5000) cupos.clear();
   }
   return c.n <= RATE_MAX;
 }
 
-/* ---------- purga de fiestas abandonadas ---------- */
+/* ---------- abandoned-party cleanup ---------- */
 
-// cuántas fiestas hay en disco: se cuenta al vuelo en cada POST (endpoint
-// con rate limit y ≤5000 dirents, ~1 ms) — sin contadores que se desfasen
+// Count parties on disk on each POST. This endpoint is rate-limited and capped
+// at <=5000 dirents, so it is cheap and avoids counters that drift.
 function numFiestas() {
   try {
     return fs.readdirSync(DATA_DIR).filter((f) => f.endsWith('.json')).length;
@@ -246,7 +246,7 @@ function purgar() {
       const ruta = path.join(DATA_DIR, f);
       try {
         const st = fs.statSync(ruta);
-        // los .tmp huérfanos de más de un día también sobran
+        // Orphan .tmp files older than one day can go too.
         const esTmp = f.includes('.tmp-');
         if ((f.endsWith('.json') && st.mtimeMs < limite) ||
             (esTmp && st.mtimeMs < Date.now() - 24 * 3600 * 1000)) {
@@ -254,13 +254,13 @@ function purgar() {
           if (f.endsWith('.json')) meta.delete(f.slice(0, -5));
           borradas++;
         }
-      } catch (e) { /* carrera con otra purga: da igual */ }
+      } catch (e) { /* Race with another cleanup pass; harmless. */ }
     }
-  } catch (e) { /* sin data dir aún */ }
-  if (borradas) console.log(`purga: ${borradas} fiesta(s) caducada(s)`);
+  } catch (e) { /* Data dir may not exist yet. */ }
+  if (borradas) console.log(`cleanup: ${borradas} expired party file(s)`);
 }
-// la primera purga espera a que el server esté sirviendo: con muchos ficheros
-// un barrido síncrono antes de listen() retrasaría el arranque
+// Delay the first cleanup until the server is listening. With many files, a
+// synchronous scan before listen() would slow startup.
 setTimeout(purgar, 5000).unref();
 setInterval(purgar, 12 * 3600 * 1000).unref();
 
@@ -280,7 +280,7 @@ async function api(req, res, url) {
     let cuerpo;
     try { cuerpo = JSON.parse(await leerCuerpo(req)); }
     catch (e) {
-      if (e.message === 'grande') throw e; // el catch de fuera responde 413
+      if (e.message === 'grande') throw e; // Outer catch returns 413.
       return json(res, 400, { error: 'Cuerpo inválido' });
     }
     const estado = estadoValido(cuerpo && cuerpo.estado);
@@ -298,9 +298,9 @@ async function api(req, res, url) {
     if (!ID_RE.test(id)) return json(res, 404, { error: 'No hay tal fiesta' });
 
     if (req.method === 'GET') {
-      // 204 y no 304: fetch trata mejor un "no hay cambios" explícito.
-      // Vía rápida: si la caché de revisiones ya dice que no hay nada nuevo,
-      // ni disco ni parseo.
+      // 204 instead of 304: fetch handles an explicit unchanged response more
+      // cleanly. Fast path: if the rev cache already says nothing changed,
+      // skip disk and parsing.
       const m = meta.get(id);
       if (m && url.searchParams.get('rev') === String(m.rev)) return json(res, 204);
       const doc = leerFiesta(id);
@@ -313,7 +313,7 @@ async function api(req, res, url) {
       let cuerpo;
       try { cuerpo = JSON.parse(await leerCuerpo(req)); }
       catch (e) {
-        if (e.message === 'grande') throw e; // el catch de fuera responde 413
+        if (e.message === 'grande') throw e; // Outer catch returns 413.
         return json(res, 400, { error: 'Cuerpo inválido' });
       }
       const doc = leerFiesta(id);
@@ -335,7 +335,7 @@ async function api(req, res, url) {
   return json(res, 404, { error: 'No hay nada por aquí' });
 }
 
-/* ---------- estático (solo desarrollo local) ---------- */
+/* ---------- static serving for local development ---------- */
 
 const TIPOS = {
   '.html': 'text/html; charset=utf-8',
@@ -370,7 +370,7 @@ function estatico(req, res, url) {
   res.end(req.method === 'HEAD' ? undefined : datos);
 }
 
-/* ---------- servidor ---------- */
+/* ---------- server ---------- */
 
 const hayEstatico = fs.existsSync(path.join(STATIC_DIR, 'index.html'));
 
@@ -378,7 +378,7 @@ const servidor = http.createServer(async (req, res) => {
   const inicio = Date.now();
   const url = new URL(req.url, 'http://local');
   res.on('finish', () => {
-    // el id de fiesta no se loguea: con él solo ya se puede leer la fiesta
+    // Do not log party IDs; the ID alone is enough to read the party.
     const ruta = url.pathname.replace(/^(\/api\/fiestas\/)[^/]+/, '$1***');
     console.log(`${req.method} ${ruta} ${res.statusCode} ${Date.now() - inicio}ms`);
   });
@@ -396,5 +396,5 @@ const servidor = http.createServer(async (req, res) => {
 });
 
 servidor.listen(PUERTO, () => {
-  console.log(`A Pachas API en http://localhost:${PUERTO} (datos en ${DATA_DIR}${hayEstatico ? `, estático desde ${STATIC_DIR}` : ''})`);
+  console.log(`A Pachas API at http://localhost:${PUERTO} (data in ${DATA_DIR}${hayEstatico ? `, static files from ${STATIC_DIR}` : ''})`);
 });

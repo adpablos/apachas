@@ -1,67 +1,72 @@
-# Despliegue
+# Deployment
 
-A Pachas se sirve desde el server de Hetzner (`treasure-map-prod-01`), el mismo
-que hospeda la porra del Mundial. SSH solo por tailnet (`100.83.154.97`,
-usuario `adpablos`, clave `~/.ssh/treasure_map_prod_github_actions_ed25519`;
-la clave personal NO está autorizada en ese server).
+A Pachas is served from the Hetzner server `treasure-map-prod-01`, the same
+server that hosts the World Cup pool. SSH is only available through the tailnet
+at `100.83.154.97`, with user `adpablos` and key
+`~/.ssh/treasure_map_prod_github_actions_ed25519`; the personal key is not
+authorized on that server.
 
-## Arquitectura
+## Architecture
 
-Un proyecto Docker Compose aislado (`collados`) con tres contenedores:
+One isolated Docker Compose project, `collados`, with three containers:
 
 ```txt
-Internet ── Cloudflare ── túnel "collados" ── cloudflared ── nginx (web)
-                                                              ├─ sirve public/
-https://collados.alexdepablos.es                              └─ /api/ → api
-                                                                 (node, fiestas
-                                                                  compartidas)
+Internet ── Cloudflare ── tunnel "collados" ── cloudflared ── nginx (web)
+                                                               ├─ serves public/
+https://collados.alexdepablos.es                               └─ /api/ → api
+                                                                  (node,
+                                                                   shared
+                                                                   parties)
 ```
 
-- `web`: nginx sirviendo `public/` en modo solo-lectura y pasando `/api/` al
-  contenedor `api` (config en `deployment/nginx/default.conf`). Expuesto
-  además en `127.0.0.1:3200` del server para smokes de operador.
-- `api`: `server/api.js` con node:22-alpine, sin `npm install` (cero
-  dependencias). Guarda un JSON por fiesta compartida en el volumen
-  `api-data`. Si se cae, lo estático sigue arriba y la app funciona en modo
-  local (a propósito: `web` solo espera a que `api` arranque, no a que esté
-  sano).
-- `cloudflared`: túnel propio de esta app (mismo patrón que producción y
-  staging de la porra: un túnel por stack, cero acoplamiento entre apps).
+- `web`: nginx serves `public/` read-only and proxies `/api/` to the `api`
+  container. Config lives in `deployment/nginx/default.conf`. It is also
+  exposed on `127.0.0.1:3200` on the server for operator smoke tests.
+- `api`: `server/api.js` on `node:22-alpine`, with no `npm install` and no
+  runtime dependencies. It stores one JSON document per shared party in the
+  `api-data` volume. If it goes down, static serving stays up and the app keeps
+  working in local mode by design; `web` only waits for `api` to start, not for
+  it to be healthy.
+- `cloudflared`: this app's own tunnel, following the same pattern as the World
+  Cup production and staging stacks: one tunnel per stack, zero coupling
+  between apps.
 
-No hay build ni secretos de aplicación. Los datos de las fiestas viven en el
-volumen `api-data` (se pierden solo con `docker compose down -v`; las fiestas
-sin tocar 8 meses se purgan solas). El único material sensible son las
-credenciales del túnel, que viven fuera del repo.
+There is no build step and no application secret. Party data lives in the
+`api-data` volume. It is lost only with `docker compose down -v`; untouched
+parties are automatically purged after eight months. The only sensitive
+material is the tunnel credential, which lives outside the repo.
 
-## Rutas en el server
+## Server Paths
 
-| Qué                        | Dónde                                        |
+These are current production paths. Rename them only as part of an explicit
+server migration, not as a cosmetic repo change.
+
+| What                       | Where                                        |
 | -------------------------- | -------------------------------------------- |
-| Clon del repo (despliegue) | `/opt/collados-party`                        |
-| Config y credenciales túnel| `/etc/collados-party/cloudflared/`           |
-| Puerto de smoke local      | `127.0.0.1:3200`                             |
-| Proyecto Compose           | `collados`                                   |
+| Deployment clone           | `/opt/collados-party`                        |
+| Tunnel config/credentials  | `/etc/collados-party/cloudflared/`           |
+| Local smoke port           | `127.0.0.1:3200`                             |
+| Compose project            | `collados`                                   |
 
-## Despliegue habitual
+## Normal Deployment
 
-Commit + push a `main`, y desde el Mac:
+Commit and push to `main`, then run from the Mac:
 
 ```bash
 scripts/deploy.sh
 ```
 
-El script hace `git pull --ff-only` + `docker compose up -d --wait` en el
-server y comprueba que `https://collados.alexdepablos.es` responde. Como
-`public/` está montado directamente en nginx, un cambio de contenido ni
-siquiera reinicia contenedores: el pull basta. Un cambio en `server/api.js`
-o en la config de nginx sí necesita reinicio; el `up` no detecta cambios en
-ficheros montados, así que en ese caso:
+The script runs `git pull --ff-only` and `docker compose up -d --wait` on the
+server, then verifies that `https://collados.alexdepablos.es` responds. Because
+`public/` is mounted directly into nginx, content-only changes do not require a
+container restart. Changes to `server/api.js` or nginx config do need a restart;
+`up` does not detect changes in mounted files, so use:
 
 ```bash
-sudo docker compose restart api    # o web, si cambió deployment/nginx/
+sudo docker compose restart api    # or web, if deployment/nginx/ changed
 ```
 
-Manual equivalente, desde el server:
+Equivalent manual flow on the server:
 
 ```bash
 cd /opt/collados-party
@@ -71,29 +76,30 @@ curl -fsS http://127.0.0.1:3200/ >/dev/null && echo OK
 curl -fsS http://127.0.0.1:3200/api/salud >/dev/null && echo API OK
 ```
 
-## Setup inicial (una sola vez)
+## Initial Setup
 
-Hecho el 2026-07-05 (túnel `collados`, id
-`2abb0680-613f-4304-9835-80e2bcf642fd`); queda documentado por si hay que
-recrearlo.
+Completed on 2026-07-05 with tunnel `collados`, id
+`2abb0680-613f-4304-9835-80e2bcf642fd`. This is documented so the setup can be
+recreated if needed.
 
-Dato clave: el CLI de `cloudflared` y el `cert.pem` de la cuenta de
-Cloudflare viven **en el Mac** (`~/.cloudflared/`), no en el server. Los
-túneles se crean desde el Mac y solo las credenciales del túnel viajan al
-server. Así se montaron también los túneles de la porra.
+Important boundary: the `cloudflared` CLI and the Cloudflare account
+`cert.pem` live on the Mac under `~/.cloudflared/`, not on the server. Tunnels
+are created from the Mac; only the tunnel credentials travel to the server.
+This is the same pattern used by the World Cup pool tunnels.
 
-1. Desde el Mac, crear el túnel y su ruta DNS:
+1. From the Mac, create the tunnel and DNS route:
 
    ```bash
    cloudflared tunnel create collados
    cloudflared tunnel route dns collados collados.alexdepablos.es
    ```
 
-   `create` imprime el id del túnel y deja las credenciales en
+   `create` prints the tunnel id and stores credentials at
    `~/.cloudflared/<tunnel-id>.json`.
 
-2. Desde el Mac, subir credenciales y config (mismo patrón de permisos que
-   la porra: `root:adpablos`, ficheros `0640`, directorios `0750`):
+2. From the Mac, upload credentials and config using the same permission
+   pattern as the World Cup pool: `root:adpablos`, files `0640`, directories
+   `0750`.
 
    ```bash
    TID=<tunnel-id>
@@ -102,7 +108,7 @@ server. Así se montaron también los túneles de la porra.
      /tmp/collados-config.yml ~/.cloudflared/$TID.json adpablos@100.83.154.97:/tmp/
    ```
 
-   Y en el server:
+   Then on the server:
 
    ```bash
    sudo mkdir -p /etc/collados-party/cloudflared
@@ -113,14 +119,14 @@ server. Así se montaron también los túneles de la porra.
    rm /tmp/collados-config.yml /tmp/$TID.json
    ```
 
-3. En el server, clonar el repo:
+3. On the server, clone the repo:
 
    ```bash
-   sudo git clone https://github.com/adpablos/collados-party.git /opt/collados-party
+   sudo git clone https://github.com/adpablos/apachas.git /opt/collados-party
    sudo chown -R adpablos:adpablos /opt/collados-party
    ```
 
-4. Levantar y verificar:
+4. Start and verify:
 
    ```bash
    cd /opt/collados-party
@@ -128,9 +134,9 @@ server. Así se montaron también los túneles de la porra.
    curl -fsS https://collados.alexdepablos.es >/dev/null && echo OK
    ```
 
-## Operación
+## Operations
 
-Estado y logs:
+Status and logs:
 
 ```bash
 sudo docker compose -p collados ps
@@ -138,36 +144,37 @@ sudo docker compose -p collados logs -f cloudflared
 sudo docker compose -p collados logs -f web
 ```
 
-Rollback (el contenido es el repo, así que rollback = git):
+Rollback. Content is the repo, so rollback is git:
 
 ```bash
 cd /opt/collados-party
-git log --oneline -5          # elegir el commit bueno
-git reset --hard <commit>     # o revert + push desde el Mac, preferible
+git log --oneline -5          # pick the known-good commit
+git reset --hard <commit>     # or revert + push from the Mac, preferred
 sudo docker compose up -d --wait
 ```
 
-Apagar todo (no borra el túnel ni el DNS):
+Shutdown without deleting the tunnel or DNS:
 
 ```bash
 cd /opt/collados-party
 sudo docker compose down
 ```
 
-Borrado completo del túnel, si algún día se retira la app (desde el Mac, que
-es donde está el cert de cuenta):
+Full tunnel deletion, if the app is retired someday. Run this from the Mac,
+where the account cert lives:
 
 ```bash
-cloudflared tunnel delete collados   # tras el down y borrar el DNS en Cloudflare
+cloudflared tunnel delete collados   # after down and DNS deletion in Cloudflare
 ```
 
-## Guardarraíles
+## Guardrails
 
-- El server es compartido con la porra del Mundial: proyectos Compose
-  `current` (producción) y `staging`. **No tocar nada de esos stacks** —
-  contenedores, volúmenes, redes, `/opt/porra-mundial-2026*`,
+- The server is shared with the World Cup pool. Compose projects `current`
+  (production) and `staging` are off-limits. Do not touch their containers,
+  volumes, networks, `/opt/porra-mundial-2026*`, or
   `/etc/porra-mundial-2026/*`.
-- El puerto `3200` está reservado para esta app (la porra usa `3000` y
-  `3100`). Si hay conflicto, cambiarlo en `compose.yaml`, no pisar el ajeno.
-- Las credenciales del túnel no se commitean nunca; viven solo en
+- Port `3200` is reserved for this app; the World Cup pool uses `3000` and
+  `3100`. If there is a conflict, change `compose.yaml`; do not reuse another
+  app's port.
+- Tunnel credentials are never committed. They live only in
   `/etc/collados-party/cloudflared/`.

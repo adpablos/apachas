@@ -1,21 +1,21 @@
-# Diseño — A Pachas (v2)
+# Design — A Pachas v2
 
-Identidad y UI rediseñadas con Claude Design (archivo «A Pachas v2.dc.html»
-del proyecto, la v1 arena queda ahí de histórico). Proyecto de diseño
-(prototipo navegable, editable):
+Identity and UI redesigned with Claude Design from the project file
+"A Pachas v2.dc.html"; the previous sand-toned v1 remains historical context.
+Editable navigable prototype:
 https://claude.ai/design/p/61c29d29-59f4-4f4d-8c5b-df04adba396e
 
-Dirección: base neutra luminosa, primario violeta festivo, los números de
-dinero como protagonistas absolutos (a lo Splitwise), verde = te deben,
-coral = debes, y modo oscuro en tinta (nada de marrón).
+Direction: bright neutral base, festive violet primary, money figures as the
+visual lead, green = owed to you, coral = you owe, and ink-dark mode. Avoid
+brown or sand-heavy palettes in v2.
 
-## Concepto
+## Concept
 
-El logo sigue siendo el óculo/rosetón circular de piedra del monasterio de
-Santa María de la Sierra (Collado Hermoso), partido en 5 porciones iguales:
-pagar «a pachas» es repartir entre todos. Se pinta con `currentColor`; su
-color de marca es el violeta `#5A50EC`. Además de logo, se usa como marca
-de agua gigante (blanco al 16 %) en la card violeta de la fiesta.
+The logo remains the circular stone oculus/rosette from Santa Maria de la
+Sierra monastery in Collado Hermoso, split into five equal portions: paying "a
+pachas" means splitting among everyone. It uses `currentColor`; brand color is
+violet `#5A50EC`. Beyond the logo, the oculus appears as a giant white 16%
+watermark on the violet party card.
 
 ```svg
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
@@ -32,93 +32,92 @@ de agua gigante (blanco al 16 %) en la card violeta de la fiesta.
 
 ## Tokens
 
-| Token           | Claro                        | Oscuro    | Uso |
+| Token           | Light                        | Dark      | Use |
 | --------------- | ---------------------------- | --------- | --- |
-| `--bg`          | `#F5F6FA`                    | `#101218` | fondo app |
+| `--bg`          | `#F5F6FA`                    | `#101218` | app background |
 | `--card`        | `#FFFFFF`                    | `#191C25` | cards, nav, sheet |
-| `--ink`         | `#171A21`                    | `#EDEFF6` | texto principal |
-| `--muted`       | `#6A7186`                    | `#99A0B4` | texto secundario, iconos inactivos |
-| `--line`        | `#E6E8F0`                    | `#2A2E3C` | bordes, divisores |
-| `--primary`     | `#5A50EC`                    | `#9D96FF` | violeta: botones, tab activa, links de acción |
-| `--onprimary`   | `#FFFFFF`                    | `#1B1747` | texto sobre primary/green/coral |
-| `--primarysoft` | `#ECEAFE`                    | `#2A2750` | pills/chips activos, avatares, «Me lo pido» |
-| `--green`       | `#0E9256`                    | `#45D48F` | te deben, comprada, check hecho, WhatsApp |
-| `--greensoft`   | `#DCF5E7`                    | `#17362A` | fondos suaves verdes |
-| `--coral`       | `#E5484D`                    | `#FF8080` | debes, badge, borrar |
-| `--coralsoft`   | `#FDE8E8`                    | `#3D2226` | fondos suaves coral (reservado) |
-| `--chip`        | `#EFF1F6`                    | `#242836` | chip neutro «Sin dueño» |
-| `--shadow`      | `0 1px 2px rgba(16,18,24,.04)` | `none`  | sombra de cards |
+| `--ink`         | `#171A21`                    | `#EDEFF6` | primary text |
+| `--muted`       | `#6A7186`                    | `#99A0B4` | secondary text, inactive icons |
+| `--line`        | `#E6E8F0`                    | `#2A2E3C` | borders, dividers |
+| `--primary`     | `#5A50EC`                    | `#9D96FF` | violet: buttons, active tab, action links |
+| `--onprimary`   | `#FFFFFF`                    | `#1B1747` | text on primary/green/coral |
+| `--primarysoft` | `#ECEAFE`                    | `#2A2750` | active pills/chips, avatars, "Me lo pido" |
+| `--green`       | `#0E9256`                    | `#45D48F` | owed to you, bought, done check, WhatsApp |
+| `--greensoft`   | `#DCF5E7`                    | `#17362A` | soft green backgrounds |
+| `--coral`       | `#E5484D`                    | `#FF8080` | you owe, badge, delete |
+| `--coralsoft`   | `#FDE8E8`                    | `#3D2226` | soft coral backgrounds, reserved |
+| `--chip`        | `#EFF1F6`                    | `#242836` | neutral chip, "Sin dueño" |
+| `--shadow`      | `0 1px 2px rgba(16,18,24,.04)` | `none` | card shadow |
 
-Fijos en ambos modos: la card de la fiesta es violeta de marca `#5A50EC`
-con texto blanco (botón interior = `--card` con texto `--primary`, botón
-secundario blanco translúcido `rgba(255,255,255,.16)`); velo del sheet
-`rgba(13,15,22,.5)`; punto «en vivo» `#3DDC84`; toast = fondo `--ink`,
-texto `--bg`. Radio de card 16px. Modo oscuro: automático por
-`prefers-color-scheme` + toggle manual (luna, arriba a la derecha,
-`position:absolute`) persistido en localStorage.
+Fixed in both modes: the party card is brand violet `#5A50EC` with white text;
+its primary inner button is `--card` with `--primary` text; its secondary button
+is translucent white `rgba(255,255,255,.16)`. Sheet veil is
+`rgba(13,15,22,.5)`. Live-status dot is `#3DDC84`. Toast uses `--ink` as
+background and `--bg` as text. Card radius is 16px. Dark mode is automatic via
+`prefers-color-scheme` plus a manual moon toggle at top right with
+`position:absolute`, persisted in localStorage.
 
-## Tipografía
+## Typography
 
-- Display: **Bricolage Grotesque** (Google Fonts) — wordmark 800/34px
-  (20px en la cabecera interior), títulos de pantalla 700/26px, títulos de
-  card/sheet 700/20px (el de la card violeta de la fiesta va a 21px),
-  «¿Qué toca?» 700/18px, inicial de avatar 700/16px.
-- Números de dinero (siempre Bricolage 800, `tabular-nums`): «Tu cuenta»
-  32px, total de cuentas 28px, «Tu saldo» del inicio 24px.
-- Cuerpo: **Instrument Sans** — botones 600/15px, nombres 600/15px,
-  cuerpo 400–500/14px, meta 400/13px, chips 600/12px, labels
-  uppercase 600/12px con tracking 0.08em, tabs 600/11px. Los inputs van
-  a 16px A PROPÓSITO: por debajo de eso, iOS hace zoom automático al
-  enfocar el campo. No bajarlos.
-- Fallback: pila de sistema (la app funciona sin red de fuentes).
+- Display: **Bricolage Grotesque** from Google Fonts. Wordmark 800/34px, 20px
+  in the inner header; screen titles 700/26px; card/sheet titles 700/20px; the
+  violet party-card title is 21px; "¿Qué toca?" is 700/18px; avatar initial is
+  700/16px.
+- Money figures always use Bricolage 800 with `tabular-nums`: "Tu cuenta" 32px,
+  accounts total 28px, home "Tu saldo" 24px.
+- Body: **Instrument Sans**. Buttons 600/15px, names 600/15px, body 400-500/14px,
+  meta 400/13px, chips 600/12px, uppercase labels 600/12px with `0.08em`
+  tracking, tabs 600/11px. Inputs are intentionally 16px; below that, iOS zooms
+  when focusing the field. Do not reduce input font size.
+- Fallback: system stack. The app must work without font network access.
 
-## Voz del copy
+## User-Facing Voice
 
-Castellano de pueblo, con guasa pero sin pasarse:
+Visible product copy stays in Spanish from Spain. Tone: village Spanish with a
+bit of humor, but not overdone.
 
-- «Los gastos de la peña, a partes iguales. Ni pa ti ni pa mí.»
-- «¿Qué falta? (garrafón no)» · «Me lo pido» · «Ya está comprada»
-- «¿Quiénes lo catan?» · «Sin dueño» · «La trae Marta»
-- «Ponle precio, que gratis no fue.» · «Alguien lo catará, digo yo.»
-- «Pon qué fue.» · «Apuntado. Las cuentas ya lo saben.»
-- «Todo comprado. Vaya máquinas.» · «Cuentas claras y el chocolate espeso.»
-- Sincronización sin lenguaje técnico: «En vivo con la peña · al día hace
-  un momento» (con punto verde) · «Solo en este móvil» · «Sin red. Tus
-  cambios quedan apuntados y se subirán solos.» Nada de sync/versión/conflicto.
-- Admin = «la llave» (icono de llave discreto, nada de "administrador").
+- "Los gastos de la peña, a partes iguales. Ni pa ti ni pa mí."
+- "¿Qué falta? (garrafón no)" · "Me lo pido" · "Ya está comprada"
+- "¿Quiénes lo catan?" · "Sin dueño" · "La trae Marta"
+- "Ponle precio, que gratis no fue." · "Alguien lo catará, digo yo."
+- "Pon qué fue." · "Apuntado. Las cuentas ya lo saben."
+- "Todo comprado. Vaya máquinas." · "Cuentas claras y el chocolate espeso."
+- Sync copy must avoid technical language: "En vivo con la peña · al día hace
+  un momento" with green dot, "Solo en este móvil", "Sin red. Tus cambios
+  quedan apuntados y se subirán solos." Do not say sync/version/conflict in
+  user-facing copy.
+- Admin is "la llave" in the UI, with a discreet key icon. Do not show
+  "administrador" to users.
 
-## Pantallas
+## Screens
 
-1. **Fiesta (inicio accionable)**: cabecera con óculo + wordmark a la
-   izquierda y luna a la derecha · card VIOLETA de la fiesta (marca de agua
-   del óculo, label/meta en blanco translúcido, botón blanco «Mandar al
-   grupo», «Ponerla en vivo» translúcido si es local, línea de estado con
-   punto verde cuando está en vivo) · card «¿QUÉ TOCA?» con statement en
-   Bricolage 18px y UNA acción · card «TU SALDO» con el número grande
-   coloreado y «Mis cuentas» · fila quién-eres con avatar y «Cambiar» como
-   texto violeta · accesos (cambiar nombre/fecha si llave, empezar otra,
-   ejemplo). Sin fiesta: hero grande centrado + unirse (botón violeta) /
-   crear / ejemplo.
-2. **Lista**: sub «{n} cosas por resolver de {total}» · añadir (botón
-   violeta) · «+ Apuntar un gasto ya pagado» discontinuo · cards con chip
-   («La trae X» primarysoft/primary, «Sin dueño» chip/muted) y acciones
-   («Me lo pido» primarysoft, «Asignar» con borde, links pequeños) ·
-   sección «YA COMPRADAS»: cards con check verde circular a la izquierda +
-   «{precio} · pagó {N} · entre {n}», se editan tocándolas · enlace
-   «Mandar lo que falta al grupo» si hay cosas sin dueño.
-3. **Peña**: filas avatar (primarysoft con inicial violeta) + nombre
-   (+llave) + saldo («le deben» verde / «debe» coral / «en paz») · «Mandar
-   al grupo» · añadir a mano. Ficha por persona al tocar, con desglose y
-   recordatorio compartible.
-4. **Cuentas**: card «TU CUENTA» primero (Debes X / Te deben X / Estás en
-   paz en Bricolage 800/32px coloreado + desglose «Pagaste · te tocaba» +
-   tus bizums con copiar) · card total en fila (cifra 28px izq., nota
-   der.: «por cabeza» solo si todas las compras son entre todos) · «BIZUMS
-   DE TODOS» con check circular (hecho = relleno verde, fila al 55 %) ·
-   «Mandar las cuentas al grupo» en violeta.
-5. **Sheet de gasto** (directo, marcar comprada o editar): Qué · Precio ·
-   Pagó (pills violeta) · ¿Quiénes lo catan? (pills verdes) · botón verde ·
-   borrar con confirmación y línea de historial.
-6. **Sheet de mandar al grupo**: vista previa del mensaje (bloque `previo`,
-   enlaces AP1 abreviados) · botones Copiar / WhatsApp (verde) · «Mandar
-   con otra app» si hay share nativo.
+1. **Fiesta, actionable home**: header with oculus + wordmark left and moon
+   right; violet party card with oculus watermark, translucent white label/meta,
+   white "Mandar al grupo" button, translucent "Ponerla en vivo" when local, and
+   live-status line with green dot; "¿QUÉ TOCA?" card with Bricolage 18px
+   statement and exactly one action; "TU SALDO" card with large colored number
+   and "Mis cuentas"; identity row with avatar and violet "Cambiar"; access
+   links for rename/date when key holder, start another party, and demo. Without
+   a party: large centered hero plus join/create/demo.
+2. **Lista**: subtitle "{n} cosas por resolver de {total}"; add row with violet
+   button; dashed "+ Apuntar un gasto ya pagado"; cards with state chips ("La
+   trae X" primarysoft/primary, "Sin dueño" chip/muted) and actions ("Me lo
+   pido" primarysoft, bordered "Asignar", small links); "YA COMPRADAS" section
+   with green circular check on the left, "{precio} · pagó {N} · entre {n}",
+   editable by tapping; "Mandar lo que falta al grupo" link when unowned items
+   exist.
+3. **Peña**: avatar rows with violet initials, name, optional key, and balance
+   ("le deben" green, "debe" coral, "en paz"); "Mandar al grupo"; manual add.
+   Person sheet on tap, with breakdown and shareable reminder.
+4. **Cuentas**: "TU CUENTA" card first: Debes X / Te deben X / Estás en paz in
+   Bricolage 800/32px colored text, breakdown "Pagaste · te tocaba", and user's
+   Bizums with copy; total card in row with 28px figure left and note right.
+   Show "por cabeza" only if every purchase is consumed by everyone. "BIZUMS DE
+   TODOS" rows have circular checks; done rows are green-filled and 55% opacity.
+   "Mandar las cuentas al grupo" in violet.
+5. **Expense sheet**: direct expense, mark bought, or edit. Fields: Qué, Precio,
+   Pagó with violet pills, ¿Quiénes lo catan? with green pills, green save
+   button, delete with confirmation, and history line.
+6. **Share sheet**: message preview in `previo`, abbreviated AP1 links, Copiar
+   and WhatsApp green buttons, and "Mandar con otra app" when native share is
+   available.

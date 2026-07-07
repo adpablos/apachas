@@ -1,42 +1,55 @@
 # A Pachas
 
-Los gastos de la peña, a partes iguales. Ni pa ti ni pa mí.
+Party expenses for the Collado Hermoso crew, split evenly and settled with
+minimum Bizums.
 
-**En producción:** https://collados.alexdepablos.es
+**Production:** https://collados.alexdepablos.es
 
-Apuntáis la lista de la compra de la fiesta, cada uno se pide lo que trae,
-se apunta lo que costó (o un gasto directo: «he pillado hielo, 6 €») y
-quiénes lo catan, y A Pachas saca los bizums mínimos para quedar en paz.
+The group writes the party shopping list, each person claims what they will
+bring, bought items record price, payer, and consumers, and A Pachas calculates
+the minimum transfers required to settle up. The party is shared by WhatsApp
+link, with no accounts and no sign-in. If the network is unavailable, the app
+keeps working locally and uploads changes when connectivity returns.
 
-Se comparte por enlace al grupo de WhatsApp, sin cuentas ni registros: la
-fiesta vive en el servidor y todos los móviles ven y editan la misma. Sin
-red, la app sigue funcionando en local y sube los cambios sola al volver.
+The product is intentionally small:
 
-Es un frontend de una sola página (`public/index.html`) y un API de un
-solo fichero (`server/api.js`, Node sin dependencias). El logo y la
-identidad salen del óculo del monasterio de Santa María de la Sierra, el
-monumento de Collado Hermoso — ver [docs/diseno.md](docs/diseno.md). Qué
-hace la app y por qué: [docs/producto.md](docs/producto.md).
+- `public/index.html` contains the whole frontend.
+- `server/api.js` contains the whole API, using only the Node standard library.
+- There is no build step and no dependency install.
 
-## Desarrollo
+Brand and UI rules live in [docs/diseno.md](docs/diseno.md). Product decisions
+live in [docs/producto.md](docs/producto.md).
 
-No hay build ni dependencias:
+## Language Policy
+
+Source code, identifiers, implementation comments, commit messages, and
+technical/repository documentation are written in English.
+
+User-facing product copy stays in Spanish from Spain, with the village tone
+defined in `docs/diseno.md`. Persisted data fields that already shipped in
+Spanish are a compatibility exception and must not be renamed without a
+migration.
+
+## Development
+
+Run the local API and frontend together:
 
 ```sh
-node server/api.js         # app + API en http://localhost:8010
+node server/api.js
 ```
 
-o solo el frontend en modo local:
+Open `http://localhost:8010`.
+
+For frontend-only local mode:
 
 ```sh
 python3 -m http.server -d public
 ```
 
-## Despliegue
+## Deployment
 
 ```sh
 scripts/deploy.sh
 ```
 
-Runbook completo (arquitectura, setup inicial, operación, rollback):
-[docs/despliegue.md](docs/despliegue.md).
+The full infrastructure runbook is in [docs/despliegue.md](docs/despliegue.md).

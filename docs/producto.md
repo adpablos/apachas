@@ -1,315 +1,289 @@
-# Producto — qué mejorar en A Pachas y por qué
+# Product — What A Pachas Improves and Why
 
-Especificación de producto, 2026-07-05. Parte del análisis de mercado hecho
-con Codex (Tricount, Splitwise, Settle Up, Splid, Spliit, Tab, Google Pay
-split), lo contrasta con el código real de `public/index.html` y deja
-decisiones tomadas, no opciones abiertas. El apéndice recoge lo que el
-análisis original decía mal o a medias.
+Product specification dated 2026-07-05. It starts from market research done
+with Codex (Tricount, Splitwise, Settle Up, Splid, Spliit, Tab, Google Pay
+split), compares it with the real code in `public/index.html`, and records
+decisions rather than open options. The appendix captures where the original
+analysis was wrong or incomplete.
 
-## La tesis
+## Thesis
 
-A Pachas no compite con Tricount en completitud. Compite en una promesa más
-estrecha y más valiosa para una peña:
+A Pachas does not compete with Tricount on completeness. It competes on a
+narrower and more valuable promise for a village party group:
 
-> Lo mandas al grupo, cada uno apunta lo suyo, y al final salen los bizums.
+> Send it to the group, everyone records their part, and the final Bizums fall
+> out automatically.
 
-Hoy la app cumple la mitad de esa promesa. Calcula bien (splits por
-consumidores, bizums mínimos, saldos por persona) y entra bien (sin cuentas,
-sin instalar, con demo). Lo que no cumple es el «cada uno apunta lo suyo»:
-el enlace es una **foto** de la fiesta, no la fiesta. Cada móvil guarda su
-copia y la app misma tiene que avisar de que las compras las apunte una sola
-persona. Esa es la debilidad número uno; casi todo lo demás son mejoras de
-segundo orden.
+Today the app delivers half of that promise. It calculates correctly (consumer
+splits, minimum Bizums, per-person balances) and entry is low friction (no
+accounts, no install, demo available). What it does not deliver is "everyone
+records their part": the link is a **snapshot** of the party, not the party.
+Each phone stores its own copy, and the app has to warn that one person should
+record purchases. That is the main weakness; almost everything else is
+secondary.
 
-## Diagnóstico (por orden de daño)
+## Diagnosis, Ordered by Damage
 
-1. **Colaboración por copia, no por estado vivo.** Dos personas editan copias
-   distintas creyendo que «la app» está al día. Obliga al modo escriba: uno
-   apunta todo y reenvía el enlace. Es lo contrario de la promesa.
-2. **El enlace hace de invitación, backup y transporte de datos a la vez.**
-   Enlaces kilométricos en el chat, snapshots obsoletos que pisan la fiesta
-   local al abrirlos, y todo el estado de la fiesta viajando en cada mensaje.
-3. **No hay gasto directo.** En fiesta real la mitad de los gastos aparecen
-   después de pagarlos («he pillado hielo, 6 €»). Hoy eso son dos pasos:
-   apuntar a la lista y luego «ya comprada». Además, quien no tiene la llave
-   no puede decir que pagó otro.
-4. **Las cuentas no responden «¿y yo qué?».** La pantalla Cuentas enseña el
-   total, un «por cabeza» y los bizums de todos. Tu saldo está en otra tab
-   (Peña), sin desglose. Y el «por cabeza» (total ÷ personas) es directamente
-   engañoso cuando hay compras que no catan todos.
-5. **WhatsApp es un `share` genérico.** Hay dos textos (invitación y cuentas)
-   pero no mensajes por momento: faltan cosas, recordatorio individual con
-   deuda, cierre. El texto que llega al grupo es parte del producto.
-6. **La pantalla Fiesta no dice qué toca ahora.** Repite el hero y la
-   identidad, pero la acción principal (apuntar gasto, resolver lista, mandar
-   cuentas) hay que ir a buscarla.
-7. **Sin rastro mínimo.** Un gasto no dice quién lo apuntó ni cuándo se tocó;
-   borrar una compra pide confirmación implícita (está tras el sheet de
-   edición) pero nada explícito. Con dinero, la confianza se apoya en poder
-   auditar.
+1. **Collaboration by copy, not live state.** Two people edit different copies
+   while believing "the app" is current. This forces a scribe mode: one person
+   records everything and reshares the link. It contradicts the product promise.
+2. **The link acts as invitation, backup, and data transport at once.** Chat
+   links are huge, stale snapshots overwrite local parties when opened, and the
+   full party state travels in every message.
+3. **No direct expense.** In a real party, many expenses appear after payment,
+   such as "I bought ice, EUR 6". Today that takes two steps: add to list, then
+   mark as bought. Also, people without the key cannot say someone else paid.
+4. **Accounts do not answer "what about me?" first.** The Accounts screen shows
+   total, a "per head" figure, and everyone's Bizums. Your own balance is in
+   another tab, without breakdown. "Per head" is misleading when not every
+   purchase is consumed by everyone.
+5. **WhatsApp is generic share.** There are invite and accounts texts, but no
+   moment-specific messages: missing items, individual reminder with debt,
+   closing message. The text sent to the group is part of the product.
+6. **The Fiesta screen does not say what is next.** It repeats identity and
+   hero content, but the main action is hidden in another tab.
+7. **Minimal audit trail is missing.** An expense does not say who created it or
+   when it was touched. Deleting a purchase is implicit behind edit flow, not an
+   explicit confirmation. Money workflows need inspectability to build trust.
 
-## Lecciones del mercado (condensadas)
+## Market Lessons
 
-- **Tricount** (21 M usuarios): gana por «todos ven lo mismo y todos pueden
-  añadir», no por multidivisa. Es exactamente lo que nos falta.
-- **Splitwise**: enseña hacia dónde NO crecer en el primer nivel (categorías,
-  recurrentes, IOUs…). Copiar la claridad de balances, no la densidad.
-- **Settle Up**: «quién paga ahora» encaja de lleno con lista de compra de
-  fiesta — reparte la carga durante, en vez de ajustar después. P1 claro.
-- **Splid**: la referencia de pacto mental — sin cuenta, local si no hay red,
-  compartido cuando la hay. Nuestro norte de arquitectura.
-- **Spliit**: hasta el minimalista open source tiene grupos compartidos.
-  «Sin backend» ya no es diferencial; «sin cuentas» sí.
-- **Tab**: OCR de tickets solo tiene sentido cuando el problema son tickets
-  de bar largos y repetidos. No es nuestro caso todavía.
-- **Google Pay split**: la fricción de pago en España es Bizum, y no tiene
-  API. El valor está en dejar claro «tu único bizum es X a Y» y dar el texto
-  hecho. No perseguir integraciones.
+- **Tricount**: wins because everyone sees the same thing and everyone can add,
+  not because of multicurrency. That is exactly what A Pachas lacks.
+- **Splitwise**: shows where not to grow first: categories, recurring expenses,
+  IOUs. Copy balance clarity, not density.
+- **Settle Up**: "who pays now" fits party shopping lists: spread the burden
+  during the party instead of adjusting after. Clear P1.
+- **Splid**: the mental model reference: no account, local if offline, shared
+  when online. This is the architecture north star.
+- **Spliit**: even the minimal open-source option has shared groups. "No
+  backend" is no longer the differentiator; "no accounts" still is.
+- **Tab**: receipt OCR only matters when the problem is long repeated bar
+  receipts. Not the current case.
+- **Google Pay split**: in Spain, payment friction is Bizum and there is no
+  official API. The value is telling someone "your only Bizum is X to Y" and
+  giving them copyable text. Do not chase unofficial integrations.
 
-Sobre WhatsApp: es la puerta y el megáfono, no la superficie de edición.
-Business Platform y Flows exigen cuenta business, plantillas aprobadas,
-webhooks y servidor serio — fase 3 como pronto. El MVP correcto es enlace
-corto + mensajes prerellenados impecables (`navigator.share` y `wa.me`).
+WhatsApp is the door and loudspeaker, not the editing surface. Business Platform
+and Flows require a business account, approved templates, webhooks, and a more
+serious server. That is phase 3 at earliest. The MVP is short live links plus
+excellent prefilled messages through `navigator.share` and `wa.me`.
 
-## Decisiones
+## Decisions
 
-### D1. Fiesta viva por enlace, con backend mínimo propio
+### D1. Live Party by Link, With a Minimal Owned Backend
 
-Se acaba el snapshot: una fiesta compartida vive en el servidor y el enlace
-corto la referencia. Sin cuentas, sin usuarios, sin base de datos: un JSON
-por fiesta.
+Snapshots end: a shared party lives on the server and the short link references
+it. No accounts, no users, no database: one JSON document per party.
 
-- **API de un solo fichero** (`server/api.js`, Node ≥18 sin dependencias,
-  igual que el frontend es un solo HTML): `POST /api/fiestas` (crear),
-  `GET /api/fiestas/:id` (leer, con `?rev=` para abaratar el sondeo),
-  `PUT /api/fiestas/:id` (guardar con control de revisión: 409 si llegas
-  viejo, 403 sin clave de escritura).
-- **Enlace**: `https://collados.alexdepablos.es/#F:<id>:<clave>`. Va en el
-  *hash*, así que ni nginx ni Cloudflare ven la clave en logs. Quien tiene el
-  enlace puede editar (mismo modelo de confianza que hoy); las acciones
-  delicadas siguen siendo de la llave, dentro de la app.
-- **El modo local no muere**: sin red, o si el servidor no está, la app
-  funciona exactamente como hoy (localStorage + enlaces `AP1:` como copia).
-  Una fiesta local se puede «poner en vivo» en un toque; los enlaces `AP1:`
-  y `EB1:` antiguos se siguen importando.
-- **Sincronización sin lenguaje técnico**: subir con retardo de medio
-  segundo tras cada cambio; bajar al abrir, al volver a la app y cada ~12 s;
-  «Al día hace un momento» como único indicador. Si no hay red: «Sin red;
-  tus cambios se subirán solos» — y se suben.
-- **Conflictos**: fusión por entidad (última escritura gana por `mod`
-  timestamp; borrados con papelera de ids para que no resuciten). Con una
-  peña de 5–15 personas y ediciones que son casi siempre añadir, esto
-  sobra; nada de pedirle al usuario que entienda versiones.
+- **Single-file API**: `server/api.js`, Node >=18, no dependencies, matching the
+  one-file frontend. Endpoints: `POST /api/fiestas` to create,
+  `GET /api/fiestas/:id` to read with `?rev=` for cheap polling, and
+  `PUT /api/fiestas/:id` to save with optimistic revision control.
+- **Link**: `https://collados.alexdepablos.es/#F:<id>:<key>`. The key lives in
+  the hash, so nginx and Cloudflare never see it in logs. Anyone with the link
+  can edit, matching the current trust model; sensitive actions remain guarded
+  by "la llave" inside the app.
+- **Local mode stays alive**: if the network or server is down, the app keeps
+  working as before through localStorage and `AP1:` snapshot links. A local
+  party can be made live in one tap. Legacy `AP1:` and `EB1:` links still
+  import.
+- **No technical sync language**: upload shortly after each change; download on
+  open, when the app becomes visible, and about every 12 seconds. User-facing
+  status is "al día hace un momento". If offline, say changes are saved and will
+  upload themselves.
+- **Conflicts**: entity-level merge; latest edit wins by `mod`, and tombstones
+  prevent deleted entities from coming back. For a 5-15 person group where most
+  edits are additions, this is enough. Do not ask users to understand versions.
 
-Tradeoff asumido: deja de ser 100 % estático. A cambio, el stack sigue
-siendo «dos ficheros de producto» (un HTML, un JS de servidor) y el
-despliegue el mismo `compose up`. Es el cambio con más retorno de todo el
-documento; lo demás son mejoras alrededor.
+Tradeoff: the product is no longer 100% static. In exchange, it remains "two
+product files" (one HTML, one server JS) with the same Compose deployment. This
+is the highest-return change in the spec.
 
-### D2. Un solo modelo de item, no dos colecciones
+### D2. One Item Model, Not Two Collections
 
-El análisis original proponía separar `shoppingItems` de `expenses`. **No.**
-El modelo actual (`item.estado: pendiente | pillada | comprada`) ya modela
-el ciclo planificación → gasto con un solo objeto, y es la ventaja propia de
-A Pachas: la lista y las cuentas son la misma cosa vista en dos momentos.
-Un «gasto directo» es simplemente un item que nace `comprada`. Separar
-colecciones duplicaría UI, merge y migración sin ganancia a esta escala.
+The original analysis proposed separate `shoppingItems` and `expenses`. Do not
+do that. The existing model, `item.estado: pendiente | pillada | comprada`,
+already captures planning -> expense with a single object. That is A Pachas'
+own advantage: the list and accounts are the same thing seen at two moments. A
+direct expense is simply an item born `comprada`. Splitting collections would
+duplicate UI, merge logic, and migration without enough benefit at this scale.
 
-### D3. Gasto rápido como acción principal
+### D3. Quick Expense as a Primary Action
 
-Sheet único de gasto para los tres casos (gasto directo, marcar item de la
-lista como comprado, editar compra): concepto + precio + «pagó» (yo por
-defecto, cualquiera puede cambiarlo — se quita la restricción de llave al
-elegir pagador) + «quiénes la catan» (todos por defecto). Guardar un gasto
-entre todos = 4 acciones: botón, concepto, precio, guardar.
+Use one expense sheet for direct expense, marking a list item as bought, and
+editing a purchase: concept, price, payer, and consumers. Default payer is the
+current user, but anyone can change it. Consumers default to everyone. Saving a
+shared expense should take four actions: button, concept, price, save.
 
-### D4. Cuentas que responden primero «¿y yo qué?»
+### D4. Accounts Answer "What About Me?" First
 
-Arriba del todo, tu situación: «Estás en paz» / «Debes 12,40 €» / «Te deben
-8,10 €», con el desglose que la explica (pagaste X, te tocaba Y) y tu acción
-concreta (a quién haces bizum / quién te lo debe). El «por cabeza» solo se
-enseña cuando todas las compras son entre todos; si hay consumos parciales
-se sustituye por «repartido según quién cata cada cosa». Total, bizums de
-todos y compartir siguen debajo.
+The top of Accounts shows the current user's status: "Estás en paz", "Debes
+12,40 EUR", or "Te deben 8,10 EUR", with the explanatory breakdown and concrete
+action. "Per head" appears only when every purchase is consumed by everyone; if
+there are partial consumptions, replace it with "repartido según quién cata cada
+cosa". Total, everyone's Bizums, and share remain below.
 
-### D5. Kit de mensajes WhatsApp por momento
+### D5. Moment-Specific WhatsApp Kit
 
-Cuatro mensajes, escritos para que el grupo actúe sin preguntar, con vista
-previa antes de mandar y botón WhatsApp (`wa.me`) además de compartir/copiar:
+Four messages, written so the group can act without asking, with preview before
+send, WhatsApp button, native share, and copy:
 
-1. **Invitación** (al crear y desde Fiesta/Peña): entra, di quién eres,
-   apunta lo que pilles.
-2. **Faltan cosas** (desde Lista, si hay pendientes): lista de lo que no
-   tiene dueño + enlace.
-3. **Cuentas** (desde Cuentas): total, bizums con ✓/·, «marca el tuyo cuando
-   lo hagas» + enlace. Si está todo saldado, mensaje de cierre.
-4. **Recordatorio individual** (desde la ficha de persona): lo que le toca
-   traer y/o el bizum que le sale.
+1. **Invite**: enter, say who you are, record what you buy.
+2. **Missing items**: list unowned items and link.
+3. **Accounts**: total, Bizums with check/dot state, "marca el tuyo cuando lo
+   hagas", and link. If settled, closing message.
+4. **Individual reminder**: what the person should bring and/or their Bizum.
 
-### D6. Fiesta → Inicio accionable
+### D6. Fiesta Becomes Actionable Home
 
-Dentro de una fiesta el hero grande sobra (ya sabes dónde estás). La
-pantalla pasa a: card de la fiesta con estado de sincronización y «Mandar al
-grupo» + card «¿Qué toca?» con LA acción según el estado (lista vacía →
-apuntar lo que falta; cosas sin dueño → resolverlas; si no → apuntar gasto;
-bizums pendientes → a cuentas) + tu saldo en una línea + identidad y enlaces
-de siempre. El hero completo queda para la entrada sin fiesta.
+Inside a party, the large hero is redundant. The screen becomes: party card with
+sync status and "Mandar al grupo"; "¿Qué toca?" card with exactly one action
+based on state; the current user's balance; identity; and existing links. The
+full hero remains only for the entry state without a party.
 
-### D7. Historial mínimo, no contabilidad
+### D7. Minimal History, Not Accounting
 
-Cada item guarda quién lo apuntó y cuándo, y quién lo tocó por última vez;
-el sheet de edición lo enseña en una línea. Borrar una compra con precio
-pide confirmación explícita. Nada de feed de actividad en P0.
+Each item stores who created it and when, plus who last touched it. The edit
+sheet shows that in one line. Deleting a priced purchase asks for explicit
+confirmation. No activity feed in P0.
 
-## Especificación P0
+## P0 Specification
 
-Todo lo de esta sección se implementa ya (rama de esta iteración).
+Everything in this section is implemented by this branch.
 
-### Modelo de datos (v4, evolución del actual)
+### Data Model, v4
+
+Persisted field names stay in Spanish for compatibility. Do not rename them
+without a migration.
 
 ```js
-// Compartido (viaja al servidor y en enlaces):
+// Shared: sent to the server and encoded in links.
 {
   v: 4,
-  fiesta: { nombre, fecha, mod },          // mod: ms epoch de última edición
+  fiesta: { nombre, fecha, mod },          // mod is last-edit ms epoch
   gente:  [{ id, nombre, admin, mod }],
   items:  [{
     id, nombre,
     estado: 'pendiente' | 'pillada' | 'comprada',
-    pilladorId?,                            // solo pillada
-    precio?, compradorId?, consumen?,       // solo comprada; consumen null = todos
+    pilladorId?,                            // only for pillada
+    precio?, compradorId?, consumen?,       // only for comprada; null consumers = everyone
     creadoEn?, creadoPor?, mod, modPor?,
   }],
-  saldados: { 'pDe>pA': { hecho, t, por } },  // se acepta `true` legado
-  papelera: [{ id, t }],                       // tombstones de gente e items
+  saldados: { 'pDe>pA': { hecho, t, por } }, // legacy true is accepted
+  papelera: [{ id, t }],                     // people/item tombstones
 }
-// Solo local (nunca se sube): yo, tab, remota: { id, clave, rev }
+// Local only, never uploaded: yo, tab, remota: { id, clave, rev }
 ```
 
-Migración v3→v4 al cargar/importar: `mod: 0`, `saldados[k] === true` →
-`{hecho: true, t: 0}`, `papelera: []`. La clave de localStorage sigue siendo
-`a-pachas-v1` y los enlaces `AP1:`/`EB1:` se siguen aceptando (y generando
-como copia de seguridad en modo local). Los enlaces `AP1:` nuevos (v4) los
-abre también la app vieja: mismas formas, campos extra ignorados.
+v3 -> v4 migration on load/import: `mod: 0`, `saldados[k] === true` becomes
+`{hecho: true, t: 0}`, and `papelera: []`. The localStorage key remains
+`a-pachas-v1`. `AP1:` and `EB1:` links remain accepted, and `AP1:` links are
+generated as local-mode backups. New v4 `AP1:` links also open in old cached
+clients because they preserve shape and extra fields are ignored.
 
 ### API
 
-- `POST /api/fiestas` body `{estado}` → `201 {id, clave, rev:1}`.
-- `GET /api/fiestas/:id[?rev=n]` → `200 {rev, estado, updatedAt}` o `204`
-  (sin cambios; 204 y no 304 porque `fetch` lo trata mejor).
-- `PUT /api/fiestas/:id` body `{clave, rev, estado}` →
-  `200 {rev}` · `409 {rev, estado}` (revisión vieja: fusiona y reintenta) ·
-  `403` (clave mala) · `404` · `413`/`400` (el cliente avisa y no reintenta
-  a ciegas).
-- `GET /api/salud` → `200` (healthcheck).
-- Guardarraíles: JSON ≤ 256 KB, validación de forma mínima, ids de 10
-  caracteres generados con crypto, escritura atómica (tmp + rename), rate
-  limit best-effort por IP (leer barato, escribir caro: la peña entera
-  comparte la IP del WiFi del pueblo), tope global de fiestas en disco, y
-  ni contenido ni ids de fiestas en logs (el id solo ya da lectura).
-  Fiestas sin tocar 8 meses se purgan.
-- Despliegue: contenedor `api` (node:22-alpine, sin npm install) en el
-  compose existente; nginx pasa `/api/` al contenedor y lo demás sigue
-  siendo estático. En local `node server/api.js` sirve también `public/`
-  para probar todo junto.
+- `POST /api/fiestas` body `{estado}` -> `201 {id, clave, rev:1}`.
+- `GET /api/fiestas/:id[?rev=n]` -> `200 {rev, estado, updatedAt}` or `204`.
+  Use 204, not 304, because `fetch` handles it more cleanly here.
+- `PUT /api/fiestas/:id` body `{clave, rev, estado}` -> `200 {rev}`,
+  `409 {rev, estado}`, `403`, `404`, `413`, or `400`.
+- `GET /api/salud` -> `200`.
+- Guardrails: JSON <= 256 KB, strict shape validation, crypto IDs, atomic
+  tmp+rename writes, best-effort rate limit by IP, global party cap on disk, and
+  no party content or IDs in logs. The party ID alone grants read access.
+  Untouched parties are purged after eight months.
+- Deployment: `api` container with `node:22-alpine`, no npm install, in the
+  existing Compose project. nginx proxies `/api/` and continues serving static
+  files. Locally, `node server/api.js` serves both API and `public/`.
 
-### Criterios de aceptación
+### Acceptance Criteria
 
-1. **Fiesta viva**: Edu apunta «Hielo 6 €» en su móvil; Marta abre el enlace
-   del grupo (el mismo de hace tres días) y ve el gasto sin que nadie
-   reenvíe nada. Cinco personas editan la misma fiesta desde móviles
-   distintos sin pisarse.
-2. **Gasto rápido**: con identidad elegida, apuntar un gasto entre todos =
-   4 acciones. Errores con la voz de la casa («Pon qué fue», «Ponle precio,
-   que gratis no fue»).
-3. **Lista**: sigue igual de simple (apuntar, me lo pido, asignar con
-   llave, ya comprada) y separa visualmente pendientes de compradas.
-4. **Cuentas**: lo primero que ves es tu situación y tu acción. Por cabeza
-   solo cuando es verdad.
-5. **WhatsApp**: los 4 mensajes salen con vista previa, share nativo, botón
-   WhatsApp y copiar como último recurso.
-6. **Sin red / sin servidor**: la app no se rompe; guarda local, avisa una
-   vez y sube sola al volver la red.
-7. **Compatibilidad**: un enlace `AP1:` viejo se importa; una fiesta local
-   existente se pone en vivo en un toque; la demo nunca se sube al servidor.
+1. **Live party**: Edu records "Hielo 6 EUR" on his phone; Marta opens the same
+   group link from three days ago and sees it without anyone resending. Five
+   people edit the same party from different phones without overwriting each
+   other.
+2. **Quick expense**: with identity selected, recording a shared expense takes
+   four actions. Errors use product voice: "Pon qué fue", "Ponle precio, que
+   gratis no fue".
+3. **List**: stays simple: add, claim, assign with key, mark bought. Pending and
+   bought items are visually separated.
+4. **Accounts**: first thing visible is the user's own status and action. "Per
+   head" appears only when true.
+5. **WhatsApp**: all four messages have preview, native share, WhatsApp button,
+   and copy fallback.
+6. **Offline / no server**: the app does not break; it saves locally, warns
+   once, and uploads when network returns.
+7. **Compatibility**: an old `AP1:` link imports; an existing local party can go
+   live in one tap; the demo never uploads.
 
-## P1 — siguiente tanda (no en esta rama)
+## P1, Next Batch
 
-1. **«Quién paga ahora»** (Settle Up): al ir a comprar, sugerir que pague
-   quien menos lleva puesto. Barato encima del saldo ya calculado.
-2. **Foto de ticket** (sin OCR): comprimida en cliente, miniatura en el
-   gasto. Sube confianza y corta discusiones. Requiere decidir subida al
-   backend (multipart o base64 con tope).
-3. **Enlace de solo lectura** (sin clave de escritura en el hash) para
-   mandar cuentas a quien no debe tocar.
-4. **Cantidades exactas por consumidor** (el bar: cada uno lo suyo) —
-   plegado tras «más opciones», nunca en el flujo básico.
-5. **Varias fiestas por móvil**: archivo, duplicar fiesta anterior
-   («la caldereta del año pasado»), borrar local.
-6. **Plantillas de lista** (caldereta, barbacoa, cumpleaños…): matan la
-   pantalla en blanco y refuerzan la especificidad de pueblo.
+1. **Who pays now**: suggest that the person who has paid least should pay the
+   next purchase.
+2. **Receipt photo without OCR**: client-compressed thumbnail on the expense.
+   Raises trust and reduces arguments. Requires choosing backend upload shape.
+3. **Read-only link**: no write key in the hash, for sending accounts to people
+   who should not edit.
+4. **Exact per-consumer amounts**: useful for bar tabs; hidden behind "more
+   options", never in the default flow.
+5. **Multiple parties per phone**: archive, duplicate last year's party, delete
+   local copy.
+6. **List templates**: stew, barbecue, birthday. They remove the blank state and
+   reinforce the village-party specificity.
 
-## P2 — apuestas (solo con uso real demostrado)
+## P2 Bets
 
-- OCR / AI scan de tickets; parser de texto pegado del chat.
-- Bot o Flows de WhatsApp (exigen Business Platform: plantillas,
-  webhooks, número dedicado — no antes de tener hábito y backend rodado).
-- Exportación bonita (imagen vertical para el grupo, CSV de respaldo).
+- OCR or AI scan of receipts; parser for pasted chat text.
+- WhatsApp bot or Flows. Requires Business Platform, templates, webhooks, and a
+  dedicated number. Not before there is real habit and backend confidence.
+- Nice export: vertical image for the group, backup CSV.
 
-## Qué NO haremos
+## Non-Goals
 
-- Cuentas de usuario, emails, teléfonos. Nunca en P0–P1.
-- Categorías, multidivisa, gastos recurrentes, comentarios (densidad
-  Splitwise que esta escala no paga).
-- Integración Bizum por deep links no oficiales (frágil); el texto copiable
-  con importe y destinatario es suficiente.
-- Frameworks o build en el frontend; npm install en el backend.
+- User accounts, email, or phone numbers. Never in P0-P1.
+- Categories, multicurrency, recurring expenses, comments. Splitwise density is
+  not worth it at this scale.
+- Unofficial Bizum deep links. Too fragile; copyable text with amount and
+  recipient is enough.
+- Frontend framework or build step; npm install on the backend.
 
-## Riesgos y mitigaciones
+## Risks and Mitigations
 
-- **El backend rompe la magia de «sin infra»** → un fichero, un JSON por
-  fiesta, cero dependencias; el modo local sigue existiendo entero; enlaces
-  `AP1:` siguen sirviendo de backup manual.
-- **Cualquiera con el enlace edita** → aceptable para peñas (modelo actual);
-  destructivo sigue tras la llave; solo-lectura en P1; ids no adivinables y
-  la clave nunca llega al servidor web en claro por ir en el hash.
-- **Conflictos de edición** → fusión por entidad con última-escritura-gana y
-  papelera; el peor caso realista (dos editan el mismo precio a la vez) se
-  resuelve en el orden de llegada y se puede corregir en un toque.
-- **El server es compartido con la porra del Mundial** → el stack `collados`
-  sigue aislado; el api añade un contenedor a ese proyecto y nada más; los
-  guardarraíles de docs/despliegue.md se mantienen.
+- **Backend breaks the "no infra" magic**: one file, one JSON per party, zero
+  dependencies; full local mode remains; `AP1:` links remain manual backup.
+- **Anyone with the link can edit**: acceptable for village groups and matches
+  the current trust model. Destructive actions remain behind "la llave";
+  read-only links are P1; IDs are not guessable and the key stays in the hash.
+- **Edit conflicts**: entity merge with last-write-wins and tombstones. The
+  realistic worst case, two people editing the same price, resolves by arrival
+  order and can be corrected in one tap.
+- **Server is shared with the World Cup pool**: the `collados` stack remains
+  isolated; the API only adds one container to that project. Guardrails in
+  `docs/despliegue.md` remain active.
 
-## Métricas (sin analítica invasiva)
+## Metrics Without Invasive Analytics
 
-De momento, las que salen gratis de los logs del api (que redactan el id de
-la fiesta): fiestas creadas (201), volumen de escrituras (PUT 200), 409
-(¿molestan los conflictos?) y sondeos baratos (204). Nada de nombres,
-contenido ni ids. Si algún día hace falta más, eventos anónimos y opt-out.
+For now, use what API logs provide for free while redacting party IDs: parties
+created (201), write volume (PUT 200), 409s, and cheap polls (204). No names,
+content, or IDs. If more is needed later, use anonymous events with opt-out.
 
-## Apéndice — correcciones al análisis original
+## Appendix: Corrections to the Original Analysis
 
-Errores o imprecisiones del documento de Codex que conviene dejar anotados:
-
-1. **El flujo de unirse que propone como nuevo ya existe** tal cual: sheet
-   «¿Quién eres?» con pills de personas + «apúntate» + posibilidad de mirar
-   sin elegir. No hay nada que construir ahí salvo mantenerlo.
-2. **Proponía separar `shoppingItems` de `expenses`** — descartado (ver D2):
-   el estado `pendiente|pillada|comprada` ya une planificación y gasto, y
-   esa unión es justo el diferencial frente a Tricount.
-3. **«El gasto directo está escondido»** es cierto, pero el dato exacto es:
-   son dos pasos (apuntar + «ya comprada») y además el pagador solo lo puede
-   cambiar la llave — esa restricción también hay que quitarla, no solo
-   añadir el botón.
-4. **«Por cabeza» hoy es engañoso de verdad**: se calcula total ÷ toda la
-   peña aunque haya compras con consumidores parciales (la demo misma lo
-   enseña mal: el barril no lo catan todos).
-5. **Sugería `paidBy: [..]` (multi-pagador) en el modelo** — fuera de P0;
-   complica el merge y la UI para un caso raro en peña (se apuntan dos
-   gastos y listo).
-6. **Navegación**: proponía valorar quitar la tab Peña. Se queda: es donde
-   viven saldos por persona, la llave y las fichas; lo que cambia es que
-   Cuentas ya no te obliga a pasar por ella para saber lo tuyo.
-7. Lo que el análisis clava y este documento asume entero: fiesta viva como
-   cambio nº 1, WhatsApp como megáfono y no como editor, mensajes por
-   momento, cuentas centradas en «tu cuenta», nada de OCR/bot/Flows en MVP.
+1. The proposed join flow already exists: "¿Quién eres?" sheet with person
+   pills, "apúntate", and the ability to inspect without choosing. Keep it.
+2. Splitting `shoppingItems` and `expenses` is rejected by D2. The current
+   `pendiente|pillada|comprada` state already unifies planning and expense.
+3. Direct expense is not just hidden; it currently takes two steps and only the
+   key holder can change payer. Both problems must be fixed.
+4. "Per head" is truly misleading today: it divides total by the whole group
+   even when purchases have partial consumers. The demo itself shows this.
+5. `paidBy: [...]` multi-payer is out of P0. It complicates merge and UI for a
+   rare village-party case; record two expenses instead.
+6. Keep the Peña tab. It owns per-person balances, key-holder management, and
+   person sheets. Accounts simply stops forcing users through it to know their
+   own status.
+7. The original analysis was right about: live party as the top change,
+   WhatsApp as loudspeaker rather than editor, moment-specific messages,
+   "your account" first, and no OCR/bot/Flows in the MVP.

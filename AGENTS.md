@@ -1,4 +1,4 @@
-# CLAUDE.md — A Pachas
+# AGENTS.md — A Pachas
 
 A Pachas is a single-page app for splitting party expenses among the Collado
 Hermoso crew. There is no build step, no framework, and no dependency install:
@@ -11,15 +11,13 @@ the whole frontend lives in `public/index.html` and the whole backend lives in
 - `server/api.js` — the shared-party API: create/read/save with optimistic
   revisions; in local development it also serves `public/`.
 - `docs/producto.md` — product specification: diagnosis, decisions, P0
-  acceptance criteria, and backlog. Read it before changing functionality.
+  acceptance criteria, and backlog.
 - `docs/diseno.md` — identity and UI rules: logo, exact tokens, typography,
-  user-facing voice, and screen structure. Read it before touching styles or
-  product copy.
+  user-facing voice, and screen structure.
 - `compose.yaml` — server stack: nginx, API, and cloudflared.
 - `deployment/nginx/default.conf` — nginx static serving plus `/api/` proxy.
 - `scripts/deploy.sh` — one-command deployment from the Mac.
-- `docs/despliegue.md` — infrastructure runbook. Read it before touching the
-  server.
+- `docs/despliegue.md` — infrastructure runbook.
 
 ## Language Policy
 
@@ -40,23 +38,19 @@ the whole frontend lives in `public/index.html` and the whole backend lives in
    explicitly asks for it. The only agreed exception is Google Fonts, with a
    system fallback.
 2. Preserve data compatibility. The localStorage key is `a-pachas-v1`; legacy
-   `el-bote-proto-*` keys migrate. Live links use `#F:id:key` and keep the key
-   in the hash so it does not reach logs. Local snapshot links use `AP1:` and
-   legacy `EB1:` remains accepted. v3 state migrates to v4 in `migrar()`. Do
-   not break any of this without a migration.
+   `el-bote-proto-*` keys migrate. Live links use `#F:id:key`; local snapshot
+   links use `AP1:` and legacy `EB1:` remains accepted. Do not break these
+   without a migration.
 3. Local mode must keep working. If the API is unavailable, the app remains
-   usable from localStorage and explains the situation without technical
-   jargon. Do not mention sync, revisions, or conflicts in user-facing copy.
+   usable from localStorage and explains the situation without technical jargon.
 4. The deployment server is shared with the World Cup pool production app. Do
    not touch the `current` or `staging` stacks.
-5. Cloudflare tunnel credentials never enter the repo. Shared-party data lives
-   in the `api-data` volume and must not be logged.
+5. Cloudflare tunnel credentials never enter the repo.
 6. Verify before declaring work done. Run the local app with `node
-   server/api.js` and test the full mobile flow: create, join by link from
-   another client, list, quick expense, bought item with price and consumers,
-   Bizums, and share messages. After deployment, confirm
-   `https://collados.alexdepablos.es` responds; `scripts/deploy.sh` already
-   checks web and API health.
+   server/api.js` and test the full mobile flow: create, join by link, list,
+   quick expense, bought item with price and consumers, Bizums, and share
+   messages. After deployment, confirm `https://collados.alexdepablos.es`
+   responds; `scripts/deploy.sh` already checks web and API health.
 
 ## Testing
 
@@ -66,17 +60,11 @@ Local live-party mode:
 node server/api.js
 ```
 
-Open `http://localhost:8010`; it serves both `public/` and the API. Data is
-stored under `server/data/`, which is ignored by git.
-
-Frontend-only local mode:
+Open `http://localhost:8010`. For frontend-only local mode:
 
 ```sh
 python3 -m http.server -d public
 ```
 
-Test on a mobile viewport around 390px wide. "Ver una fiesta de ejemplo" loads
-demo data and must never upload it to the server. A second client can be
-simulated with `curl` against `/api/fiestas/:id` or by opening the `#F:...`
-link in another tab/profile. There is no automated test suite; verification is
-browser-based.
+Test on a mobile viewport around 390px wide. There is no automated test suite;
+verification is browser-based.
