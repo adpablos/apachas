@@ -1,11 +1,11 @@
-# Copy this file to /etc/collados-party/cloudflared/config.yml on the server
-# and replace <tunnel-id> with the real "collados" tunnel id.
+# Copy this file to /etc/apachas/cloudflared/config.yml on the server
+# and replace <tunnel-id> with the real "apachas" tunnel id.
 # The tunnel JSON credentials live in the same directory.
 tunnel: <tunnel-id>
 credentials-file: /etc/cloudflared/<tunnel-id>.json
 protocol: quic
 
 ingress:
-  - hostname: collados.alexdepablos.es
+  - hostname: apachas.alexdepablos.es
     service: http://web:80
   - service: http_status:404

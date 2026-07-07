@@ -80,7 +80,7 @@ it. No accounts, no users, no database: one JSON document per party.
   one-file frontend. Endpoints: `POST /api/parties` to create,
   `GET /api/parties/:id` to read with `?rev=` for cheap polling, and
   `PUT /api/parties/:id` to save with optimistic revision control.
-- **Link**: `https://collados.alexdepablos.es/#F:<id>:<key>`. The key lives in
+- **Link**: `https://apachas.alexdepablos.es/#F:<id>:<key>`. The key lives in
   the hash, so nginx and Cloudflare never see it in logs. Anyone with the link
   can edit, matching the current trust model; sensitive actions remain guarded
   by "la llave" inside the app.
@@ -172,7 +172,7 @@ Everything in this section is implemented by this branch.
 // Local only, never uploaded: me, tab, remote: { id, key, rev }, pendingUpload
 ```
 
-The localStorage key remains `a-pachas-v1`. `AP2:` links are generated as
+The localStorage key remains `a-pachas-v2`. `AP2:` links are generated as
 local-mode backups. The app does not accept Spanish payload aliases.
 
 ### API
@@ -252,7 +252,7 @@ local-mode backups. The app does not accept Spanish payload aliases.
 - **Edit conflicts**: entity merge with last-write-wins and tombstones. The
   realistic worst case, two people editing the same price, resolves by arrival
   order and can be corrected in one tap.
-- **Server is shared with the World Cup pool**: the `collados` stack remains
+- **Server is shared with the World Cup pool**: the `apachas` stack remains
   isolated; the API only adds one container to that project. Guardrails in
   `docs/deployment.md` remain active.
 

@@ -1,8 +1,8 @@
 # Server stack: nginx serves public/ and proxies /api/ to the api container for
-# shared parties; cloudflared exposes it at https://collados.alexdepablos.es.
+# shared parties; cloudflared exposes it at https://apachas.alexdepablos.es.
 # Intended for the Hetzner server. For local development, `node server/api.js`
 # is enough. See docs/deployment.md.
-name: collados
+name: apachas
 
 services:
   web:
@@ -49,7 +49,7 @@ services:
     user: "0:0"
     command: tunnel --config /etc/cloudflared/config.yml run
     volumes:
-      - ${COLLADOS_CLOUDFLARED_CONFIG_DIR:-/etc/collados-party/cloudflared}:/etc/cloudflared:ro
+      - ${APACHAS_CLOUDFLARED_CONFIG_DIR:-/etc/apachas/cloudflared}:/etc/cloudflared:ro
     depends_on:
       web:
         condition: service_healthy

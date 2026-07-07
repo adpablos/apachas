@@ -27,7 +27,7 @@
     --coralsoft:#FDE8E8;
     --chip:#EFF1F6;
     --shadow:0 1px 2px rgba(16,18,24,.04);
-    --velo:rgba(13,15,22,.5);
+    --overlay:rgba(13,15,22,.5);
     --radius:16px;
     --display:'Bricolage Grotesque',system-ui,-apple-system,sans-serif;
     --text:'Instrument Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
@@ -37,20 +37,20 @@
       --bg:#101218; --card:#191C25; --ink:#EDEFF6; --muted:#99A0B4; --line:#2A2E3C;
       --primary:#9D96FF; --onprimary:#1B1747; --primarysoft:#2A2750;
       --green:#45D48F; --greensoft:#17362A; --coral:#FF8080; --coralsoft:#3D2226;
-      --chip:#242836; --shadow:none; --velo:rgba(13,15,22,.5);
+      --chip:#242836; --shadow:none; --overlay:rgba(13,15,22,.5);
     }
   }
   :root[data-theme="light"]{
     --bg:#F5F6FA; --card:#FFFFFF; --ink:#171A21; --muted:#6A7186; --line:#E6E8F0;
     --primary:#5A50EC; --onprimary:#FFFFFF; --primarysoft:#ECEAFE;
     --green:#0E9256; --greensoft:#DCF5E7; --coral:#E5484D; --coralsoft:#FDE8E8;
-    --chip:#EFF1F6; --shadow:0 1px 2px rgba(16,18,24,.04); --velo:rgba(13,15,22,.5);
+    --chip:#EFF1F6; --shadow:0 1px 2px rgba(16,18,24,.04); --overlay:rgba(13,15,22,.5);
   }
   :root[data-theme="dark"]{
     --bg:#101218; --card:#191C25; --ink:#EDEFF6; --muted:#99A0B4; --line:#2A2E3C;
     --primary:#9D96FF; --onprimary:#1B1747; --primarysoft:#2A2750;
     --green:#45D48F; --greensoft:#17362A; --coral:#FF8080; --coralsoft:#3D2226;
-    --chip:#242836; --shadow:none; --velo:rgba(13,15,22,.5);
+    --chip:#242836; --shadow:none; --overlay:rgba(13,15,22,.5);
   }
 
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -69,7 +69,7 @@
   :focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 
   /* ---------- theme button ---------- */
-  #btnTema{
+  #themeButton{
     /* absolute instead of fixed: it scrolls with the page instead of floating
        over cards. */
     position:absolute;top:14px;right:14px;z-index:50;
@@ -77,32 +77,32 @@
     background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;
     color:var(--muted);
   }
-  #btnTema svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;
+  #themeButton svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;
     stroke-linecap:round;stroke-linejoin:round}
 
   /* ---------- screen headers ---------- */
-  .cabecera{margin:18px 2px 16px}
-  .cabecera h1{font-family:var(--display);font-size:26px;font-weight:700;margin:0;line-height:1.15}
-  .cabecera .sub{color:var(--muted);font-size:13px;margin-top:3px}
+  .screen-header{margin:18px 2px 16px}
+  .screen-header h1{font-family:var(--display);font-size:26px;font-weight:700;margin:0;line-height:1.15}
+  .screen-header .sub{color:var(--muted);font-size:13px;margin-top:3px}
 
   /* ---------- party hero ---------- */
   .hero{text-align:center;padding:34px 0 6px}
   .hero .logo{color:var(--primary)}
   .hero .logo svg{width:76px;height:76px}
   .hero h1{font-family:var(--display);font-weight:800;font-size:34px;letter-spacing:-.5px;margin:10px 0 6px}
-  .hero .lema{color:var(--muted);font-size:14px;line-height:1.5;margin:0 auto 24px;max-width:34ch}
+  .hero .tagline{color:var(--muted);font-size:14px;line-height:1.5;margin:0 auto 24px;max-width:34ch}
 
   /* ---------- common ---------- */
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
     padding:14px;margin-bottom:10px;box-shadow:var(--shadow)}
   .label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
     color:var(--muted);display:block;margin:16px 0 7px}
-  .card .label:first-child, .campo .label{margin-top:0}
+  .card .label:first-child, .field .label{margin-top:0}
   .btn{border:none;border-radius:11px;padding:12px 16px;font-size:15px;font-weight:600;cursor:pointer}
   .btn-primary{background:var(--primary);color:var(--onprimary)}
   .btn-green{background:var(--green);color:var(--onprimary)}
   .btn-soft{background:var(--primarysoft);color:var(--primary)}
-  .btn-borde{background:var(--card);border:1px solid var(--line);color:var(--ink)}
+  .btn-outline{background:var(--card);border:1px solid var(--line);color:var(--ink)}
   .btn-mini{padding:8px 13px;font-size:13.5px;border-radius:9px}
   .btn-block{width:100%}
   .quiet-link{background:none;border:none;color:var(--muted);font-size:13px;font-weight:500;
@@ -115,10 +115,10 @@
   input:focus,textarea:focus{outline:none;border-color:var(--primary)}
   input[type=date]{min-height:47px}
   textarea{resize:vertical;min-height:90px}
-  .fila-add{display:flex;gap:8px;margin-bottom:14px}
-  .fila-add input{flex:1;min-width:0}
-  .campo{margin-bottom:16px}
-  .vacio{text-align:center;color:var(--muted);padding:36px 20px;font-size:14px;line-height:1.6}
+  .add-row{display:flex;gap:8px;margin-bottom:14px}
+  .add-row input{flex:1;min-width:0}
+  .field{margin-bottom:16px}
+  .empty-state{text-align:center;color:var(--muted);padding:36px 20px;font-size:14px;line-height:1.6}
   .avatar{
     width:40px;height:40px;border-radius:999px;background:var(--primarysoft);flex:none;
     display:inline-flex;align-items:center;justify-content:center;
@@ -126,25 +126,25 @@
   }
   .avatar.mini{width:24px;height:24px;font-size:11px}
   .status-chip{font-size:12px;font-weight:600;border-radius:999px;padding:4px 10px;white-space:nowrap}
-  .chip-neutro{background:var(--chip);color:var(--muted)}
+  .chip-neutral{background:var(--chip);color:var(--muted)}
   .chip-primary{background:var(--primarysoft);color:var(--primary)}
-  .llave{width:13px;height:13px;color:var(--muted);flex:none}
+  .key-icon{width:13px;height:13px;color:var(--muted);flex:none}
 
   /* ---------- party card (brand violet, same in both themes) ---------- */
   .party-card{position:relative;overflow:hidden;background:#5A50EC;border-color:#5A50EC;color:#fff}
   .party-card .label{color:#fff;opacity:.72}
   .party-card .title{font-family:var(--display);font-weight:700;font-size:21px;margin:2px 0 3px}
   .party-card .meta{font-size:13px;opacity:.82;margin-bottom:10px}
-  .party-card .oculo-marca{position:absolute;right:-42px;top:-34px;width:200px;height:200px;
+  .party-card .brand-mark{position:absolute;right:-42px;top:-34px;width:200px;height:200px;
     color:#fff;opacity:.16;pointer-events:none}
-  .party-card .oculo-marca svg{width:100%;height:100%}
-  .btn-blanco{background:var(--card);color:var(--primary)}
+  .party-card .brand-mark svg{width:100%;height:100%}
+  .btn-white{background:var(--card);color:var(--primary)}
   .btn-live{background:rgba(255,255,255,.16);color:#fff}
   .party-card .sync-status{color:#fff;opacity:.95;font-weight:600;font-size:13px}
   .sync-status.live::before{content:'';display:inline-block;width:8px;height:8px;
     border-radius:999px;background:#3DDC84;margin-right:7px}
-  .quetoca-txt{margin:0 0 12px;font-family:var(--display);font-weight:700;font-size:18px;line-height:1.3}
-  .crear-dashed{
+  .next-action-text{margin:0 0 12px;font-family:var(--display);font-weight:700;font-size:18px;line-height:1.3}
+  .create-dashed{
     width:100%;border:1.5px dashed var(--line);background:transparent;border-radius:var(--radius);
     color:var(--muted);font-size:14px;font-weight:600;padding:14px;cursor:pointer;
   }
@@ -159,7 +159,7 @@
   .item-card .name{font-weight:600;font-size:15px;line-height:1.35;padding-top:2px}
   .item-card .meta{color:var(--muted);font-size:13px;margin-top:3px}
   .item-card .actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:11px}
-  .quitar{background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;
+  .remove-button{background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;
     padding:4px 6px;line-height:1;opacity:.6;flex:none}
   .bought-card{cursor:pointer}
   .bought-card:active{filter:brightness(.97)}
@@ -172,11 +172,11 @@
   /* ---------- group ---------- */
   .person-row{display:flex;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid var(--line);cursor:pointer}
   .person-row:last-child{border-bottom:none}
-  .person-row .centro{flex:1;min-width:0}
+  .person-row .center{flex:1;min-width:0}
   .person-row .name{font-weight:600;font-size:15px;display:flex;align-items:center;gap:6px}
-  .person-row .subtexto{color:var(--muted);font-size:13px;margin-top:1px}
+  .person-row .secondary-text{color:var(--muted);font-size:13px;margin-top:1px}
   .person-row .balance{text-align:right;font-variant-numeric:tabular-nums}
-  .person-row .balance .cifra{font-weight:600;font-size:14.5px}
+  .person-row .balance .amount{font-weight:600;font-size:14.5px}
   .person-row .balance .status{display:block;font-size:11px;color:var(--muted)}
   .balance-green{color:var(--green)}
   .balance-coral{color:var(--coral)}
@@ -185,14 +185,14 @@
   /* ---------- accounts ---------- */
   .total-card{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
     padding:18px 16px;text-align:left}
-  .total-card .cifra{font-family:var(--display);font-weight:800;font-size:28px;letter-spacing:-.5px;
+  .total-card .amount{font-family:var(--display);font-weight:800;font-size:28px;letter-spacing:-.5px;
     font-variant-numeric:tabular-nums}
-  .total-card .porcabeza{color:var(--muted);font-size:13px;text-align:right}
-  .bizum-fila{display:flex;align-items:center;gap:11px}
-  .bizum-fila.done{opacity:.55}
-  .bizum-fila .who{flex:1;font-size:14.5px;font-weight:600;min-width:0}
-  .bizum-fila .who svg{width:14px;height:14px;color:var(--muted);vertical-align:-2px;margin:0 3px}
-  .bizum-fila .cuanto{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .total-card .per-head{color:var(--muted);font-size:13px;text-align:right}
+  .bizum-row{display:flex;align-items:center;gap:11px}
+  .bizum-row.done{opacity:.55}
+  .bizum-row .who{flex:1;font-size:14.5px;font-weight:600;min-width:0}
+  .bizum-row .who svg{width:14px;height:14px;color:var(--muted);vertical-align:-2px;margin:0 3px}
+  .bizum-row .transfer-amount{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
   .checkIcon{
     width:30px;height:30px;border-radius:999px;border:1.5px solid var(--line);
     background:transparent;cursor:pointer;flex:none;
@@ -201,15 +201,15 @@
   .checkIcon.on{background:var(--green);border-color:var(--green);color:var(--onprimary)}
   .checkIcon svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.4;
     stroke-linecap:round;stroke-linejoin:round}
-  .enpaz{color:var(--green);text-align:center;font-weight:600;font-size:14.5px;padding:18px 10px 6px}
-  .pie-nota{color:var(--muted);font-size:12.5px;text-align:center;margin-top:14px}
-  .micuenta-cifra{font-family:var(--display);font-weight:800;font-size:32px;letter-spacing:-.5px;
+  .settled-message{color:var(--green);text-align:center;font-weight:600;font-size:14.5px;padding:18px 10px 6px}
+  .footnote{color:var(--muted);font-size:12.5px;text-align:center;margin-top:14px}
+  .my-account-amount{font-family:var(--display);font-weight:800;font-size:32px;letter-spacing:-.5px;
     line-height:1.1;font-variant-numeric:tabular-nums}
-  .micuenta-desglose{color:var(--muted);font-size:13px;margin-top:3px}
-  .micuenta-action{display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);
+  .my-account-breakdown{color:var(--muted);font-size:13px;margin-top:3px}
+  .my-account-action{display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);
     margin-top:12px;padding-top:11px;font-size:14px}
-  .micuenta-action .text{flex:1;min-width:0}
-  .micuenta-action .btn{flex:none}
+  .my-account-action .text{flex:1;min-width:0}
+  .my-account-action .btn{flex:none}
 
   /* ---------- actionable home / sharing ---------- */
   .hero-mini{display:flex;align-items:center;gap:8px;padding:14px 2px 12px;color:var(--primary)}
@@ -217,15 +217,15 @@
   .hero-mini .marca{font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:-.3px;color:var(--ink)}
   .sync-status{color:var(--muted);font-size:12.5px;margin-top:10px}
   .balance-card{display:flex;align-items:center;gap:10px}
-  .balance-card .centro{flex:1;min-width:0}
+  .balance-card .center{flex:1;min-width:0}
   .balance-card .label{margin:0 0 1px}
-  .balance-card .cifra{font-family:var(--display);font-weight:800;font-size:24px;
+  .balance-card .amount{font-family:var(--display);font-weight:800;font-size:24px;
     letter-spacing:-.4px;font-variant-numeric:tabular-nums;line-height:1.15}
   .btn-text{background:none;border:none;color:var(--primary);font-weight:600;font-size:14.5px;cursor:pointer;padding:6px 4px}
-  .previo{white-space:pre-wrap;overflow-wrap:break-word;background:var(--bg);border:1px solid var(--line);
+  .preview{white-space:pre-wrap;overflow-wrap:break-word;background:var(--bg);border:1px solid var(--line);
     border-radius:11px;padding:12px 13px;font-size:13px;line-height:1.55;max-height:36dvh;overflow-y:auto}
-  .history-linea{color:var(--muted);font-size:12.5px;text-align:center;margin-top:14px}
-  .centrado{display:block;margin:10px auto 0;text-align:center}
+  .history-line{color:var(--muted);font-size:12.5px;text-align:center;margin-top:14px}
+  .centered{display:block;margin:10px auto 0;text-align:center}
 
   /* ---------- tab bar ---------- */
   nav#tabbar{
@@ -241,7 +241,7 @@
   }
   .tab svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;
     stroke-linecap:round;stroke-linejoin:round}
-  .tab.activa{color:var(--primary)}
+  .tab.active{color:var(--primary)}
   .tab .badge{
     position:absolute;top:3px;right:calc(50% - 24px);
     background:var(--coral);color:var(--onprimary);font-size:9.5px;font-weight:700;
@@ -251,9 +251,9 @@
   .tab .badge[hidden]{display:none}
 
   /* ---------- sheet ---------- */
-  #velo{position:fixed;inset:0;background:var(--velo);z-index:60;opacity:0;
+  #overlay{position:fixed;inset:0;background:var(--overlay);z-index:60;opacity:0;
     pointer-events:none;transition:opacity .2s}
-  #velo.abierto{opacity:1;pointer-events:auto}
+  #overlay.open{opacity:1;pointer-events:auto}
   #sheet{
     position:fixed;left:0;right:0;bottom:0;z-index:61;background:var(--card);
     border-radius:18px 18px 0 0;border-top:1px solid var(--line);
@@ -261,8 +261,8 @@
     max-width:480px;margin:0 auto;transform:translateY(105%);transition:transform .25s;
     max-height:85dvh;overflow-y:auto;
   }
-  #sheet.abierto{transform:translateY(0)}
-  .asa{width:36px;height:4px;border-radius:99px;background:var(--line);margin:6px auto 16px}
+  #sheet.open{transform:translateY(0)}
+  .sheet-handle{width:36px;height:4px;border-radius:99px;background:var(--line);margin:6px auto 16px}
   .sheet-title{font-family:var(--display);font-size:20px;font-weight:700;margin:0 0 4px;text-wrap:balance}
   .sheet-sub{color:var(--muted);font-size:13.5px;margin:0 0 14px;line-height:1.5}
   .pills{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
@@ -274,22 +274,22 @@
   .pill .avatar{width:24px;height:24px;font-size:11px}
   .pill.on{border-color:var(--green);background:var(--greensoft)}
   .pill.off{opacity:.4}
-  .pill.solo-text{padding:6px 13px}
+  .pill.text-only{padding:6px 13px}
   .pill.on.pill-primary{border-color:var(--primary);background:var(--primarysoft)}
   .price-input{display:flex;align-items:center;gap:10px}
   .price-input input{font-size:24px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
   .price-input .eur{font-size:19px;font-weight:600;color:var(--muted)}
-  .sheet-botones{display:flex;gap:10px;margin-top:22px}
-  .sheet-botones .btn{flex:1}
+  .sheet-actions{display:flex;gap:10px;margin-top:22px}
+  .sheet-actions .btn{flex:1}
   .delete-link{background:none;border:none;color:var(--coral);font-size:13.5px;
     font-weight:600;margin:16px auto 0;display:block;cursor:pointer}
-  .opcion-menu{
+  .menu-option{
     display:block;width:100%;background:var(--card);
     border:1px solid var(--line);border-radius:11px;
     font-size:14.5px;font-weight:600;padding:13px 14px;margin-bottom:8px;cursor:pointer;text-align:left;
   }
-  .opcion-menu small{display:block;font-weight:400;color:var(--muted);font-size:12.5px;margin-top:2px}
-  .nota{border:1px solid var(--line);border-left:3px solid var(--primary);
+  .menu-option small{display:block;font-weight:400;color:var(--muted);font-size:12.5px;margin-top:2px}
+  .note{border:1px solid var(--line);border-left:3px solid var(--primary);
     border-radius:9px;padding:11px 13px;font-size:13px;color:var(--muted);line-height:1.5;margin-top:16px}
 
   /* ---------- toast ---------- */
@@ -307,7 +307,7 @@
 </head>
 <body>
 
-<button id="btnTema" type="button" aria-label="Cambiar entre modo claro y oscuro">
+<button id="themeButton" type="button" aria-label="Cambiar entre modo claro y oscuro">
   <svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>
 </button>
 
@@ -326,20 +326,20 @@
         Peña</button>
       <button class="tab" data-tab="accounts" type="button">
         <svg viewBox="0 0 24 24"><path d="M4 7h13M17 7l-3-3M17 7l-3 3"/><path d="M20 17H7M7 17l3-3M7 17l3 3"/></svg>
-        Cuentas<span class="badge" id="badgeCuentas" hidden></span></button>
+        Cuentas<span class="badge" id="accountsBadge" hidden></span></button>
     </div>
   </nav>
 </div>
 
-<div id="velo"></div>
+<div id="overlay"></div>
 <div id="sheet" role="dialog" aria-modal="true"></div>
 <div id="toast" role="status"></div>
 
 <script>
 'use strict';
 /* ================= state ================= */
-const STORAGE_KEY = 'a-pachas-v1';
-const THEME_KEY = 'a-pachas-tema';
+const STORAGE_KEY = 'a-pachas-v2';
+const THEME_KEY = 'a-pachas-theme';
 const API = '/api';
 const now = () => Date.now();
 
@@ -377,7 +377,7 @@ function migrateState(o){
 }
 
 const LOGO = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4.5"><circle cx="24" cy="24" r="19"/><g stroke-linecap="round"><line x1="24" y1="24" x2="24" y2="5"/><line x1="24" y1="24" x2="42.1" y2="18.1"/><line x1="24" y1="24" x2="35.2" y2="39.4"/><line x1="24" y1="24" x2="12.8" y2="39.4"/><line x1="24" y1="24" x2="5.9" y2="18.1"/></g></svg>`;
-const KEY_ICON = `<svg class="llave" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="La llave"><circle cx="8" cy="8" r="4.5"/><path d="M11 11l9 9M17 17l2.5-2.5M14 14l2.5-2.5"/></svg>`;
+const KEY_ICON = `<svg class="key-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="La llave"><circle cx="8" cy="8" r="4.5"/><path d="M11 11l9 9M17 17l2.5-2.5M14 14l2.5-2.5"/></svg>`;
 
 function demoState(){
   return migrateState({
@@ -456,7 +456,7 @@ function resetSync(){
   const t = localStorage.getItem(THEME_KEY);
   if(t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
 })();
-document.getElementById('btnTema').addEventListener('click', () => {
+document.getElementById('themeButton').addEventListener('click', () => {
   const root = document.documentElement;
   const currentTheme = root.dataset.theme ||
     (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -566,8 +566,8 @@ function requireAdmin(){
   return false;
 }
 
-const personPill = (p, attr, clases) =>
-  `<button class="pill ${clases}" type="button" data-${attr}="${escapeHtml(p.id)}">${avatarHtml(p.id,true)}${escapeHtml(p.name)}</button>`;
+const personPill = (p, attr, classes) =>
+  `<button class="pill ${classes}" type="button" data-${attr}="${escapeHtml(p.id)}">${avatarHtml(p.id,true)}${escapeHtml(p.name)}</button>`;
 
 // Parse price into cents using Spanish notation: comma decimals and dot
 // thousands ("1.000" is one thousand euros, not one euro).
@@ -651,7 +651,7 @@ function decodeSnapshot(text){
 // Live parties still live on the server anyway.
 function backupCurrentParty(){
   if(S && !S.party.demo && (S.items.length || S.people.length > 1)){
-    try{ localStorage.setItem(STORAGE_KEY + '-anterior', JSON.stringify(S)); }catch(e){}
+    try{ localStorage.setItem(STORAGE_KEY + '-previous', JSON.stringify(S)); }catch(e){}
   }
 }
 function applyImported(obj){
@@ -854,18 +854,18 @@ function refreshSync(){
     !!(S && S.remote && !S.party.demo && !sync.markOffline && !sync.rejected));
 }
 
-const sheetAbierto = () => $('#sheet').classList.contains('abierto');
+const isSheetOpen = () => $('#sheet').classList.contains('open');
 // Do not repaint under someone's fingers: open sheet or half-written text.
 // Inputs from a closed sheet do not count, even though their DOM remains.
 function isBusy(){
   const a = document.activeElement;
   if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA') &&
-     (!$('#sheet').contains(a) || sheetAbierto())) return true;
+     (!$('#sheet').contains(a) || isSheetOpen())) return true;
   return [...document.querySelectorAll('#preview input, #preview textarea')].some(el => el.value);
 }
 // Repaint immediately if possible; otherwise repaint once the user lets go.
 function renderNowOrLater(){
-  if(!sheetAbierto() && !isBusy()){ sync.renderLater = false; render(); }
+  if(!isSheetOpen() && !isBusy()){ sync.renderLater = false; render(); }
   else sync.renderLater = true;
 }
 
@@ -947,7 +947,7 @@ async function download(){
       // Stale response: one of our PUTs already advanced the revision. Ignore it
       // to avoid a rev/state bounce and re-upload loop.
       if(!(r.body.rev > S.remote.rev)){ markOnline(); return; }
-      const antes = stateJson();
+      const beforeJson = stateJson();
       const remoteState = migrateState(r.body.state);
       adoptSharedState(mergeStates(remoteState, sharedState()));
       S.remote.rev = r.body.rev;
@@ -961,7 +961,7 @@ async function download(){
       }
       markOnline();
       saveLocal(afterJson);
-      if(afterJson !== antes) renderNowOrLater();
+      if(afterJson !== beforeJson) renderNowOrLater();
     } else if(r.status === 404){
       disconnectRemote('Esa fiesta ya no está en vivo. Sigues con la copia de tu móvil.');
     } else if(r.status === 429 || r.status >= 500){
@@ -1006,7 +1006,7 @@ function disconnectRemote(msg){
 async function enableLive(){
   if(S.remote) return shareSheet('invite');
   if(creatingRemote) return; // Already in progress, likely a double tap.
-  const btn = $('#btnPonerVivo');
+  const btn = $('#enableLiveButton');
   if(btn) btn.disabled = true;
   if(await createRemote()){
     render(); shareSheet('invite');
@@ -1084,15 +1084,15 @@ function accounts(){
 }
 
 /* ================= sheet ================= */
-function openSheet(html, bloqueado){
-  $('#sheet').innerHTML = '<div class="asa"></div>' + html;
-  $('#sheet').classList.add('abierto');
-  $('#velo').classList.add('abierto');
-  $('#velo').onclick = bloqueado ? null : closeSheet;
+function openSheet(html, locked){
+  $('#sheet').innerHTML = '<div class="sheet-handle"></div>' + html;
+  $('#sheet').classList.add('open');
+  $('#overlay').classList.add('open');
+  $('#overlay').onclick = locked ? null : closeSheet;
 }
 function closeSheet(){
-  $('#sheet').classList.remove('abierto');
-  $('#velo').classList.remove('abierto');
+  $('#sheet').classList.remove('open');
+  $('#overlay').classList.remove('open');
   // Without this, a sheet input keeps focus and leaves the keyboard open.
   const a = document.activeElement;
   if(a && a.blur && $('#sheet').contains(a)) a.blur();
@@ -1100,27 +1100,27 @@ function closeSheet(){
 }
 
 /* --- identity --- */
-function identitySheet(forzado){
+function identitySheet(forced){
   const pills = S.people.map(p =>
     personPill(p, 'who', 'pill-primary ' + (p.id===S.me?'on':''))).join('');
   openSheet(`
     <h2 class="sheet-title">¿Quién eres?</h2>
     <p class="sheet-sub">Estás en «${escapeHtml(S.party.name)}». Di quién eres o apúntate.</p>
     <div class="pills">${pills}</div>
-    <label class="label" for="nuevoNombre">O apúntate</label>
-    <div class="fila-add">
-      <input type="text" id="nuevoNombre" placeholder="Tu nombre" maxlength="20" autocomplete="off">
-      <button class="btn btn-primary" id="btnApuntame" type="button">Entrar</button>
+    <label class="label" for="newNameInput">O apúntate</label>
+    <div class="add-row">
+      <input type="text" id="newNameInput" placeholder="Tu nombre" maxlength="20" autocomplete="off">
+      <button class="btn btn-primary" id="joinButton" type="button">Entrar</button>
     </div>
-  `, forzado);
+  `, forced);
   document.querySelectorAll('[data-who]').forEach(b => b.onclick = () => {
     const p = personById(b.dataset.who);
     if(!p) return; // Removed while the sheet was open.
     S.me = p.id; save(); closeSheet(); render();
     toast('Hola, ' + p.name);
   });
-  $('#btnApuntame').onclick = () => {
-    const n = $('#nuevoNombre').value.trim();
+  $('#joinButton').onclick = () => {
+    const n = $('#newNameInput').value.trim();
     if(!n) return toast('Escribe tu nombre, que la lista no adivina.');
     if(S.people.length >= 100) return toast('La peña no da pa más (100). Menuda fiesta.');
     const p = touch({id: newId('p'), name: n, admin:false});
@@ -1141,9 +1141,9 @@ function expenseSheet(itemId){
   if(!personById(selectedPayerId)) selectedPayerId = personById(S.me) ? S.me : null;
 
   const consumerPills = S.people.map(p =>
-    personPill(p, 'cons', selectedIds.has(p.id)?'on':'off')).join('');
+    personPill(p, 'consumer', selectedIds.has(p.id)?'on':'off')).join('');
   const payerPills = S.people.map(p =>
-    personPill(p, 'comp', 'pill-primary ' + (p.id===selectedPayerId?'on':''))).join('');
+    personPill(p, 'payer', 'pill-primary ' + (p.id===selectedPayerId?'on':''))).join('');
 
   let history = '';
   if(editing){
@@ -1152,7 +1152,7 @@ function expenseSheet(itemId){
     const parts = [];
     if(creator) parts.push(`La apuntó ${escapeHtml(creator.name)}${it.createdAt ? ' ' + timeAgo(it.createdAt) : ''}`);
     if(editor) parts.push(`tocada por ${escapeHtml(editor.name)} ${timeAgo(it.updatedAt)}`);
-    if(parts.length) history = `<div class="history-linea">${parts.join(' · ')}</div>`;
+    if(parts.length) history = `<div class="history-line">${parts.join(' · ')}</div>`;
   }
 
   const title = direct ? 'Apuntar un gasto' : escapeHtml(it.name);
@@ -1163,28 +1163,28 @@ function expenseSheet(itemId){
   openSheet(`
     <h2 class="sheet-title">${title}</h2>
     <p class="sheet-sub">${sub}</p>
-    <label class="label" for="inConcepto" style="margin-top:0">Qué</label>
-    <input type="text" id="inConcepto" placeholder="Hielo, pan, el bar…" maxlength="40"
+    <label class="label" for="expenseNameInput" style="margin-top:0">Qué</label>
+    <input type="text" id="expenseNameInput" placeholder="Hielo, pan, el bar…" maxlength="40"
       autocomplete="off" value="${it ? escapeHtml(it.name) : ''}">
-    <label class="label" for="inPrecio">Precio</label>
+    <label class="label" for="priceInput">Precio</label>
     <div class="price-input">
-      <input type="tel" id="inPrecio" inputmode="decimal" placeholder="0,00" value="${initialPrice}" autocomplete="off">
+      <input type="tel" id="priceInput" inputmode="decimal" placeholder="0,00" value="${initialPrice}" autocomplete="off">
       <span class="eur">€</span>
     </div>
     <span class="label">Pagó</span>
     <div class="pills">${payerPills}</div>
     <span class="label">¿Quiénes lo catan?</span>
     <div class="pills">${consumerPills}</div>
-    <div class="sheet-botones">
-      <button class="btn btn-borde" id="btnCancelar" type="button">Cancelar</button>
-      <button class="btn btn-green" id="btnGuardarCompra" type="button">
+    <div class="sheet-actions">
+      <button class="btn btn-outline" id="cancelButton" type="button">Cancelar</button>
+      <button class="btn btn-green" id="saveExpenseButton" type="button">
         ${editing ? 'Guardar' : direct ? 'Apuntar el gasto' : 'Apuntar la compra'}</button>
     </div>
-    ${editing ? '<button class="delete-link" id="btnBorrarItem" type="button">Borrar esta compra</button>' : ''}
+    ${editing ? '<button class="delete-link" id="deleteItemButton" type="button">Borrar esta compra</button>' : ''}
     ${history}
   `);
-  document.querySelectorAll('[data-cons]').forEach(b => b.onclick = () => {
-    const id = b.dataset.cons;
+  document.querySelectorAll('[data-consumer]').forEach(b => b.onclick = () => {
+    const id = b.dataset.consumer;
     touchedConsumers = true; // No longer an intentional "everyone" split.
     if(selectedIds.has(id)){
       if(selectedIds.size === 1) return toast('Alguien lo catará, digo yo.');
@@ -1193,16 +1193,16 @@ function expenseSheet(itemId){
     b.classList.toggle('on', selectedIds.has(id));
     b.classList.toggle('off', !selectedIds.has(id));
   });
-  document.querySelectorAll('[data-comp]').forEach(b => b.onclick = () => {
-    selectedPayerId = b.dataset.comp;
-    document.querySelectorAll('[data-comp]').forEach(x =>
-      x.classList.toggle('on', x.dataset.comp === selectedPayerId));
+  document.querySelectorAll('[data-payer]').forEach(b => b.onclick = () => {
+    selectedPayerId = b.dataset.payer;
+    document.querySelectorAll('[data-payer]').forEach(x =>
+      x.classList.toggle('on', x.dataset.payer === selectedPayerId));
   });
-  $('#btnCancelar').onclick = closeSheet;
-  $('#btnGuardarCompra').onclick = () => {
-    const name = $('#inConcepto').value.trim();
+  $('#cancelButton').onclick = closeSheet;
+  $('#saveExpenseButton').onclick = () => {
+    const name = $('#expenseNameInput').value.trim();
     if(!name) return toast('Pon qué fue.');
-    const priceCents = parsePriceCents($('#inPrecio').value);
+    const priceCents = parsePriceCents($('#priceInput').value);
     if(isNaN(priceCents) || priceCents<=0) return toast('Ponle precio, que gratis no fue.');
     if(priceCents > 100000000) return toast('¿' + eur(priceCents) + '? Repasa ese precio, anda.');
     if(!personById(selectedPayerId)) return toast('¿Quién lo pagó?');
@@ -1262,7 +1262,7 @@ function expenseSheet(itemId){
     }
     save(); closeSheet(); render();
   };
-  const del = $('#btnBorrarItem');
+  const del = $('#deleteItemButton');
   if(del) del.onclick = () => {
     confirmSheet('¿Borrar esta compra?',
       `«${it.name}» (${eur(it.priceCents||0)}) se quita de la lista y de las cuentas.`, () => {
@@ -1276,28 +1276,28 @@ function expenseSheet(itemId){
         save(); render(); toast('Fuera de la lista');
       });
   };
-  setTimeout(()=>$(direct ? '#inConcepto' : '#inPrecio').focus(), 250);
+  setTimeout(()=>$(direct ? '#expenseNameInput' : '#priceInput').focus(), 250);
 }
 
 /* --- assign, admins only --- */
 function assignSheet(itemId){
   const it = S.items.find(x=>x.id===itemId); if(!it) return;
   const pills = S.people.map(p =>
-    personPill(p, 'asig', 'pill-primary ' + (it.claimerId===p.id?'on':''))).join('');
+    personPill(p, 'assign-person', 'pill-primary ' + (it.claimerId===p.id?'on':''))).join('');
   openSheet(`
     <h2 class="sheet-title">¿Quién trae «${escapeHtml(it.name)}»?</h2>
     <p class="sheet-sub">Le saldrá como suya en la lista.</p>
     <div class="pills">
       ${pills}
-      <button class="pill solo-text ${!it.claimerId?'on':''}" type="button" data-asig="">Sin dueño</button>
+      <button class="pill text-only ${!it.claimerId?'on':''}" type="button" data-assign-person="">Sin dueño</button>
     </div>
   `);
-  document.querySelectorAll('[data-asig]').forEach(b => b.onclick = () => {
+  document.querySelectorAll('[data-assign-person]').forEach(b => b.onclick = () => {
     if(!requireAdmin()) return;
-    const who = personById(b.dataset.asig);
-    // data-asig="" intentionally means "unowned". A person removed underneath
+    const who = personById(b.dataset.assignPerson);
+    // data-assign-person="" intentionally means "unowned". A person removed underneath
     // must not be confused with that, because it would release the item.
-    if(b.dataset.asig && !who) return abortSheet('Esa persona ya no está en la peña.');
+    if(b.dataset.assignPerson && !who) return abortSheet('Esa persona ya no está en la peña.');
     let live = itemById(itemId);
     if(!live) return abortSheet('Esa cosa ya no está en la lista.');
     if(live.status === 'bought') return abortSheet('Esa ya está comprada: no hay nada que asignar.');
@@ -1330,26 +1330,26 @@ function personSheet(pid){
       le tocaba ${eur(c.owes[pid]||0)} · ${balanceText}.</p>
     <span class="label">Le toca traer</span>
     <ul style="margin:0 0 6px;padding-left:20px;font-size:14px;line-height:1.7">${assignedList}</ul>
-    ${!isMe ? `<button class="btn btn-borde btn-mini" id="btnRecordar" type="button" style="margin-top:6px">Mandarle un recordatorio</button>` : ''}
+    ${!isMe ? `<button class="btn btn-outline btn-mini" id="remindButton" type="button" style="margin-top:6px">Mandarle un recordatorio</button>` : ''}
     ${canManage ? `
       <span class="label">Gestión</span>
-      <button class="opcion-menu" id="btnToggleAdmin" type="button">
+      <button class="menu-option" id="toggleAdminButton" type="button">
         ${p.admin ? 'Quitarle la llave' : 'Darle la llave (admin)'}
         <small>Los de la llave asignan cosas, corrigen precios y gestionan la peña.</small>
       </button>
-      <button class="opcion-menu" id="btnEliminar" type="button">
+      <button class="menu-option" id="removePersonButton" type="button">
         Quitar de la peña
         <small>Solo si no tiene compras apuntadas.</small>
       </button>` : ''}
   `);
-  const rec = $('#btnRecordar');
+  const rec = $('#remindButton');
   if(rec) rec.onclick = () => {
     if(!personById(pid)) return abortSheet('Esa persona ya no está en la peña.');
     shareSheet('person', pid);
   };
   // Handlers re-find by ID and reconfirm admin status; the party may have
   // merged underneath while the sheet was open.
-  const tog = $('#btnToggleAdmin');
+  const tog = $('#toggleAdminButton');
   if(tog) tog.onclick = () => {
     if(!requireAdmin()) return;
     const q = personById(pid);
@@ -1360,7 +1360,7 @@ function personSheet(pid){
     save(); closeSheet(); render();
     toast(q.admin ? q.name + ' tiene la llave' : q.name + ' ya no tiene la llave');
   };
-  const eli = $('#btnEliminar');
+  const eli = $('#removePersonButton');
   if(eli) eli.onclick = () => {
     if(!requireAdmin()) return;
     const q = personById(pid);
@@ -1463,7 +1463,7 @@ async function shareSheet(shareType, pid){
   // If something is still unsent, tell the sharer. A live link shows server
   // state, not this phone's unsent local state.
   const pendingNotice = S.remote && S.pendingUpload
-    ? `<div class="nota">Hay cambios tuyos aún sin subir (¿sin red?). Quien abra
+    ? `<div class="note">Hay cambios tuyos aún sin subir (¿sin red?). Quien abra
       el enlace no los verá hasta que se suban solos.</div>` : '';
   // In local mode the link embeds the whole party. The preview abbreviates it;
   // the copied/shared message keeps the full link.
@@ -1472,34 +1472,34 @@ async function shareSheet(shareType, pid){
   openSheet(`
     <h2 class="sheet-title">Mandar al grupo</h2>
     <p class="sheet-sub">Así queda el mensaje:</p>
-    <div class="previo">${escapeHtml(preview)}</div>
+    <div class="preview">${escapeHtml(preview)}</div>
     ${pendingNotice}
-    ${canGoLive ? `<div class="nota">Esta fiesta va solo en este móvil: el enlace lleva una copia
+    ${canGoLive ? `<div class="note">Esta fiesta va solo en este móvil: el enlace lleva una copia
       congelada. Ponla en vivo y todos apuntarán en la misma.</div>
-      <button class="btn btn-soft btn-block" id="btnVivoDesdeCompartir" type="button"
+      <button class="btn btn-soft btn-block" id="liveFromShareButton" type="button"
         style="margin-top:10px">Ponerla en vivo primero</button>` : ''}
-    <div class="sheet-botones">
-      <button class="btn btn-borde" id="btnCopiarMsg" type="button">Copiar</button>
-      <button class="btn btn-green" id="btnWhatsAppMsg" type="button">WhatsApp</button>
+    <div class="sheet-actions">
+      <button class="btn btn-outline" id="copyMessageButton" type="button">Copiar</button>
+      <button class="btn btn-green" id="whatsappMessageButton" type="button">WhatsApp</button>
     </div>
-    ${navigator.share ? '<button class="quiet-link centrado" id="btnOtraApp" type="button">Mandar con otra app</button>' : ''}
+    ${navigator.share ? '<button class="quiet-link centered" id="alternateAppButton" type="button">Mandar con otra app</button>' : ''}
   `);
-  $('#btnCopiarMsg').onclick = async () => {
+  $('#copyMessageButton').onclick = async () => {
     const ok = await copyToClipboard(txt);
     toast(ok ? 'Copiado. Pégalo en el grupo.' : 'No se ha podido copiar');
     if(ok) closeSheet();
   };
-  $('#btnWhatsAppMsg').onclick = () => {
+  $('#whatsappMessageButton').onclick = () => {
     window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank', 'noopener');
     closeSheet();
   };
-  const live = $('#btnVivoDesdeCompartir');
+  const live = $('#liveFromShareButton');
   if(live) live.onclick = async () => {
     live.disabled = true;
     if(await createRemote()){ render(); shareSheet(shareType, pid); }
     else { live.disabled = false; toast('Ahora mismo no hay manera (¿sin red?). Prueba luego.'); }
   };
-  const alternateApp = $('#btnOtraApp');
+  const alternateApp = $('#alternateAppButton');
   if(alternateApp) alternateApp.onclick = async () => {
     try { await navigator.share({text: txt}); closeSheet(); } catch(e){}
   };
@@ -1510,15 +1510,15 @@ function joinSheet(){
   openSheet(`
     <h2 class="sheet-title">Tengo un link</h2>
     <p class="sheet-sub">Pega aquí el enlace (o el mensaje entero) que te han pasado.</p>
-    <textarea id="inCodigo" placeholder="Pega el enlace del grupo"></textarea>
-    <div class="sheet-botones">
-      <button class="btn btn-borde" id="btnCancelarInv" type="button">Cancelar</button>
-      <button class="btn btn-primary" id="btnEntrarInv" type="button">Unirme</button>
+    <textarea id="codeInput" placeholder="Pega el enlace del grupo"></textarea>
+    <div class="sheet-actions">
+      <button class="btn btn-outline" id="cancelInviteButton" type="button">Cancelar</button>
+      <button class="btn btn-primary" id="enterInviteButton" type="button">Unirme</button>
     </div>
   `);
-  $('#btnCancelarInv').onclick = closeSheet;
-  $('#btnEntrarInv').onclick = () => {
-    if(!importParty($('#inCodigo').value)) toast('Ahí no hay ninguna fiesta que valga');
+  $('#cancelInviteButton').onclick = closeSheet;
+  $('#enterInviteButton').onclick = () => {
+    if(!importParty($('#codeInput').value)) toast('Ahí no hay ninguna fiesta que valga');
   };
 }
 
@@ -1526,29 +1526,29 @@ function joinSheet(){
 function createPartySheet(){
   openSheet(`
     <h2 class="sheet-title">Fiesta nueva</h2>
-    <div class="campo" style="margin-top:14px">
-      <label class="label" for="inFiestaNueva">Nombre de la fiesta</label>
-      <input type="text" id="inFiestaNueva" placeholder="Matanza en casa de Paco" maxlength="40" autocomplete="off">
+    <div class="field" style="margin-top:14px">
+      <label class="label" for="newPartyNameInput">Nombre de la fiesta</label>
+      <input type="text" id="newPartyNameInput" placeholder="Matanza en casa de Paco" maxlength="40" autocomplete="off">
     </div>
-    <div class="campo">
-      <label class="label" for="inTuNombre">Tu nombre (te quedas la llave)</label>
-      <input type="text" id="inTuNombre" placeholder="Paco" maxlength="20" autocomplete="off">
+    <div class="field">
+      <label class="label" for="participantNameInput">Tu nombre (te quedas la llave)</label>
+      <input type="text" id="participantNameInput" placeholder="Paco" maxlength="20" autocomplete="off">
     </div>
-    <div class="campo">
-      <label class="label" for="inFechaNueva">Fecha (opcional)</label>
-      <input type="date" id="inFechaNueva">
+    <div class="field">
+      <label class="label" for="newPartyDateInput">Fecha (opcional)</label>
+      <input type="date" id="newPartyDateInput">
     </div>
-    <button class="btn btn-primary btn-block" id="btnCrearFiesta" type="button" style="padding:14px">Crear la fiesta</button>
+    <button class="btn btn-primary btn-block" id="createPartyButton" type="button" style="padding:14px">Crear la fiesta</button>
   `);
-  $('#btnCrearFiesta').onclick = async () => {
-    const name = $('#inFiestaNueva').value.trim();
-    const participantName = $('#inTuNombre').value.trim();
+  $('#createPartyButton').onclick = async () => {
+    const name = $('#newPartyNameInput').value.trim();
+    const participantName = $('#participantNameInput').value.trim();
     if(!name) return toast('Ponle nombre a la fiesta');
     if(!participantName) return toast('Falta tu nombre');
-    const newDate = $('#inFechaNueva').value;
+    const newDate = $('#newPartyDateInput').value;
     if(newDate && !/^\d{4}-\d{2}-\d{2}$/.test(newDate))
       return toast('Esa fecha no cuadra: ponla normal o déjala en blanco.');
-    const btn = $('#btnCrearFiesta');
+    const btn = $('#createPartyButton');
     btn.disabled = true;
     const pid = newId('p');
     backupCurrentParty();
@@ -1574,25 +1574,25 @@ function createPartySheet(){
 function renameSheet(){
   openSheet(`
     <h2 class="sheet-title">Nombre y fecha</h2>
-    <div class="campo" style="margin-top:14px">
-      <label class="label" for="inNombreF">Nombre de la fiesta</label>
-      <input type="text" id="inNombreF" maxlength="40" value="${escapeHtml(S.party.name)}">
+    <div class="field" style="margin-top:14px">
+      <label class="label" for="partyNameInput">Nombre de la fiesta</label>
+      <input type="text" id="partyNameInput" maxlength="40" value="${escapeHtml(S.party.name)}">
     </div>
-    <div class="campo">
-      <label class="label" for="inFechaF">Fecha (opcional)</label>
-      <input type="date" id="inFechaF" value="${escapeHtml(S.party.date || '')}">
+    <div class="field">
+      <label class="label" for="partyDateInput">Fecha (opcional)</label>
+      <input type="date" id="partyDateInput" value="${escapeHtml(S.party.date || '')}">
     </div>
-    <div class="sheet-botones">
-      <button class="btn btn-borde" id="btnCancelarRen" type="button">Cancelar</button>
-      <button class="btn btn-primary" id="btnGuardarRen" type="button">Guardar</button>
+    <div class="sheet-actions">
+      <button class="btn btn-outline" id="cancelRenameButton" type="button">Cancelar</button>
+      <button class="btn btn-primary" id="saveRenameButton" type="button">Guardar</button>
     </div>
   `);
-  $('#btnCancelarRen').onclick = closeSheet;
-  $('#btnGuardarRen').onclick = () => {
+  $('#cancelRenameButton').onclick = closeSheet;
+  $('#saveRenameButton').onclick = () => {
     if(!requireAdmin()) return;
-    const n = $('#inNombreF').value.trim();
+    const n = $('#partyNameInput').value.trim();
     if(!n) return toast('La fiesta necesita un nombre');
-    const f = $('#inFechaF').value;
+    const f = $('#partyDateInput').value;
     if(f && !/^\d{4}-\d{2}-\d{2}$/.test(f)) return toast('Esa fecha no cuadra: ponla normal o déjala en blanco.');
     S.party.name = n;
     S.party.date = f || null;
@@ -1601,17 +1601,17 @@ function renameSheet(){
   };
 }
 
-function confirmSheet(title, aviso, action){
+function confirmSheet(title, message, action){
   openSheet(`
     <h2 class="sheet-title">${escapeHtml(title)}</h2>
-    <p class="sheet-sub">${escapeHtml(aviso)}</p>
-    <div class="sheet-botones">
-      <button class="btn btn-borde" id="btnNo" type="button">Cancelar</button>
-      <button class="btn btn-primary" id="btnSi" type="button">Sí, adelante</button>
+    <p class="sheet-sub">${escapeHtml(message)}</p>
+    <div class="sheet-actions">
+      <button class="btn btn-outline" id="confirmNoButton" type="button">Cancelar</button>
+      <button class="btn btn-primary" id="confirmYesButton" type="button">Sí, adelante</button>
     </div>
   `);
-  $('#btnNo').onclick = closeSheet;
-  $('#btnSi').onclick = () => { closeSheet(); action(); };
+  $('#confirmNoButton').onclick = closeSheet;
+  $('#confirmYesButton').onclick = () => { closeSheet(); action(); };
 }
 
 /* ================= views ================= */
@@ -1619,19 +1619,19 @@ function heroHtml(){
   return `<div class="hero">
     <div class="logo" aria-hidden="true">${LOGO}</div>
     <h1>A Pachas</h1>
-    <p class="lema">Los gastos de la peña, a partes iguales.<br>Ni pa ti ni pa mí.</p>
+    <p class="tagline">Los gastos de la peña, a partes iguales.<br>Ni pa ti ni pa mí.</p>
   </div>`;
 }
 
 function entryView(){
   return `${heroHtml()}
-    <div class="fila-add">
-      <input type="text" id="inEnlace" placeholder="Pega el enlace del grupo" autocomplete="off">
-      <button class="btn btn-primary" id="btnUnirme" type="button">Unirme</button>
+    <div class="add-row">
+      <input type="text" id="linkInput" placeholder="Pega el enlace del grupo" autocomplete="off">
+      <button class="btn btn-primary" id="joinLinkButton" type="button">Unirme</button>
     </div>
-    <button class="crear-dashed" id="btnCrear" type="button">+ Crear fiesta nueva</button>
+    <button class="create-dashed" id="createButton" type="button">+ Crear fiesta nueva</button>
     <div style="text-align:center;margin-top:22px">
-      <button class="quiet-link" id="btnVerEjemplo" type="button">Ver una fiesta de ejemplo</button>
+      <button class="quiet-link" id="demoButton" type="button">Ver una fiesta de ejemplo</button>
     </div>`;
 }
 
@@ -1650,19 +1650,19 @@ function partyView(c){
   let action;
   if(!S.items.length && !c.total){
     action = {txt:'La lista está vacía. Apunta lo que hace falta pa la fiesta.',
-      btn:'Apuntar lo que falta', ir:'list'};
+      btn:'Apuntar lo que falta', target:'list'};
   } else if(unownedCount){
     action = {txt:`Hay ${unownedCount === 1 ? 'una cosa' : unownedCount + ' cosas'} sin dueño en la lista.`,
-      btn:'Ver la lista', ir:'list'};
+      btn:'Ver la lista', target:'list'};
   } else if(openItems === 0 && pendingBizumCount){
     action = {txt:'Todo comprado. Solo quedan los bizums pa quedar en paz.',
-      btn:'A las cuentas', ir:'accounts'};
+      btn:'A las cuentas', target:'accounts'};
   } else if(openItems === 0 && !pendingBizumCount && c.total){
     action = {txt:'Todo comprado y todo saldado. Vaya máquinas.',
-      btn:'Ver las cuentas', ir:'accounts'};
+      btn:'Ver las cuentas', target:'accounts'};
   } else {
     action = {txt:'¿Has pagado algo? Apúntalo y a otra cosa.',
-      btn:'Apuntar un gasto', ir:'expense'};
+      btn:'Apuntar un gasto', target:'expense'};
   }
 
   // User balance, with the amount as the visual lead.
@@ -1671,43 +1671,43 @@ function partyView(c){
     const s = c.balance[S.me] || 0;
     const txt = s === 0 ? 'En paz' : (s > 0 ? '+' : '−') + eur(Math.abs(s));
     myLine = `<div class="card balance-card">
-      <div class="centro">
+      <div class="center">
         <span class="label">Tu saldo</span>
-        <div class="cifra ${balanceClass(s)}">${txt}</div>
+        <div class="amount ${balanceClass(s)}">${txt}</div>
       </div>
-      <button class="btn btn-borde btn-mini" id="btnMiCuenta" type="button">Mis cuentas</button>
+      <button class="btn btn-outline btn-mini" id="myAccountButton" type="button">Mis cuentas</button>
     </div>`;
   }
 
   const isLive = S.remote && !S.party.demo && !sync.markOffline && !sync.rejected;
   return `${heroMiniHtml()}
     <div class="card party-card">
-      <span class="oculo-marca" aria-hidden="true">${LOGO}</span>
+      <span class="brand-mark" aria-hidden="true">${LOGO}</span>
       <span class="label">Tu fiesta</span>
       <div class="title">${escapeHtml(S.party.name)}</div>
       <div class="meta">${f ? escapeHtml(f) + ' · ' : ''}${S.people.length} en la peña · ${S.items.length} cosa${S.items.length===1?'':'s'} en la lista · ${eur(c.total)}</div>
-      <button class="btn btn-blanco btn-block" id="btnInvitar" type="button">Mandar al grupo</button>
+      <button class="btn btn-white btn-block" id="inviteButton" type="button">Mandar al grupo</button>
       ${!S.remote && !S.party.demo ? `
-        <button class="btn btn-live btn-block" id="btnPonerVivo" type="button" style="margin-top:8px">
+        <button class="btn btn-live btn-block" id="enableLiveButton" type="button" style="margin-top:8px">
           Ponerla en vivo pa que todos apunten</button>` : ''}
       <div class="sync-status${isLive ? ' live' : ''}" id="syncEstado">${escapeHtml(syncText())}</div>
     </div>
     <div class="card">
       <span class="label">¿Qué toca?</span>
-      <p class="quetoca-txt">${action.txt}</p>
-      <button class="btn ${action.ir==='expense'?'btn-green':'btn-soft'} btn-block" id="btnAccion"
-        data-ir="${action.ir}" type="button">${action.btn}</button>
+      <p class="next-action-text">${action.txt}</p>
+      <button class="btn ${action.target==='expense'?'btn-green':'btn-soft'} btn-block" id="actionButton"
+        data-target="${action.target}" type="button">${action.btn}</button>
     </div>
     ${myLine}
     <div class="card identity-row">
       ${me ? avatarHtml(S.me) : ''}
       <span class="who">${me ? `Eres <b>${escapeHtml(me.name)}</b>` : 'Aún no has dicho quién eres'}</span>
-      <button class="btn-text" id="btnQuienSoy" type="button">${me ? 'Cambiar' : '¿Quién eres?'}</button>
+      <button class="btn-text" id="whoAmIButton" type="button">${me ? 'Cambiar' : '¿Quién eres?'}</button>
     </div>
     <div style="display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:22px">
-      ${isAdmin() ? '<button class="quiet-link" id="btnRenombrar" type="button">Cambiar nombre o fecha</button>' : ''}
-      <button class="quiet-link" id="btnNueva" type="button">Empezar otra fiesta</button>
-      <button class="quiet-link" id="btnVerEjemplo" type="button">Ver la fiesta de ejemplo</button>
+      ${isAdmin() ? '<button class="quiet-link" id="renameButton" type="button">Cambiar nombre o fecha</button>' : ''}
+      <button class="quiet-link" id="newPartyButton" type="button">Empezar otra fiesta</button>
+      <button class="quiet-link" id="demoButton" type="button">Ver la fiesta de ejemplo</button>
     </div>`;
 }
 
@@ -1744,20 +1744,20 @@ function listView(){
     let chip;
     if(isMine) chip = '<span class="status-chip chip-primary">La traes tú</span>';
     else if(p) chip = `<span class="status-chip chip-primary">La trae ${escapeHtml(p.name)}</span>`;
-    else chip = '<span class="status-chip chip-neutro">Sin dueño</span>';
+    else chip = '<span class="status-chip chip-neutral">Sin dueño</span>';
 
     const id = escapeHtml(it.id);
     let actions = '';
     if(isMine){
-      actions = `<button class="btn btn-green btn-mini" data-comprar="${id}" type="button">Ya está comprada</button>
-        <button class="quiet-link" data-soltar="${id}" type="button">soltar</button>`;
+      actions = `<button class="btn btn-green btn-mini" data-buy="${id}" type="button">Ya está comprada</button>
+        <button class="quiet-link" data-release="${id}" type="button">soltar</button>`;
     } else if(!p){
       actions = `<button class="btn btn-soft btn-mini" data-pillar="${id}" type="button">Me lo pido</button>
-        <button class="quiet-link" data-comprar="${id}" type="button">ya comprada</button>
-        ${admin ? `<button class="btn btn-borde btn-mini" data-asignar="${id}" type="button">Asignar</button>` : ''}`;
+        <button class="quiet-link" data-buy="${id}" type="button">ya comprada</button>
+        ${admin ? `<button class="btn btn-outline btn-mini" data-assign="${id}" type="button">Asignar</button>` : ''}`;
     } else if(admin){
-      actions = `<button class="quiet-link" data-soltar="${id}" type="button">soltar</button>
-        <button class="quiet-link" data-comprar="${id}" type="button">apuntar precio</button>`;
+      actions = `<button class="quiet-link" data-release="${id}" type="button">soltar</button>
+        <button class="quiet-link" data-buy="${id}" type="button">apuntar precio</button>`;
     }
 
     const canRemove = admin || !p;
@@ -1769,7 +1769,7 @@ function listView(){
         </div>
         <div style="display:flex;align-items:center;gap:4px">
           ${chip}
-          ${canRemove ? `<button class="quitar" data-quitar="${id}" type="button" aria-label="Quitar ${escapeHtml(it.name)}">✕</button>` : ''}
+          ${canRemove ? `<button class="remove-button" data-remove-button="${id}" type="button" aria-label="Quitar ${escapeHtml(it.name)}">✕</button>` : ''}
         </div>
       </div>
     </div>`;
@@ -1780,17 +1780,17 @@ function listView(){
   const unownedCount = S.items.filter(isUnownedItem).length;
 
   return `
-    <div class="cabecera"><h1>La lista</h1><div class="sub">${sub}</div></div>
-    <form class="fila-add" id="formAddItem">
-      <input type="text" id="inItem" placeholder="¿Qué falta? (garrafón no)" maxlength="40" autocomplete="off">
+    <div class="screen-header"><h1>La lista</h1><div class="sub">${sub}</div></div>
+    <form class="add-row" id="addItemForm">
+      <input type="text" id="itemInput" placeholder="¿Qué falta? (garrafón no)" maxlength="40" autocomplete="off">
       <button class="btn btn-primary" type="submit">Apuntar</button>
     </form>
-    <button class="crear-dashed" id="btnGastoDirecto" type="button" style="margin-bottom:14px">
+    <button class="create-dashed" id="directExpenseButton" type="button" style="margin-bottom:14px">
       + Apuntar un gasto ya pagado</button>
-    ${!total ? '<div class="vacio">La lista está vacía.<br>Apunta lo primero que haga falta.</div>'
+    ${!total ? '<div class="empty-state">La lista está vacía.<br>Apunta lo primero que haga falta.</div>'
       : toBuy.map(cardItem).join('')
         + (unownedCount ? `<div style="text-align:center;margin:2px 0 10px">
-            <button class="quiet-link" id="btnMandarLista" type="button">Mandar lo que falta al grupo</button>
+            <button class="quiet-link" id="shareListButton" type="button">Mandar lo que falta al grupo</button>
           </div>` : '')
         + (boughtItems.length && toBuy.length ? '<span class="label">Ya compradas</span>' : '')
         + boughtItems.map(cardItem).join('')}
@@ -1807,25 +1807,25 @@ function groupView(c){
     if(p.admin) subs.push('Organiza la fiesta');
     if(assignedItems) subs.push(`trae ${assignedItems} cosa${assignedItems===1?'':'s'}`);
     return `
-    <div class="person-row" data-persona="${escapeHtml(p.id)}">
+    <div class="person-row" data-person="${escapeHtml(p.id)}">
       ${avatarHtml(p.id)}
-      <div class="centro">
+      <div class="center">
         <div class="name">${escapeHtml(p.name)}${p.id===S.me?' (tú)':''}${p.admin?KEY_ICON:''}</div>
-        ${subs.length?`<div class="subtexto">${escapeHtml(subs.join(' · '))}</div>`:''}
+        ${subs.length?`<div class="secondary-text">${escapeHtml(subs.join(' · '))}</div>`:''}
       </div>
       <div class="balance ${cls}">
-        <span class="cifra">${s>0?'+':''}${eur(s)}</span>
+        <span class="amount">${s>0?'+':''}${eur(s)}</span>
         <span class="status">${statusText}</span>
       </div>
     </div>`;
   }).join('');
   return `
-    <div class="cabecera"><h1>La peña</h1><div class="sub">${S.people.length} en la cuadrilla</div></div>
+    <div class="screen-header"><h1>La peña</h1><div class="sub">${S.people.length} en la cuadrilla</div></div>
     <div class="card" style="padding:4px 14px">${rows}</div>
-    <button class="btn btn-primary btn-block" id="btnInvitar" type="button" style="margin-top:6px">Mandar al grupo</button>
-    <form class="fila-add" id="formAddPersona" style="margin-top:14px">
-      <input type="text" id="inPersona" placeholder="Añadir a alguien a mano" maxlength="20" autocomplete="off">
-      <button class="btn btn-borde" type="submit">Añadir</button>
+    <button class="btn btn-primary btn-block" id="inviteButton" type="button" style="margin-top:6px">Mandar al grupo</button>
+    <form class="add-row" id="addPersonForm" style="margin-top:14px">
+      <input type="text" id="personInput" placeholder="Añadir a alguien a mano" maxlength="20" autocomplete="off">
+      <button class="btn btn-outline" type="submit">Añadir</button>
     </form>
   `;
 }
@@ -1833,9 +1833,9 @@ function groupView(c){
 function accountsView(c){
   if(c.total === 0){
     return `
-      <div class="cabecera"><h1>Las cuentas</h1><div class="sub">Bizums mínimos pa quedar en paz</div></div>
-      <div class="vacio">Aún no hay gastos apuntados.<br>En cuanto la peña compre cosas, aquí salen las cuentas.</div>
-      <div style="text-align:center"><button class="btn btn-green" id="btnGastoDirecto" type="button">Apuntar un gasto</button></div>`;
+      <div class="screen-header"><h1>Las cuentas</h1><div class="sub">Bizums mínimos pa quedar en paz</div></div>
+      <div class="empty-state">Aún no hay gastos apuntados.<br>En cuanto la peña compre cosas, aquí salen las cuentas.</div>
+      <div style="text-align:center"><button class="btn btn-green" id="directExpenseButton" type="button">Apuntar un gasto</button></div>`;
   }
 
   const arrow = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M14 6l6 6-6 6"/></svg>';
@@ -1847,9 +1847,9 @@ function accountsView(c){
   if(!S.me){
     myAccount = `<div class="card">
       <span class="label">Tu cuenta</span>
-      <div class="micuenta-action" style="border-top:none;margin-top:0;padding-top:2px">
+      <div class="my-account-action" style="border-top:none;margin-top:0;padding-top:2px">
         <span class="text">Di quién eres y te digo cómo vas.</span>
-        <button class="btn btn-primary btn-mini" id="btnQuienSoy" type="button">¿Quién eres?</button>
+        <button class="btn btn-primary btn-mini" id="whoAmIButton" type="button">¿Quién eres?</button>
       </div>
     </div>`;
   } else {
@@ -1858,18 +1858,18 @@ function accountsView(c){
     const title = s === 0 ? 'Estás en paz' : s > 0 ? `Te deben ${eur(s)}` : `Debes ${eur(-s)}`;
     const myBizums = pending.filter(b => b.de === S.me || b.a === S.me);
     const actions = myBizums.map(b => b.de === S.me
-      ? `<div class="micuenta-action">
+      ? `<div class="my-account-action">
           <span class="text">Haz bizum de <b>${eur(b.cents)}</b> a <b>${escapeHtml(personById(b.a).name)}</b></span>
-          <button class="btn btn-soft btn-mini" data-copiabizum="${escapeHtml(b.a)}" data-cents="${b.cents}" type="button">Copiar</button>
+          <button class="btn btn-soft btn-mini" data-copy-bizum="${escapeHtml(b.a)}" data-cents="${b.cents}" type="button">Copiar</button>
         </div>`
-      : `<div class="micuenta-action">
+      : `<div class="my-account-action">
           <span class="text"><b>${escapeHtml(personById(b.de).name)}</b> te debe <b>${eur(b.cents)}</b></span>
         </div>`).join('');
     myAccount = `<div class="card">
       <span class="label">Tu cuenta</span>
-      <div class="micuenta-cifra ${cls}">${title}</div>
-      <div class="micuenta-desglose">Pagaste ${eur(c.payerTotals[S.me]||0)} · te tocaba ${eur(c.owes[S.me]||0)}</div>
-      ${actions || (s === 0 ? '<div class="micuenta-action"><span class="text">Ni pa ti ni pa mí. Así da gusto.</span></div>' : '')}
+      <div class="my-account-amount ${cls}">${title}</div>
+      <div class="my-account-breakdown">Pagaste ${eur(c.payerTotals[S.me]||0)} · te tocaba ${eur(c.owes[S.me]||0)}</div>
+      ${actions || (s === 0 ? '<div class="my-account-action"><span class="text">Ni pa ti ni pa mí. Así da gusto.</span></div>' : '')}
     </div>`;
   }
 
@@ -1881,9 +1881,9 @@ function accountsView(c){
 
   const bizumsHtml = c.bizums.map(b => {
     const key = bizumKey(b), done = isBizumDone(b);
-    return `<div class="card bizum-fila ${done?'done':''}">
+    return `<div class="card bizum-row ${done?'done':''}">
       <div class="who">${escapeHtml(personById(b.de).name)}${arrow}${escapeHtml(personById(b.a).name)}</div>
-      <span class="cuanto">${eur(b.cents)}</span>
+      <span class="transfer-amount">${eur(b.cents)}</span>
       <button class="checkIcon ${done?'on':''}" data-bizum="${escapeHtml(key)}" type="button"
         aria-label="${done?'Deshacer':'Marcar'} bizum de ${escapeHtml(personById(b.de).name)} a ${escapeHtml(personById(b.a).name)}">${checkIcon}</button>
     </div>`;
@@ -1892,18 +1892,18 @@ function accountsView(c){
   const allSettled = c.bizums.length>0 && pending.length===0;
 
   return `
-    <div class="cabecera"><h1>Las cuentas</h1><div class="sub">Bizums mínimos pa quedar en paz</div></div>
+    <div class="screen-header"><h1>Las cuentas</h1><div class="sub">Bizums mínimos pa quedar en paz</div></div>
     ${myAccount}
     <div class="card total-card">
-      <div class="cifra">${eur(c.total)}</div>
-      <div class="porcabeza">${subtotalText}</div>
+      <div class="amount">${eur(c.total)}</div>
+      <div class="per-head">${subtotalText}</div>
     </div>
     ${c.bizums.length ? '<span class="label">Bizums de todos</span>' : ''}
     ${bizumsHtml}
-    ${allSettled ? '<div class="enpaz">Cuentas claras y el chocolate espeso.</div>'
-      : c.bizums.length ? '<div class="pie-nota">Marca el círculo cuando el bizum esté hecho.</div>'
-      : '<div class="enpaz">Cuentas en paz. Ni pa ti ni pa mí.</div>'}
-    <button class="btn btn-primary btn-block" id="btnCompartirCuentas" type="button" style="margin-top:14px;padding:14px">
+    ${allSettled ? '<div class="settled-message">Cuentas claras y el chocolate espeso.</div>'
+      : c.bizums.length ? '<div class="footnote">Marca el círculo cuando el bizum esté hecho.</div>'
+      : '<div class="settled-message">Cuentas en paz. Ni pa ti ni pa mí.</div>'}
+    <button class="btn btn-primary btn-block" id="shareAccountsButton" type="button" style="margin-top:14px;padding:14px">
       Mandar las cuentas al grupo</button>
   `;
 }
@@ -1919,10 +1919,10 @@ function render(){
     return;
   }
   document.querySelectorAll('.tab').forEach(t =>
-    t.classList.toggle('activa', t.dataset.tab === S.tab));
+    t.classList.toggle('active', t.dataset.tab === S.tab));
   const c = accounts();
   const pendingItems = pendingBizums(c).length;
-  const badge = $('#badgeCuentas');
+  const badge = $('#accountsBadge');
   badge.hidden = pendingItems===0;
   badge.textContent = pendingItems;
 
@@ -1934,13 +1934,13 @@ function render(){
 }
 
 function bindEntry(v){
-  v.querySelector('#btnUnirme').onclick = () => {
-    const txt = v.querySelector('#inEnlace').value.trim();
+  v.querySelector('#joinLinkButton').onclick = () => {
+    const txt = v.querySelector('#linkInput').value.trim();
     if(!txt) return joinSheet();
     if(!importParty(txt)) toast('Ahí no hay ninguna fiesta que valga');
   };
-  v.querySelector('#btnCrear').onclick = createPartySheet;
-  v.querySelector('#btnVerEjemplo').onclick = () => {
+  v.querySelector('#createButton').onclick = createPartySheet;
+  v.querySelector('#demoButton').onclick = () => {
     resetSync();
     S = demoState(); saveLocal(); render(); identitySheet(true);
   };
@@ -1950,26 +1950,26 @@ function bindView(v){
   const on = (sel, fn) => { const el = v.querySelector(sel); if(el) el.onclick = fn; };
 
   /* party / home */
-  on('#btnInvitar', () => shareSheet('invite'));
-  on('#btnPonerVivo', enableLive);
-  on('#btnQuienSoy', () => identitySheet(false));
-  on('#btnMiCuenta', () => { S.tab='accounts'; save(); render(); });
-  on('#btnAccion', e => {
-    const ir = v.querySelector('#btnAccion').dataset.ir;
-    if(ir === 'expense'){
+  on('#inviteButton', () => shareSheet('invite'));
+  on('#enableLiveButton', enableLive);
+  on('#whoAmIButton', () => identitySheet(false));
+  on('#myAccountButton', () => { S.tab='accounts'; save(); render(); });
+  on('#actionButton', e => {
+    const target = v.querySelector('#actionButton').dataset.target;
+    if(target === 'expense'){
       if(!S.me) return identitySheet(true);
       expenseSheet(null);
-    } else { S.tab = ir; save(); render(); }
+    } else { S.tab = target; save(); render(); }
   });
-  on('#btnRenombrar', renameSheet);
-  on('#btnNueva', () => confirmSheet('¿Empezar otra fiesta?',
+  on('#renameButton', renameSheet);
+  on('#newPartyButton', () => confirmSheet('¿Empezar otra fiesta?',
     S.remote
       ? 'Se quita de tu móvil, pero sigue en vivo pa la peña: con el enlace del grupo vuelves cuando quieras.'
       : 'Esta se borra de tu móvil. Si quieres conservarla, copia antes el enlace de invitación: sirve de copia de seguridad.', () => {
       resetSync();
       S = null; localStorage.removeItem(STORAGE_KEY); render();
     }));
-  on('#btnVerEjemplo', () => confirmSheet('¿Cargar la fiesta de ejemplo?',
+  on('#demoButton', () => confirmSheet('¿Cargar la fiesta de ejemplo?',
     S.remote
       ? 'La tuya sigue en vivo pa la peña; el ejemplo va solo en este móvil.'
       : 'Se borrará la actual de este móvil (la de tus colegas no se toca).', () => {
@@ -1979,21 +1979,21 @@ function bindView(v){
     }));
 
   /* list */
-  const form = v.querySelector('#formAddItem');
+  const form = v.querySelector('#addItemForm');
   if(form) form.onsubmit = e => {
     e.preventDefault();
-    const n = v.querySelector('#inItem').value.trim();
+    const n = v.querySelector('#itemInput').value.trim();
     if(!n) return toast('Escribe algo, que la lista no adivina.');
     if(S.items.length >= 500) return toast('La lista no da pa más (500 cosas). Quita algo primero.');
     S.items.unshift(touch({id:newId('i'), name:n, status:'pending',
       createdAt:now(), createdBy:S.me || null}));
     save(); render(); toast('«' + n + '» apuntado');
   };
-  on('#btnGastoDirecto', () => {
+  on('#directExpenseButton', () => {
     if(!S.me) return identitySheet(true);
     expenseSheet(null);
   });
-  on('#btnMandarLista', () => shareSheet('list'));
+  on('#shareListButton', () => shareSheet('list'));
   // The party may have changed underneath while rendering was deferred because
   // an input had half-written text. Every action revalidates item state so it
   // does not overwrite a purchase another phone just resolved.
@@ -2007,8 +2007,8 @@ function bindView(v){
     touch(it);
     save(); render(); toast('Apuntado: ' + it.name + ' corre de tu cuenta.');
   });
-  v.querySelectorAll('[data-soltar]').forEach(b => b.onclick = () => {
-    const it = itemById(b.dataset.soltar);
+  v.querySelectorAll('[data-release]').forEach(b => b.onclick = () => {
+    const it = itemById(b.dataset.release);
     if(!it || it.status !== 'claimed'){
       render(); return toast('Esa ya ha cambiado de manos.');
     }
@@ -2019,13 +2019,13 @@ function bindView(v){
     touch(it);
     save(); render(); toast('Suelta. A ver quién se la pide ahora.');
   });
-  v.querySelectorAll('[data-asignar]').forEach(b => b.onclick = () => {
+  v.querySelectorAll('[data-assign]').forEach(b => b.onclick = () => {
     if(!isAdmin()) return toast('Eso es cosa de la llave');
-    assignSheet(b.dataset.asignar);
+    assignSheet(b.dataset.assign);
   });
-  v.querySelectorAll('[data-comprar]').forEach(b => b.onclick = () => {
+  v.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => {
     if(!S.me) return identitySheet(true);
-    expenseSheet(b.dataset.comprar);
+    expenseSheet(b.dataset.buy);
   });
   v.querySelectorAll('[data-editar]').forEach(card => card.onclick = e => {
     if(e.target.closest('button')) return;
@@ -2037,9 +2037,9 @@ function bindView(v){
     }
     expenseSheet(card.dataset.editar);
   });
-  v.querySelectorAll('[data-quitar]').forEach(b => b.onclick = e => {
+  v.querySelectorAll('[data-remove-button]').forEach(b => b.onclick = e => {
     e.stopPropagation();
-    const it = itemById(b.dataset.quitar);
+    const it = itemById(b.dataset.remove-button);
     if(!it) return render();
     if(it.status === 'bought'){
       // Another phone just bought it; deleting money requires confirmation.
@@ -2055,16 +2055,16 @@ function bindView(v){
   });
 
   /* group */
-  const formP = v.querySelector('#formAddPersona');
+  const formP = v.querySelector('#addPersonForm');
   if(formP) formP.onsubmit = e => {
     e.preventDefault();
-    const n = v.querySelector('#inPersona').value.trim();
+    const n = v.querySelector('#personInput').value.trim();
     if(!n) return;
     if(S.people.length >= 100) return toast('La peña no da pa más (100). Menuda fiesta.');
     S.people.push(touch({id:newId('p'), name:n, admin:false}));
     save(); render(); toast(n + ' se une a la peña');
   };
-  v.querySelectorAll('[data-persona]').forEach(f => f.onclick = () => personSheet(f.dataset.persona));
+  v.querySelectorAll('[data-person]').forEach(f => f.onclick = () => personSheet(f.dataset.person));
 
   /* accounts */
   v.querySelectorAll('[data-bizum]').forEach(b => b.onclick = () => {
@@ -2083,13 +2083,13 @@ function bindView(v){
     }
     save(); render();
   });
-  v.querySelectorAll('[data-copiabizum]').forEach(b => b.onclick = async () => {
-    const who = personById(b.dataset.copiabizum);
+  v.querySelectorAll('[data-copy-bizum]').forEach(b => b.onclick = async () => {
+    const who = personById(b.dataset.copyBizum);
     const txt = `Bizum de ${eur(Number(b.dataset.cents))} a ${who ? who.name : '—'} — «${S.party.name}»`;
     const ok = await copyToClipboard(txt);
     toast(ok ? 'Copiado. Al Bizum y arreando.' : 'No se ha podido copiar');
   });
-  on('#btnCompartirCuentas', () => shareSheet('accounts'));
+  on('#shareAccountsButton', () => shareSheet('accounts'));
 }
 
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {

@@ -3,7 +3,7 @@
 Party expenses for the Collado Hermoso crew, split evenly and settled with
 minimum Bizums.
 
-**Production:** https://collados.alexdepablos.es
+**Production:** https://apachas.alexdepablos.es
 
 The group writes the party shopping list, each person claims what they will
 bring, bought items record price, payer, and consumers, and A Pachas calculates

@@ -7,8 +7,8 @@ set -euo pipefail
 DEPLOY_HOST="${DEPLOY_HOST:-100.83.154.97}" # treasure-map-prod-01 (tailnet)
 DEPLOY_USER="${DEPLOY_USER:-adpablos}"
 DEPLOY_SSH_KEY="${DEPLOY_SSH_KEY:-$HOME/.ssh/treasure_map_prod_github_actions_ed25519}"
-APP_DIR="/opt/collados-party"
-PUBLIC_URL="https://collados.alexdepablos.es"
+APP_DIR="/opt/apachas"
+PUBLIC_URL="https://apachas.alexdepablos.es"
 
 echo "→ Deploying to ${DEPLOY_USER}@${DEPLOY_HOST}:${APP_DIR}"
 # Restart api because `up` does not detect changes in mounted files such as

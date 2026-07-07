@@ -40,7 +40,7 @@ the whole frontend lives in `public/index.html` and the whole backend lives in
    explicitly asks for it. The only agreed exception is Google Fonts, with a
    system fallback.
 2. Use the current English-only data contract. The localStorage key is
-   `a-pachas-v1`; live links use `#F:id:key` and keep the key in the hash so it
+   `a-pachas-v2`; live links use `#F:id:key` and keep the key in the hash so it
    does not reach logs. Local snapshot links use `AP2:`. Do not add legacy
    Spanish payload aliases unless explicitly requested.
 3. Local mode must keep working. If the API is unavailable, the app remains
@@ -54,7 +54,7 @@ the whole frontend lives in `public/index.html` and the whole backend lives in
    server/api.js` and test the full mobile flow: create, join by link from
    another client, list, quick expense, bought item with price and consumers,
    Bizums, and share messages. After deployment, confirm
-   `https://collados.alexdepablos.es` responds; `scripts/deploy.sh` already
+   `https://apachas.alexdepablos.es` responds; `scripts/deploy.sh` already
    checks web and API health.
 
 ## Testing

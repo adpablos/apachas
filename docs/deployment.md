@@ -8,12 +8,12 @@ authorized on that server.
 
 ## Architecture
 
-One isolated Docker Compose project, `collados`, with three containers:
+One isolated Docker Compose project, `apachas`, with three containers:
 
 ```txt
-Internet ── Cloudflare ── tunnel "collados" ── cloudflared ── nginx (web)
+Internet ── Cloudflare ── tunnel "apachas" ── cloudflared ── nginx (web)
                                                                ├─ serves public/
-https://collados.alexdepablos.es                               └─ /api/ → api
+https://apachas.alexdepablos.es                               └─ /api/ → api
                                                                   (node,
                                                                    shared
                                                                    parties)
@@ -38,15 +38,14 @@ material is the tunnel credential, which lives outside the repo.
 
 ## Server Paths
 
-These are current production paths. Rename them only as part of an explicit
-server migration, not as a cosmetic repo change.
+These are the canonical deployment paths for A Pachas. Changing them is a server migration, not a cosmetic repo change.
 
-| What                       | Where                                        |
-| -------------------------- | -------------------------------------------- |
-| Deployment clone           | `/opt/collados-party`                        |
-| Tunnel config/credentials  | `/etc/collados-party/cloudflared/`           |
-| Local smoke port           | `127.0.0.1:3200`                             |
-| Compose project            | `collados`                                   |
+| What                       | Where                              |
+| -------------------------- | ---------------------------------- |
+| Deployment clone           | `/opt/apachas`                     |
+| Tunnel config/credentials  | `/etc/apachas/cloudflared/`        |
+| Local smoke port           | `127.0.0.1:3200`                   |
+| Compose project            | `apachas`                          |
 
 ## Normal Deployment
 
@@ -57,7 +56,7 @@ scripts/deploy.sh
 ```
 
 The script runs `git pull --ff-only` and `docker compose up -d --wait` on the
-server, then verifies that `https://collados.alexdepablos.es` responds. Because
+server, then verifies that `https://apachas.alexdepablos.es` responds. Because
 `public/` is mounted directly into nginx, content-only changes do not require a
 container restart. Changes to `server/api.js` or nginx config do need a restart;
 `up` does not detect changes in mounted files, so use:
@@ -69,7 +68,7 @@ sudo docker compose restart api    # or web, if deployment/nginx/ changed
 Equivalent manual flow on the server:
 
 ```bash
-cd /opt/collados-party
+cd /opt/apachas
 git pull --ff-only
 sudo docker compose up -d --wait
 curl -fsS http://127.0.0.1:3200/ >/dev/null && echo OK
@@ -78,7 +77,7 @@ curl -fsS http://127.0.0.1:3200/api/health >/dev/null && echo API OK
 
 ## Initial Setup
 
-Completed on 2026-07-05 with tunnel `collados`, id
+Completed on 2026-07-05 with tunnel `apachas`, id
 `2abb0680-613f-4304-9835-80e2bcf642fd`. This is documented so the setup can be
 recreated if needed.
 
@@ -90,8 +89,8 @@ This is the same pattern used by the World Cup pool tunnels.
 1. From the Mac, create the tunnel and DNS route:
 
    ```bash
-   cloudflared tunnel create collados
-   cloudflared tunnel route dns collados collados.alexdepablos.es
+   cloudflared tunnel create apachas
+   cloudflared tunnel route dns apachas apachas.alexdepablos.es
    ```
 
    `create` prints the tunnel id and stores credentials at
@@ -103,35 +102,35 @@ This is the same pattern used by the World Cup pool tunnels.
 
    ```bash
    TID=<tunnel-id>
-   sed "s/<tunnel-id>/$TID/g" deployment/cloudflare/config.yml.example > /tmp/collados-config.yml
+   sed "s/<tunnel-id>/$TID/g" deployment/cloudflare/config.yml.example > /tmp/apachas-config.yml
    scp -i ~/.ssh/treasure_map_prod_github_actions_ed25519 -o IdentitiesOnly=yes \
-     /tmp/collados-config.yml ~/.cloudflared/$TID.json adpablos@100.83.154.97:/tmp/
+     /tmp/apachas-config.yml ~/.cloudflared/$TID.json adpablos@100.83.154.97:/tmp/
    ```
 
    Then on the server:
 
    ```bash
-   sudo mkdir -p /etc/collados-party/cloudflared
-   sudo install -o root -g adpablos -m 0640 /tmp/collados-config.yml /etc/collados-party/cloudflared/config.yml
-   sudo install -o root -g adpablos -m 0640 /tmp/$TID.json /etc/collados-party/cloudflared/$TID.json
-   sudo chown root:adpablos /etc/collados-party /etc/collados-party/cloudflared
-   sudo chmod 750 /etc/collados-party /etc/collados-party/cloudflared
-   rm /tmp/collados-config.yml /tmp/$TID.json
+   sudo mkdir -p /etc/apachas/cloudflared
+   sudo install -o root -g adpablos -m 0640 /tmp/apachas-config.yml /etc/apachas/cloudflared/config.yml
+   sudo install -o root -g adpablos -m 0640 /tmp/$TID.json /etc/apachas/cloudflared/$TID.json
+   sudo chown root:adpablos /etc/apachas /etc/apachas/cloudflared
+   sudo chmod 750 /etc/apachas /etc/apachas/cloudflared
+   rm /tmp/apachas-config.yml /tmp/$TID.json
    ```
 
 3. On the server, clone the repo:
 
    ```bash
-   sudo git clone https://github.com/adpablos/apachas.git /opt/collados-party
-   sudo chown -R adpablos:adpablos /opt/collados-party
+   sudo git clone https://github.com/adpablos/apachas.git /opt/apachas
+   sudo chown -R adpablos:adpablos /opt/apachas
    ```
 
 4. Start and verify:
 
    ```bash
-   cd /opt/collados-party
+   cd /opt/apachas
    sudo docker compose up -d --wait
-   curl -fsS https://collados.alexdepablos.es >/dev/null && echo OK
+   curl -fsS https://apachas.alexdepablos.es >/dev/null && echo OK
    ```
 
 ## Operations
@@ -139,15 +138,15 @@ This is the same pattern used by the World Cup pool tunnels.
 Status and logs:
 
 ```bash
-sudo docker compose -p collados ps
-sudo docker compose -p collados logs -f cloudflared
-sudo docker compose -p collados logs -f web
+sudo docker compose -p apachas ps
+sudo docker compose -p apachas logs -f cloudflared
+sudo docker compose -p apachas logs -f web
 ```
 
 Rollback. Content is the repo, so rollback is git:
 
 ```bash
-cd /opt/collados-party
+cd /opt/apachas
 git log --oneline -5          # pick the known-good commit
 git reset --hard <commit>     # or revert + push from the Mac, preferred
 sudo docker compose up -d --wait
@@ -156,7 +155,7 @@ sudo docker compose up -d --wait
 Shutdown without deleting the tunnel or DNS:
 
 ```bash
-cd /opt/collados-party
+cd /opt/apachas
 sudo docker compose down
 ```
 
@@ -164,7 +163,7 @@ Full tunnel deletion, if the app is retired someday. Run this from the Mac,
 where the account cert lives:
 
 ```bash
-cloudflared tunnel delete collados   # after down and DNS deletion in Cloudflare
+cloudflared tunnel delete apachas   # after down and DNS deletion in Cloudflare
 ```
 
 ## Guardrails
@@ -177,4 +176,4 @@ cloudflared tunnel delete collados   # after down and DNS deletion in Cloudflare
   `3100`. If there is a conflict, change `compose.yaml`; do not reuse another
   app's port.
 - Tunnel credentials are never committed. They live only in
-  `/etc/collados-party/cloudflared/`.
+  `/etc/apachas/cloudflared/`.
