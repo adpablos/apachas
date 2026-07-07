@@ -144,8 +144,6 @@
   .estado-sync.vivo::before{content:'';display:inline-block;width:8px;height:8px;
     border-radius:999px;background:#3DDC84;margin-right:7px}
   .quetoca-txt{margin:0 0 12px;font-family:var(--display);font-weight:700;font-size:18px;line-height:1.3}
-  .separador-o{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px;margin:18px 0}
-  .separador-o::before,.separador-o::after{content:'';flex:1;height:1px;background:var(--line)}
   .crear-dashed{
     width:100%;border:1.5px dashed var(--line);background:transparent;border-radius:var(--radius);
     color:var(--muted);font-size:14px;font-weight:600;padding:14px;cursor:pointer;
@@ -360,6 +358,11 @@ function migrar(o){
   if(!o.fiesta.mod) o.fiesta.mod = 0;
   // la fecha acaba en un value="...": o es AAAA-MM-DD o no es nada
   if(o.fiesta.fecha != null && !/^\d{4}-\d{2}-\d{2}$/.test(o.fiesta.fecha)) o.fiesta.fecha = null;
+  // la app desplegada marcaba ejemplo:true al migrar fiestas REALES de
+  // el-bote-proto (y sus AP1 lo arrastran): solo la demo de verdad (ids
+  // p1..p5 de fábrica) puede llevar la marca; a las demás se les quita
+  // para que puedan ponerse en vivo
+  if(o.fiesta.ejemplo && !(o.gente || []).some(p => p && p.id === 'p1')) delete o.fiesta.ejemplo;
   o.gente = (o.gente || []).filter(p => p && typeof p.id === 'string' && ID_OK.test(p.id));
   o.gente.forEach((p,i) => {
     if(p.admin === undefined) p.admin = i < 2;
@@ -373,11 +376,14 @@ function migrar(o){
     if(o.saldados[k] === true) o.saldados[k] = {hecho:true, t:0};
   }
   o.papelera = (o.papelera || []).filter(l => l && typeof l.id === 'string' && ID_OK.test(l.id));
+  // toda lápida lleva vio (qué versión vio quien borró); las antiquísimas
+  // sin él heredan su hora de borrado, como hasta ahora
+  o.papelera.forEach(l => { if(l.vio == null) l.vio = l.t || 0; });
   return o;
 }
 
 const LOGO = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4.5"><circle cx="24" cy="24" r="19"/><g stroke-linecap="round"><line x1="24" y1="24" x2="24" y2="5"/><line x1="24" y1="24" x2="42.1" y2="18.1"/><line x1="24" y1="24" x2="35.2" y2="39.4"/><line x1="24" y1="24" x2="12.8" y2="39.4"/><line x1="24" y1="24" x2="5.9" y2="18.1"/></g></svg>`;
-const LLAVE = `<svg class="llave" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Admin"><circle cx="8" cy="8" r="4.5"/><path d="M11 11l9 9M17 17l2.5-2.5M14 14l2.5-2.5"/></svg>`;
+const LLAVE = `<svg class="llave" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="La llave"><circle cx="8" cy="8" r="4.5"/><path d="M11 11l9 9M17 17l2.5-2.5M14 14l2.5-2.5"/></svg>`;
 
 function demo(){
   return migrar({
@@ -423,10 +429,11 @@ try {
   if(S && !['fiesta','lista','pena','cuentas'].includes(S.tab)) S.tab = 'fiesta';
 } catch(e){ S = null; }
 
-function guardarLocal(){
+function guardarLocal(jsonCompartido){
   // foto de lo compartido tal y como queda guardado: guardar() la compara
-  // para distinguir cambios de verdad de guardados puramente locales (tab, yo)
-  if(S && S.remota) sync.compartidoActual = estadoJson();
+  // para distinguir cambios de verdad de guardados puramente locales (tab, yo).
+  // Quien ya tenga la serialización la pasa y se ahorra recalcularla.
+  if(S && S.remota) sync.compartidoActual = jsonCompartido || estadoJson();
   try{ localStorage.setItem(CLAVE, JSON.stringify(S)); }catch(e){}
 }
 // Guardar de verdad: al móvil siempre, y si la fiesta está en vivo, al
@@ -437,14 +444,27 @@ function guardar(){
   if(S && S.remota && !S.fiesta.ejemplo){
     const j = estadoJson();
     const esCambio = j !== sync.compartidoActual;                 // este guardado tocó lo compartido
+    if(esCambio) sync.rechazado = false; // cambio de verdad: otra oportunidad de subir
     const sinSubir = sync.subido !== null && j !== sync.subido;   // difiere de lo confirmado
     if(esCambio || sinSubir){
       S.pendienteSubida = true;
-      sync.rechazado = false; // cambio nuevo: otra oportunidad de subir
-      programarSubida();
+      // con el último estado rechazado por el server, reintentar sin cambios
+      // nuevos solo repite el 400 y el toast
+      if(!sync.rechazado) programarSubida();
     }
+    guardarLocal(j);
+    return;
   }
   guardarLocal();
+}
+
+// al cambiar de fiesta (abrir enlace, crear, importar, ejemplo, empezar otra)
+// el estado de sincronización de la anterior no pinta nada en la nueva
+function resetSync(){
+  clearTimeout(sync.timer);
+  sync.subido = null; sync.compartidoActual = null; sync.otraVez = false;
+  sync.pintarLuego = false; sync.ultimo = 0; sync.sinRed = false;
+  sync.avisado = false; sync.rechazado = false;
 }
 
 /* ================= tema ================= */
@@ -504,8 +524,29 @@ const hechoBizum = b => {
 const bizumsPendientes = c => c.bizums.filter(b => !hechoBizum(b));
 const claseSaldo = s => s > 0 ? 'saldo-verde' : (s < 0 ? 'saldo-coral' : 'saldo-neutro');
 
-// sello de última edición: de esto vive la fusión entre móviles
-function tocar(x){ x.mod = ahora(); x.modPor = S.yo || null; return x; }
+// sello de última edición: de esto vive la fusión entre móviles. Monótono
+// respecto a lo que edita: aunque el reloj de este móvil vaya atrasado, una
+// edición real siempre queda por encima de la versión (y la lápida) que pisa.
+function tocar(x){ x.mod = Math.max(ahora(), (x.mod || 0) + 1); x.modPor = S.yo || null; return x; }
+
+// borrar con protocolo: fuera de la colección + lápida informada (vio) con
+// el tope local de papelera (el servidor rechaza estados desbocados)
+function enterrar(coleccion, ent){
+  S[coleccion] = S[coleccion].filter(x => x.id !== ent.id);
+  S.papelera.push({id: ent.id, t: ahora(), vio: ent.mod || 0});
+  if(S.papelera.length > 300) S.papelera = S.papelera.slice(-300);
+}
+
+const elItem = id => S && S.items.find(x => x.id === id);
+
+// abortar una acción de sheet cuya premisa ya no vale (la fiesta cambió
+// por debajo): cerrar, repintar la verdad y avisar — siempre igual
+function abortarSheet(msg){ cerrarSheet(); pintar(); toast(msg); }
+function exigirLlave(){
+  if(soyAdmin()) return true;
+  abortarSheet('La llave ya no es tuya: eso no te toca.');
+  return false;
+}
 
 const pillPersona = (p, attr, clases) =>
   `<button class="pill ${clases}" type="button" data-${attr}="${esc(p.id)}">${avatarHtml(p.id,true)}${esc(p.nombre)}</button>`;
@@ -561,9 +602,9 @@ async function copiar(txt){
 const RE_VIVO = /F:([a-z2-9]{6,}):([a-z2-9]{6,})/i;
 
 function codigoFiesta(){
-  const limpio = {...S, yo:null, tab:'fiesta'};
-  delete limpio.remota;
-  delete limpio.pendienteSubida;
+  // por lista blanca (compartidoDe define qué es compartido): un campo local
+  // nuevo jamás se cuela de rondón en los enlaces-copia
+  const limpio = {...compartidoDe(S), yo:null, tab:'fiesta'};
   // los AP1 los leen también clientes viejos cacheados: saldados en su
   // formato (solo claves hechas, a true), que un {hecho:false} les sale ✓.
   // Se exporta lo saldado según las cuentas de AHORA (una marca con importe
@@ -598,6 +639,11 @@ function respaldarActual(){
     try{ localStorage.setItem(CLAVE + '-anterior', JSON.stringify(S)); }catch(e){}
   }
 }
+function aplicarImportado(obj){
+  respaldarActual();
+  resetSync();
+  S = obj; guardarLocal(); pintar(); sheetIdentidad(true);
+}
 function importar(texto){
   const mv = String(texto).match(RE_VIVO);
   if(mv){
@@ -607,8 +653,15 @@ function importar(texto){
   }
   const obj = decodificar(texto);
   if(!obj) return false;
-  respaldarActual();
-  S = obj; guardarLocal(); pintar(); sheetIdentidad(true);
+  // un enlace-copia viejo no puede desconectar una fiesta viva en silencio
+  if(S && S.remota && !S.fiesta.ejemplo){
+    cerrarSheet();
+    sheetConfirmar('¿Abrir la fiesta del enlace?',
+      'Ese enlace lleva una copia congelada. Tu fiesta en vivo se queda a salvo: vuelves a ella con el enlace del grupo.',
+      () => aplicarImportado(obj));
+    return true;
+  }
+  aplicarImportado(obj);
   return true;
 }
 
@@ -667,15 +720,12 @@ function fusionar(a, b){
     if(!previa || fuerza(p) > fuerza(previa) ||
        (fuerza(p) === fuerza(previa) && (p.t||0) > (previa.t||0))) pap.set(p.id, p);
   });
+  // la lápida guarda qué versión vio quien borró (vio, normalizado en
+  // migrar): solo entierra lo que conocía. Un borrado a ciegas no puede
+  // llevarse una compra apuntada en una revisión que nunca descargó.
   const enterrado = x => {
     const l = pap.get(x.id);
-    if(!l) return false;
-    // la lápida guarda qué versión vio quien borró (vio): solo entierra lo
-    // que conocía. Un borrado a ciegas no puede llevarse una compra que se
-    // apuntó en una revisión que el borrador nunca llegó a descargar.
-    // Lápidas antiguas sin vio: se comparan por hora, como antes.
-    const visto = l.vio != null ? l.vio : (l.t || 0);
-    return visto >= mod(x);
+    return !!l && fuerza(l) >= mod(x);
   };
   const mezcla = (la, lb) => {
     const enA = new Map(la.map(x=>[x.id,x]));
@@ -696,6 +746,19 @@ function fusionar(a, b){
   }
   const gente = mezcla(a.gente, b.gente);
   const items = mezcla(a.items, b.items);
+  // saldados no puede crecer sin freno (el servidor rechaza >500 claves):
+  // fuera las parejas con gente que ya no está y, si aún sobra, las marcas
+  // más viejas. Determinista: todos los móviles podan igual.
+  const idsDeGente = new Set(gente.map(p => p.id));
+  for(const k of Object.keys(saldados)){
+    const par = k.split('>');
+    if(!idsDeGente.has(par[0]) || !idsDeGente.has(par[1])) delete saldados[k];
+  }
+  const clavesSaldados = Object.keys(saldados);
+  if(clavesSaldados.length > 400){
+    clavesSaldados.sort((x, y) => ((saldados[x].t || 0) - (saldados[y].t || 0)));
+    for(const k of clavesSaldados.slice(0, clavesSaldados.length - 400)) delete saldados[k];
+  }
   // un gasto vivo mantiene vivo a quien lo pagó o lo trae: si no, borrar a
   // una persona con compras que sobreviven dejaría cuentas descuadradas
   // (se cobra a los que catan y el crédito del pagador se esfuma)
@@ -712,6 +775,14 @@ function fusionar(a, b){
         presentes.add(ref);
       }
     }
+  }
+  // la peña no puede quedarse vacía: dos llaves borrando en paralelo pueden
+  // enterrar a todo el mundo (cada guard local pasa en su móvil). Nadie
+  // quiso eso: se recupera el id más bajo, elección determinista.
+  if(!gente.length && candidatos.size){
+    const superviviente = [...candidatos.values()].sort((x,y) => x.id < y.id ? -1 : 1)[0];
+    gente.push(superviviente);
+    presentes.add(superviviente.id);
   }
   // la llave no puede desaparecer: si dos llaves se la quitan mutuamente a
   // la vez, la fusión dejaría a la peña sin admin y sin manera de arreglarlo.
@@ -800,7 +871,11 @@ async function subir(){
       const fiestaPedida = S.remota.id;
       const estado = estadoCompartido();
       const json = JSON.stringify(estado);
-      if(json === sync.subido) break;
+      if(json === sync.subido){
+        // ya está todo confirmado: que la marca persistida no se quede colgada
+        if(S.pendienteSubida){ S.pendienteSubida = false; guardarLocal(json); }
+        break;
+      }
       const r = await pedir('PUT', '/fiestas/' + fiestaPedida,
         {clave: S.remota.clave, rev: S.remota.rev, estado});
       // si durante el vuelo se cambió de fiesta, esta respuesta ya no pinta nada
@@ -819,18 +894,18 @@ async function subir(){
         pintarOLuego();
         // y a la siguiente vuelta subimos lo fusionado
       } else if(r.status === 404){
-        desconectarRemota('Esa fiesta ya no está en el servidor. Sigues con tu copia local.');
+        desconectarRemota('Esa fiesta ya no está en vivo. Sigues con la copia de tu móvil.');
         break;
       } else if(r.status === 403){
-        desconectarRemota('Este enlace ya no puede editar la fiesta. Sigues con tu copia local.');
+        desconectarRemota('Este enlace ya no puede editar la fiesta. Sigues con la copia de tu móvil.');
         break;
       } else if(r.status === 429){
         break; // frenazo del servidor: el intervalo lo reintenta enseguida
       } else if(r.status === 400 || r.status === 413){
-        // el servidor no quiere este estado (¿demasiado grande?): no es un
+        // el otro lado no quiere este estado (¿demasiado grande?): no es un
         // problema de red y reintentar a ciegas no lo arregla
         sync.rechazado = true;
-        toast('El servidor no ha aceptado los últimos cambios. Se quedan en este móvil.');
+        toast('Los últimos cambios no han podido subir. De momento se quedan en este móvil.');
         refrescarSync();
         break;
       } else { sinRed(); break; }
@@ -854,6 +929,9 @@ async function bajar(){
       alDia(); return;
     }
     if(r.status === 200 && r.cuerpo && r.cuerpo.estado){
+      // respuesta rezagada (un PUT nuestro ya avanzó la revisión): ignorar,
+      // que regresar rev/estado montaría un vaivén de re-subidas
+      if(!(r.cuerpo.rev > S.remota.rev)){ alDia(); return; }
       const antes = estadoJson();
       const remoto = migrar(r.cuerpo.estado);
       adoptar(fusionar(remoto, estadoCompartido()));
@@ -867,18 +945,21 @@ async function bajar(){
         programarSubida(); // la fusión tiene cosas nuestras que el server no vio
       }
       alDia();
-      if(despues !== antes){ guardarLocal(); pintarOLuego(); }
-      else guardarLocal(); // persistir al menos rev/pendienteSubida
+      guardarLocal(despues);
+      if(despues !== antes) pintarOLuego();
     } else if(r.status === 404){
-      desconectarRemota('Esa fiesta ya no está en el servidor. Sigues con tu copia local.');
-    } else if(r.status >= 500){
-      sinRed(); // el server no está fino: mismo trato que sin cobertura
+      desconectarRemota('Esa fiesta ya no está en vivo. Sigues con la copia de tu móvil.');
+    } else if(r.status === 429 || r.status >= 500){
+      sinRed(); // saturación o caída: mismo trato honesto que sin cobertura
     }
   } catch(e){ sinRed(); }
 }
 
+let creandoRemota = false; // un doble tap no puede crear dos fiestas
 async function crearRemota(){
   if(!S || S.fiesta.ejemplo || S.remota) return !!(S && S.remota); // la demo jamás se sube
+  if(creandoRemota) return false;
+  creandoRemota = true;
   const fiestaLocal = S; // si S cambia durante el POST, la respuesta no es de esta
   const estado = estadoCompartido();
   const json = JSON.stringify(estado); // foto de lo que de verdad mandamos
@@ -886,6 +967,7 @@ async function crearRemota(){
     const r = await pedir('POST', '/fiestas', {estado});
     if(S !== fiestaLocal) return false;
     if(r.status === 201 && r.cuerpo && r.cuerpo.id){
+      resetSync();
       S.remota = {id: r.cuerpo.id, clave: r.cuerpo.clave, rev: r.cuerpo.rev};
       sync.subido = json;
       // lo editado mientras el POST volaba se sube ahora
@@ -895,20 +977,26 @@ async function crearRemota(){
       return true;
     }
   } catch(e){}
+  finally { creandoRemota = false; }
   return false;
 }
 
 function desconectarRemota(msg){
-  S.remota = null; sync.subido = null;
+  S.remota = null;
+  resetSync();
   guardarLocal(); toast(msg);
   pintarOLuego();
 }
 
 async function activarVivo(){
   if(S.remota) return sheetCompartir('invitar');
+  if(creandoRemota) return; // ya está en ello (doble tap)
+  const btn = $('#btnPonerVivo');
+  if(btn) btn.disabled = true;
   if(await crearRemota()){
     pintar(); sheetCompartir('invitar');
   } else {
+    if(btn) btn.disabled = false;
     toast('Ahora mismo no hay manera (¿sin red?). La fiesta sigue en tu móvil; prueba luego.');
   }
 }
@@ -917,7 +1005,7 @@ async function abrirEnlaceVivo(id, clave){
   const r = await pedir('GET', '/fiestas/' + id).catch(() => ({status: 0}));
   if(r.status !== 200 || !r.cuerpo || !r.cuerpo.estado){
     toast(r.status === 404
-      ? 'Esa fiesta ya no está en el servidor.'
+      ? 'Ese enlace ya no lleva a ninguna fiesta.'
       : 'No se ha podido abrir la fiesta del enlace. ¿Hay red?');
     pintar();
     return false;
@@ -928,7 +1016,10 @@ async function abrirEnlaceVivo(id, clave){
   const yo = mismo ? S.yo : null;
   // si ya estábamos en esta fiesta, lo local pendiente se fusiona, no se pisa
   const base = mismo ? fusionar(remoto, estadoCompartido()) : remoto;
+  resetSync();
   S = {...base, yo, tab:'fiesta', remota:{id, clave, rev:r.cuerpo.rev}};
+  // el que abre pudo haber sido quitado de la peña: que no actúe de fantasma
+  if(S.yo && !persona(S.yo)) S.yo = null;
   const json = estadoJson();
   if(json === JSON.stringify(compartidoDe(remoto))){
     sync.subido = json;
@@ -938,7 +1029,7 @@ async function abrirEnlaceVivo(id, clave){
     S.pendienteSubida = true;
     programarSubida();
   }
-  guardarLocal(); alDia(); pintar();
+  guardarLocal(json); alDia(); pintar();
   if(!S.yo) sheetIdentidad(true);
   return true;
 }
@@ -1014,6 +1105,7 @@ function sheetIdentidad(forzado){
   $('#btnApuntame').onclick = () => {
     const n = $('#nuevoNombre').value.trim();
     if(!n) return toast('Escribe tu nombre, que la lista no adivina.');
+    if(S.gente.length >= 100) return toast('La peña no da pa más (100). Menuda fiesta.');
     const p = tocar({id: nuevoId('p'), nombre: n, admin:false});
     S.gente.push(p); S.yo = p.id; guardar(); cerrarSheet(); pintar();
     toast('Bienvenido, ' + n);
@@ -1022,10 +1114,11 @@ function sheetIdentidad(forzado){
 
 /* --- gasto: directo, marcar comprada o editar (un solo sheet) --- */
 function sheetGasto(itemId){
-  const it = itemId ? S.items.find(x=>x.id===itemId) : null;
-  if(itemId && !it) return;
+  const it = itemId ? elItem(itemId) : null;
+  if(itemId && !it){ pintar(); return toast('Esa ya no está en la lista.'); }
   const directo = !it;
   const editando = !!(it && it.estado === 'comprada');
+  let tocoConsumidores = false; // si nunca toca las pills, «todos» es todos
   const marcados = new Set(it ? consumidores(it) : S.gente.map(p=>p.id));
   let compradorSel = editando ? it.compradorId : ((it && it.pilladorId) || S.yo);
   if(!persona(compradorSel)) compradorSel = persona(S.yo) ? S.yo : null;
@@ -1075,6 +1168,7 @@ function sheetGasto(itemId){
   `);
   document.querySelectorAll('[data-cons]').forEach(b => b.onclick = () => {
     const id = b.dataset.cons;
+    tocoConsumidores = true; // ya no es un «entre todos» de intención
     if(marcados.has(id)){
       if(marcados.size === 1) return toast('Alguien lo catará, digo yo.');
       marcados.delete(id);
@@ -1093,36 +1187,47 @@ function sheetGasto(itemId){
     if(!nombre) return toast('Pon qué fue.');
     const val = precioACentimos($('#inPrecio').value);
     if(isNaN(val) || val<=0) return toast('Ponle precio, que gratis no fue.');
+    if(val > 100000000) return toast('¿' + eur(val) + '? Repasa ese precio, anda.');
     if(!persona(compradorSel)) return toast('¿Quién lo pagó?');
     // la peña puede haber cambiado con el sheet abierto: un id borrado en
-    // consumen resucitaría a esa persona en la siguiente fusión
-    const marcadosVivos = [...marcados].filter(id => persona(id));
-    if(!marcadosVivos.length){
-      cerrarSheet(); pintar();
-      return toast('La peña ha cambiado por debajo: revisa quiénes lo catan.');
+    // consumen resucitaría a esa persona en la siguiente fusión. Y si el
+    // usuario nunca tocó las pills partiendo de «todos», la intención es
+    // TODOS: que un recién llegado durante el sheet no se quede fuera.
+    let consumen;
+    if(!tocoConsumidores && (!it || !it.consumen)){
+      consumen = null;
+    } else {
+      const marcadosVivos = [...marcados].filter(id => persona(id));
+      if(!marcadosVivos.length){
+        return abortarSheet('La peña ha cambiado por debajo: revisa quiénes lo catan.');
+      }
+      consumen = marcadosVivos.length === S.gente.length ? null : marcadosVivos;
     }
-    const consumen = marcadosVivos.length === S.gente.length ? null : marcadosVivos;
     if(directo){
+      if(S.items.length >= 500) return toast('La lista no da pa más (500 cosas). Quita algo primero.');
       S.items.unshift(tocar({id:nuevoId('i'), nombre, estado:'comprada', precio:val,
         compradorId:compradorSel, consumen,
         creadoEn:ahora(), creadoPor:S.yo || null}));
       toast('Apuntado. Las cuentas ya lo saben.');
     } else {
       // buscar por id otra vez: la fiesta puede haberse refrescado mientras.
-      // Si otro la borró, se vuelve a apuntar: el pago fue real
+      // El permiso se revalida ANTES de nada (también en la rama de
+      // resurrección: quien perdió la llave no resucita compras ajenas).
       let vivo = S.items.find(x=>x.id===itemId);
+      const objetivo = vivo || it;
+      if(editando && !soyAdmin() && objetivo.compradorId !== S.yo){
+        return abortarSheet('Esa compra acaba de cambiar de manos: solo quien la pagó o la llave pueden tocarla.');
+      }
+      if(vivo && !editando && vivo.estado === 'comprada'){
+        // otro la ha comprado mientras el sheet estaba abierto: no se pisa
+        // su pago con este formulario
+        return abortarSheet('Alguien la ha apuntado ya como comprada: revísala antes de corregirla.');
+      }
       if(!vivo){
+        // si otro la borró, se vuelve a apuntar: el pago fue real
         vivo = it;
         S.items.unshift(vivo);
         S.papelera = S.papelera.filter(t=>t.id!==itemId);
-      } else if(!editando && vivo.estado === 'comprada'){
-        // otro la ha comprado mientras el sheet estaba abierto: no se pisa
-        // su pago con este formulario (ni se salta el permiso de edición)
-        cerrarSheet(); pintar();
-        return toast('Alguien la ha apuntado ya como comprada: revísala antes de corregirla.');
-      } else if(editando && !soyAdmin() && vivo.compradorId !== S.yo){
-        cerrarSheet(); pintar();
-        return toast('Esa compra acaba de cambiar de manos: solo quien la pagó o la llave pueden tocarla.');
       }
       vivo.nombre = nombre;
       vivo.precio = val;
@@ -1144,13 +1249,12 @@ function sheetGasto(itemId){
     sheetConfirmar('¿Borrar esta compra?',
       `«${it.nombre}» (${eur(it.precio||0)}) se quita de la lista y de las cuentas.`, () => {
         // revalidar sobre lo vivo: la fiesta puede haber cambiado por debajo
-        const vivo = S.items.find(x=>x.id===itemId);
+        const vivo = elItem(itemId);
         if(!vivo){ pintar(); return toast('Ya no está: alguien la ha quitado antes.'); }
         if(!soyAdmin() && vivo.compradorId !== S.yo){
           pintar(); return toast('Esa compra ha cambiado de manos: solo quien la pagó o la llave pueden borrarla.');
         }
-        S.items = S.items.filter(x=>x.id!==itemId);
-        S.papelera.push({id:itemId, t:ahora(), vio: vivo.mod || 0});
+        enterrar('items', vivo);
         guardar(); pintar(); toast('Fuera de la lista');
       });
   };
@@ -1171,13 +1275,14 @@ function sheetAsignar(itemId){
     </div>
   `);
   document.querySelectorAll('[data-asig]').forEach(b => b.onclick = () => {
-    if(!soyAdmin()){ cerrarSheet(); pintar(); return toast('La llave ya no es tuya: eso no te toca.'); }
+    if(!exigirLlave()) return;
     const quien = persona(b.dataset.asig);
-    let vivo = S.items.find(x=>x.id===itemId);
-    if(!vivo){ cerrarSheet(); pintar(); return toast('Esa cosa ya no está en la lista.'); }
-    if(vivo.estado === 'comprada'){
-      cerrarSheet(); pintar(); return toast('Esa ya está comprada: no hay nada que asignar.');
-    }
+    // ojo: data-asig="" es «Sin dueño» a propósito; una persona borrada por
+    // debajo NO puede confundirse con eso (soltaría el item sin querer)
+    if(b.dataset.asig && !quien) return abortarSheet('Esa persona ya no está en la peña.');
+    let vivo = elItem(itemId);
+    if(!vivo) return abortarSheet('Esa cosa ya no está en la lista.');
+    if(vivo.estado === 'comprada') return abortarSheet('Esa ya está comprada: no hay nada que asignar.');
     if(quien){ vivo.estado='pillada'; vivo.pilladorId=quien.id; toast('Se la lleva ' + quien.nombre); }
     else { vivo.estado='pendiente'; delete vivo.pilladorId; toast('Suelta. A ver quién se la pide ahora.'); }
     tocar(vivo);
@@ -1221,16 +1326,16 @@ function sheetPersona(pid){
   `);
   const rec = $('#btnRecordar');
   if(rec) rec.onclick = () => {
-    if(!persona(pid)){ cerrarSheet(); pintar(); return toast('Esa persona ya no está en la peña.'); }
+    if(!persona(pid)) return abortarSheet('Esa persona ya no está en la peña.');
     sheetCompartir('persona', pid);
   };
   // los handlers rebuscan por id y reconfirman la llave: la fiesta puede
   // haberse fusionado por debajo mientras el sheet estaba abierto
   const tog = $('#btnToggleAdmin');
   if(tog) tog.onclick = () => {
-    if(!soyAdmin()){ cerrarSheet(); pintar(); return toast('La llave ya no es tuya: eso no te toca.'); }
+    if(!exigirLlave()) return;
     const q = persona(pid);
-    if(!q){ cerrarSheet(); pintar(); return toast('Esa persona ya no está en la peña.'); }
+    if(!q) return abortarSheet('Esa persona ya no está en la peña.');
     if(q.admin && numAdmins() === 1) return toast('Alguien tiene que quedarse con la llave');
     q.admin = !q.admin;
     tocar(q);
@@ -1239,9 +1344,9 @@ function sheetPersona(pid){
   };
   const eli = $('#btnEliminar');
   if(eli) eli.onclick = () => {
-    if(!soyAdmin()){ cerrarSheet(); pintar(); return toast('La llave ya no es tuya: eso no te toca.'); }
+    if(!exigirLlave()) return;
     const q = persona(pid);
-    if(!q){ cerrarSheet(); pintar(); return toast('Esa persona ya no está en la peña.'); }
+    if(!q) return abortarSheet('Esa persona ya no está en la peña.');
     if(S.items.some(i=>i.estado==='comprada' && i.compradorId===pid))
       return toast('Tiene compras apuntadas: reasígnalas antes');
     // si es el único que cata una compra, quitarlo dejaría consumen vacío,
@@ -1254,8 +1359,7 @@ function sheetPersona(pid){
       if(i.pilladorId === pid){ i.estado='pendiente'; delete i.pilladorId; tocar(i); }
       if(i.consumen && i.consumen.includes(pid)){ i.consumen = i.consumen.filter(x=>x!==pid); tocar(i); }
     });
-    S.gente = S.gente.filter(x=>x.id!==pid);
-    S.papelera.push({id:pid, t:ahora(), vio: q.mod || 0});
+    enterrar('gente', q);
     guardar(); cerrarSheet(); pintar();
     toast(q.nombre + ' ya no está en la peña');
   };
@@ -1324,6 +1428,9 @@ function mensajeCompartir(tipo, pid){
 }
 
 async function sheetCompartir(tipo, pid){
+  // la demo no se comparte: su marca de ejemplo dejaría al receptor con una
+  // fiesta que nunca puede ponerse en vivo
+  if(S.fiesta.ejemplo) return toast('La fiesta de ejemplo no se comparte: monta la tuya, que es un momento.');
   // si hay cambios sin subir, un último empujón antes de componer el mensaje
   // (con tope: sin red no vamos a tener el sheet colgado 8 segundos)
   if(S.remota && S.pendienteSubida && !S.fiesta.ejemplo){
@@ -1417,13 +1524,16 @@ function sheetCrear(){
     const tu = $('#inTuNombre').value.trim();
     if(!nombre) return toast('Ponle nombre a la fiesta');
     if(!tu) return toast('Falta tu nombre');
+    const fechaNueva = $('#inFechaNueva').value;
+    if(fechaNueva && !/^\d{4}-\d{2}-\d{2}$/.test(fechaNueva))
+      return toast('Esa fecha no cuadra: ponla normal o déjala en blanco.');
     const btn = $('#btnCrearFiesta');
     btn.disabled = true;
     const pid = nuevoId('p');
     respaldarActual();
     S = {
       v:4,
-      fiesta:{nombre, fecha: $('#inFechaNueva').value || null, mod:ahora()},
+      fiesta:{nombre, fecha: fechaNueva || null, mod:ahora()},
       yo: pid, tab:'fiesta', remota: null,
       gente:[{id:pid, nombre:tu, admin:true, mod:ahora()}],
       items:[], saldados:{}, papelera:[],
@@ -1456,11 +1566,13 @@ function sheetRenombrar(){
   `);
   $('#btnCancelarRen').onclick = cerrarSheet;
   $('#btnGuardarRen').onclick = () => {
-    if(!soyAdmin()){ cerrarSheet(); pintar(); return toast('La llave ya no es tuya: eso no te toca.'); }
+    if(!exigirLlave()) return;
     const n = $('#inNombreF').value.trim();
     if(!n) return toast('La fiesta necesita un nombre');
+    const f = $('#inFechaF').value;
+    if(f && !/^\d{4}-\d{2}-\d{2}$/.test(f)) return toast('Esa fecha no cuadra: ponla normal o déjala en blanco.');
     S.fiesta.nombre = n;
-    S.fiesta.fecha = $('#inFechaF').value || null;
+    S.fiesta.fecha = f || null;
     tocar(S.fiesta);
     guardar(); cerrarSheet(); pintar(); toast('Guardado');
   };
@@ -1591,12 +1703,13 @@ function vistaLista(){
     // comprada: check verde a la izquierda, se toca para editar
     if(comprada){
       const n = consumidores(it).length;
-      return `<div class="card item-card comprada-card" data-editar="${esc(it.id)}">
+      return `<div class="card item-card comprada-card" data-editar="${esc(it.id)}" role="button" tabindex="0"
+        aria-label="Comprada: ${esc(it.nombre)}, ${eur(it.precio||0)}. Tocar para corregirla.">
         <div class="fila" style="align-items:center">
           <span class="check-comprada" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4.5 12.5l5 5 10-11"/></svg></span>
           <div style="flex:1;min-width:0">
             <div class="nombre">${esc(it.nombre)}</div>
-            <div class="meta" style="margin-top:1px">${eur(it.precio)} · pagó ${esc(persona(it.compradorId)?.nombre || '—')} · entre ${n===S.gente.length?'todos':n}</div>
+            <div class="meta" style="margin-top:1px">${eur(it.precio||0)} · pagó ${esc(persona(it.compradorId)?.nombre || '—')} · entre ${n===S.gente.length?'todos':n}</div>
           </div>
         </div>
       </div>`;
@@ -1805,7 +1918,8 @@ function conectarEntrada(v){
   };
   v.querySelector('#btnCrear').onclick = sheetCrear;
   v.querySelector('#btnVerEjemplo').onclick = () => {
-    S = demo(); guardar(); pintar(); sheetIdentidad(true);
+    resetSync();
+    S = demo(); guardarLocal(); pintar(); sheetIdentidad(true);
   };
 }
 
@@ -1827,15 +1941,17 @@ function conectar(v){
   on('#btnRenombrar', sheetRenombrar);
   on('#btnNueva', () => sheetConfirmar('¿Empezar otra fiesta?',
     S.remota
-      ? 'Se quita de tu móvil, pero sigue viva en el servidor pa la peña: con el enlace del grupo vuelves cuando quieras.'
+      ? 'Se quita de tu móvil, pero sigue en vivo pa la peña: con el enlace del grupo vuelves cuando quieras.'
       : 'Esta se borra de tu móvil. Si quieres conservarla, copia antes el enlace de invitación: sirve de copia de seguridad.', () => {
+      resetSync();
       S = null; localStorage.removeItem(CLAVE); pintar();
     }));
   on('#btnVerEjemplo', () => sheetConfirmar('¿Cargar la fiesta de ejemplo?',
     S.remota
-      ? 'La tuya sigue viva en el servidor; el ejemplo va solo en este móvil.'
+      ? 'La tuya sigue en vivo pa la peña; el ejemplo va solo en este móvil.'
       : 'Se borrará la actual de este móvil (la de tus colegas no se toca).', () => {
       respaldarActual();
+      resetSync();
       S = demo(); guardarLocal(); pintar(); sheetIdentidad(true);
     }));
 
@@ -1845,6 +1961,7 @@ function conectar(v){
     e.preventDefault();
     const n = v.querySelector('#inItem').value.trim();
     if(!n) return toast('Escribe algo, que la lista no adivina.');
+    if(S.items.length >= 500) return toast('La lista no da pa más (500 cosas). Quita algo primero.');
     S.items.unshift(tocar({id:nuevoId('i'), nombre:n, estado:'pendiente',
       creadoEn:ahora(), creadoPor:S.yo || null}));
     guardar(); pintar(); toast('«' + n + '» apuntado');
@@ -1859,7 +1976,7 @@ function conectar(v){
   // para no pisar una compra que otro móvil acaba de resolver
   v.querySelectorAll('[data-pillar]').forEach(b => b.onclick = () => {
     if(!S.yo) return sheetIdentidad(true);
-    const it = S.items.find(x=>x.id===b.dataset.pillar);
+    const it = elItem(b.dataset.pillar);
     if(!it || it.estado !== 'pendiente'){
       pintar(); return toast('Alguien se ha adelantado: esa ya está resuelta.');
     }
@@ -1868,11 +1985,13 @@ function conectar(v){
     guardar(); pintar(); toast('Apuntado: ' + it.nombre + ' corre de tu cuenta.');
   });
   v.querySelectorAll('[data-soltar]').forEach(b => b.onclick = () => {
-    const it = S.items.find(x=>x.id===b.dataset.soltar);
+    const it = elItem(b.dataset.soltar);
     if(!it || it.estado !== 'pillada'){
       pintar(); return toast('Esa ya ha cambiado de manos.');
     }
-    if(it.pilladorId !== S.yo && !soyAdmin()) return;
+    if(it.pilladorId !== S.yo && !soyAdmin()){
+      pintar(); return toast('Esa la trae ' + (persona(it.pilladorId)?.nombre || 'otro') + ': soltarla es cosa suya o de la llave.');
+    }
     it.estado='pendiente'; delete it.pilladorId;
     tocar(it);
     guardar(); pintar(); toast('Suelta. A ver quién se la pide ahora.');
@@ -1897,14 +2016,18 @@ function conectar(v){
   });
   v.querySelectorAll('[data-quitar]').forEach(b => b.onclick = e => {
     e.stopPropagation();
-    const it = S.items.find(x=>x.id===b.dataset.quitar);
+    const it = elItem(b.dataset.quitar);
     if(!it) return pintar();
     if(it.estado === 'comprada'){
       // acaba de comprarse desde otro móvil: borrar dinero va con confirmación
       pintar(); return toast('Esa ya está comprada: tócala si quieres corregirla.');
     }
-    S.items = S.items.filter(x=>x.id!==b.dataset.quitar);
-    S.papelera.push({id:b.dataset.quitar, t:ahora(), vio: it.mod || 0});
+    // el permiso del render (llave o sin dueño) se revalida al tocar: con el
+    // repintado aplazado el ✕ puede ser de antes de que alguien la pillara
+    if(!soyAdmin() && it.pilladorId){
+      pintar(); return toast('Esa ya la trae ' + (persona(it.pilladorId)?.nombre || 'alguien') + ': no se quita así como así.');
+    }
+    enterrar('items', it);
     guardar(); pintar();
   });
 
@@ -1914,6 +2037,7 @@ function conectar(v){
     e.preventDefault();
     const n = v.querySelector('#inPersona').value.trim();
     if(!n) return;
+    if(S.gente.length >= 100) return toast('La peña no da pa más (100). Menuda fiesta.');
     S.gente.push(tocar({id:nuevoId('p'), nombre:n, admin:false}));
     guardar(); pintar(); toast(n + ' se une a la peña');
   };
@@ -1973,9 +2097,18 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
   if(hash.length > 4){
     const obj = decodificar(hash);
     if(obj){
-      respaldarActual();
-      S = obj; guardarLocal();
       limpiarHash();
+      // un enlace-copia viejo no puede desconectar una fiesta viva en silencio
+      if(S && S.remota && !S.fiesta.ejemplo){
+        pintar();
+        sheetConfirmar('¿Abrir la fiesta del enlace?',
+          'Ese enlace lleva una copia congelada. Tu fiesta en vivo se queda a salvo: vuelves a ella con el enlace del grupo.',
+          () => aplicarImportado(obj));
+        bajar();
+        return;
+      }
+      aplicarImportado(obj);
+      return;
     }
   }
   pintar();
@@ -1988,8 +2121,11 @@ setInterval(() => {
   if(document.visibilityState !== 'visible' || !S || !S.remota) return;
   refrescarSync();
   if(sync.pintarLuego) pintarOLuego();
-  bajar();
-  if(sync.sinRed || S.pendienteSubida) subir();
+  // bajar primero y subir después, en orden: un GET rezagado procesado tras
+  // un PUT montaría un vaivén de revisiones
+  bajar().then(() => {
+    if(S && S.remota && (sync.sinRed || S.pendienteSubida)) subir();
+  });
 }, 12000);
 document.addEventListener('visibilitychange', () => {
   if(document.visibilityState === 'visible') bajar();

@@ -47,9 +47,16 @@ function fichero(id) {
   return path.join(DATA_DIR, id + '.json');
 }
 
+// este proceso es el único escritor: cabe cachear rev/clave por fiesta para
+// que el sondeo (la petición más frecuente, casi siempre «sin cambios»)
+// conteste 204 sin tocar disco ni parsear el documento entero
+const meta = new Map(); // id -> { rev, clave }
+
 function leerFiesta(id) {
   try {
-    return JSON.parse(fs.readFileSync(fichero(id), 'utf8'));
+    const doc = JSON.parse(fs.readFileSync(fichero(id), 'utf8'));
+    meta.set(id, { rev: doc.rev, clave: doc.clave });
+    return doc;
   } catch (e) {
     return null;
   }
@@ -59,6 +66,7 @@ function guardarFiesta(id, doc) {
   const tmp = fichero(id) + '.tmp-' + aleatorio(6);
   fs.writeFileSync(tmp, JSON.stringify(doc));
   fs.renameSync(tmp, fichero(id));
+  meta.set(id, { rev: doc.rev, clave: doc.clave });
 }
 
 function json(res, codigo, cuerpo) {
@@ -156,10 +164,46 @@ function estadoValido(estado) {
     }
   }
 
-  const limpio = { ...estado };
-  delete limpio.yo;
-  delete limpio.tab;
-  delete limpio.remota;
+  // reconstrucción por LISTA BLANCA: los campos desconocidos no se guardan.
+  // Sin esto, cualquiera con la clave podría colar cientos de KB de lastre
+  // que los clientes honestos re-subirían para siempre hasta reventar el
+  // tope de tamaño y dejar la fiesta de solo lectura.
+  const limpio = {
+    v: 4,
+    fiesta: {
+      nombre: f.nombre,
+      fecha: f.fecha ? f.fecha : null,
+      mod: f.mod || 0,
+    },
+    gente: estado.gente.map((p) => ({
+      id: p.id, nombre: p.nombre, admin: !!p.admin, mod: p.mod || 0,
+    })),
+    items: estado.items.map((it) => {
+      const e = { id: it.id, nombre: it.nombre, estado: it.estado, mod: it.mod || 0 };
+      if (it.precio != null) e.precio = it.precio;
+      if (it.compradorId != null) e.compradorId = it.compradorId;
+      if (it.pilladorId != null) e.pilladorId = it.pilladorId;
+      if (it.consumen != null) e.consumen = it.consumen.slice();
+      if (it.creadoEn != null) e.creadoEn = it.creadoEn;
+      if (it.creadoPor != null) e.creadoPor = it.creadoPor;
+      if (it.modPor != null) e.modPor = it.modPor;
+      return e;
+    }),
+    saldados: {},
+    papelera: (estado.papelera || []).map((l) => {
+      const e = { id: l.id, t: l.t || 0 };
+      if (l.vio != null) e.vio = l.vio;
+      return e;
+    }),
+  };
+  for (const k of Object.keys(estado.saldados || {})) {
+    const v = estado.saldados[k];
+    if (v === true) { limpio.saldados[k] = true; continue; }
+    const e = { hecho: !!v.hecho, t: v.t || 0 };
+    if (v.por != null) e.por = v.por;
+    if (v.cents != null) e.cents = v.cents;
+    limpio.saldados[k] = e;
+  }
   return limpio;
 }
 
@@ -186,16 +230,12 @@ function pasaCupo(req) {
 
 /* ---------- purga de fiestas abandonadas ---------- */
 
-// cuántas fiestas hay en disco, contadas perezosamente (la purga y los POST
-// mantienen la cifra; MAX_FIESTAS la usa para frenar a bots)
-let fiestasCache = null;
+// cuántas fiestas hay en disco: se cuenta al vuelo en cada POST (endpoint
+// con rate limit y ≤5000 dirents, ~1 ms) — sin contadores que se desfasen
 function numFiestas() {
-  if (fiestasCache === null) {
-    try {
-      fiestasCache = fs.readdirSync(DATA_DIR).filter((f) => f.endsWith('.json')).length;
-    } catch (e) { fiestasCache = 0; }
-  }
-  return fiestasCache;
+  try {
+    return fs.readdirSync(DATA_DIR).filter((f) => f.endsWith('.json')).length;
+  } catch (e) { return 0; }
 }
 
 function purgar() {
@@ -211,12 +251,12 @@ function purgar() {
         if ((f.endsWith('.json') && st.mtimeMs < limite) ||
             (esTmp && st.mtimeMs < Date.now() - 24 * 3600 * 1000)) {
           fs.unlinkSync(ruta);
+          if (f.endsWith('.json')) meta.delete(f.slice(0, -5));
           borradas++;
         }
       } catch (e) { /* carrera con otra purga: da igual */ }
     }
   } catch (e) { /* sin data dir aún */ }
-  fiestasCache = null; // recontar a la próxima
   if (borradas) console.log(`purga: ${borradas} fiesta(s) caducada(s)`);
 }
 // la primera purga espera a que el server esté sirviendo: con muchos ficheros
@@ -249,7 +289,6 @@ async function api(req, res, url) {
     const clave = aleatorio(14);
     const doc = { clave, rev: 1, updatedAt: new Date().toISOString(), estado };
     guardarFiesta(id, doc);
-    fiestasCache = fiestasCache === null ? null : fiestasCache + 1;
     return json(res, 201, { id, clave, rev: 1 });
   }
 
@@ -259,9 +298,13 @@ async function api(req, res, url) {
     if (!ID_RE.test(id)) return json(res, 404, { error: 'No hay tal fiesta' });
 
     if (req.method === 'GET') {
+      // 204 y no 304: fetch trata mejor un "no hay cambios" explícito.
+      // Vía rápida: si la caché de revisiones ya dice que no hay nada nuevo,
+      // ni disco ni parseo.
+      const m = meta.get(id);
+      if (m && url.searchParams.get('rev') === String(m.rev)) return json(res, 204);
       const doc = leerFiesta(id);
       if (!doc) return json(res, 404, { error: 'No hay tal fiesta' });
-      // 204 y no 304: fetch trata mejor un "no hay cambios" explícito
       if (url.searchParams.get('rev') === String(doc.rev)) return json(res, 204);
       return json(res, 200, { rev: doc.rev, estado: doc.estado, updatedAt: doc.updatedAt });
     }

@@ -61,12 +61,15 @@ texto `--bg`. Radio de card 16px. Modo oscuro: automático por
 
 - Display: **Bricolage Grotesque** (Google Fonts) — wordmark 800/34px
   (20px en la cabecera interior), títulos de pantalla 700/26px, títulos de
-  card/sheet 700/20px, «¿Qué toca?» 700/18px, inicial de avatar 700/16px.
+  card/sheet 700/20px (el de la card violeta de la fiesta va a 21px),
+  «¿Qué toca?» 700/18px, inicial de avatar 700/16px.
 - Números de dinero (siempre Bricolage 800, `tabular-nums`): «Tu cuenta»
   32px, total de cuentas 28px, «Tu saldo» del inicio 24px.
 - Cuerpo: **Instrument Sans** — botones 600/15px, nombres 600/15px,
-  cuerpo/inputs 400–500/14px, meta 400/13px, chips 600/12px, labels
-  uppercase 600/12px con tracking 0.08em, tabs 600/11px.
+  cuerpo 400–500/14px, meta 400/13px, chips 600/12px, labels
+  uppercase 600/12px con tracking 0.08em, tabs 600/11px. Los inputs van
+  a 16px A PROPÓSITO: por debajo de eso, iOS hace zoom automático al
+  enfocar el campo. No bajarlos.
 - Fallback: pila de sistema (la app funciona sin red de fuentes).
 
 ## Voz del copy
