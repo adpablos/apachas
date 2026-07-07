@@ -763,21 +763,38 @@ function fusionar(a, b){
   }
   const gente = mezcla(a.gente, b.gente);
   const items = mezcla(a.items, b.items);
-  // un gasto vivo mantiene vivo a quien lo pagó o lo trae: si no, borrar a
-  // una persona con compras que sobreviven dejaría cuentas descuadradas
-  // (se cobra a los que catan y el crédito del pagador se esfuma)
+  // la limpieza tras borrar a alguien se DERIVA aquí, no se escribe al borrar
+  // (una reescritura desde una vista vieja pisaría ediciones no vistas):
+  // 1) quien pagó un gasto vivo no puede desaparecer (el crédito se esfuma);
+  //    y si borrar a alguien dejaría un gasto sin NADIE que lo cate, vuelve
   const presentes = new Set(gente.map(p => p.id));
   const candidatos = new Map();
   [...(a.gente||[]), ...(b.gente||[])].forEach(p => {
     const prev = candidatos.get(p.id);
     if(!prev || mod(p) > mod(prev)) candidatos.set(p.id, p);
   });
+  const resucitar = new Set();
   for(const it of items){
-    for(const ref of [it.compradorId, it.pilladorId, ...(it.consumen || [])]){
-      if(ref && !presentes.has(ref) && candidatos.has(ref)){
-        gente.push(candidatos.get(ref));
-        presentes.add(ref);
-      }
+    if(it.compradorId && !presentes.has(it.compradorId)) resucitar.add(it.compradorId);
+    if(it.consumen && it.consumen.length && it.consumen.every(id => !presentes.has(id))){
+      it.consumen.forEach(id => resucitar.add(id));
+    }
+  }
+  for(const id of resucitar){
+    if(!presentes.has(id) && candidatos.has(id)){
+      gente.push(candidatos.get(id));
+      presentes.add(id);
+    }
+  }
+  // 2) con la peña ya asentada, fuera de los repartos la gente que de verdad
+  //    ya no está (borrado consolidado); si nadie recuperable queda, el gasto
+  //    pasa a «entre todos» antes que descuadrar las cuentas
+  for(let i = 0; i < items.length; i++){
+    const it = items[i];
+    if(!it.consumen) continue;
+    const vivosCons = it.consumen.filter(id => presentes.has(id));
+    if(vivosCons.length !== it.consumen.length){
+      items[i] = {...it, consumen: vivosCons.length ? vivosCons : null};
     }
   }
   // la peña no puede quedarse vacía: dos llaves borrando en paralelo pueden
@@ -1363,20 +1380,10 @@ function sheetPersona(pid){
         i.consumen.length === 1 && i.consumen[0] === pid))
       return toast('Hay compras que solo cata esa persona: corrígelas antes');
     if(q.admin && numAdmins() === 1) return toast('Alguien tiene que quedarse con la llave');
-    S.items.forEach(i => {
-      // retoque mínimo (+1 sobre lo VISTO, sin reloj): esta limpieza derivada
-      // solo puede ganar a la versión que la llave tenía delante. Una compra
-      // concurrente que aún no había bajado gana la fusión y conserva su
-      // dinero (y resucita al pagador, bloqueando el borrado como es debido).
-      if(i.pilladorId === pid){
-        i.estado='pendiente'; delete i.pilladorId;
-        i.mod = (i.mod || 0) + 1; i.modPor = S.yo || null;
-      }
-      if(i.consumen && i.consumen.includes(pid)){
-        i.consumen = i.consumen.filter(x=>x!==pid);
-        i.mod = (i.mod || 0) + 1; i.modPor = S.yo || null;
-      }
-    });
+    // ojo: aquí NO se reescriben sus items. La limpieza (soltar lo que traía,
+    // sacarla de los repartos) se deriva de la lápida en la fusión, y solo si
+    // el borrado de verdad se consolida: si la persona resucita porque compró
+    // algo que este móvil aún no había visto, sus partes se quedan como están.
     enterrar('gente', q);
     guardar(); cerrarSheet(); pintar();
     toast(q.nombre + ' ya no está en la peña');
@@ -1995,7 +2002,11 @@ function conectar(v){
   v.querySelectorAll('[data-pillar]').forEach(b => b.onclick = () => {
     if(!S.yo) return sheetIdentidad(true);
     const it = elItem(b.dataset.pillar);
-    if(!it || it.estado !== 'pendiente'){
+    // pendiente, o pillada por alguien que ya no está en la peña (su claim
+    // queda huérfano tras el borrado y la cosa vuelve a estar libre)
+    const libre = it && (it.estado === 'pendiente' ||
+      (it.estado === 'pillada' && !persona(it.pilladorId)));
+    if(!libre){
       pintar(); return toast('Alguien se ha adelantado: esa ya está resuelta.');
     }
     it.estado='pillada'; it.pilladorId=S.yo;
