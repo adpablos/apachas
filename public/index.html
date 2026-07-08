@@ -155,7 +155,7 @@
   .identity-row b{color:var(--ink)}
 
   /* ---------- list ---------- */
-  .item-card .fila{display:flex;align-items:flex-start;gap:10px;justify-content:space-between}
+  .item-card .item-row{display:flex;align-items:flex-start;gap:10px;justify-content:space-between}
   .item-card .name{font-weight:600;font-size:15px;line-height:1.35;padding-top:2px}
   .item-card .meta{color:var(--muted);font-size:13px;margin-top:3px}
   .item-card .actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:11px}
@@ -299,7 +299,7 @@
     padding:10px 17px;border-radius:10px;opacity:0;transition:.25s;pointer-events:none;
     max-width:86vw;text-align:center;
   }
-  #toast.ver{opacity:1;transform:translate(-50%,0)}
+  #toast.visible{opacity:1;transform:translate(-50%,0)}
   @media (prefers-reduced-motion:reduce){
     *{transition:none !important;animation:none !important}
   }
@@ -597,8 +597,8 @@ const avatarHtml = (id, mini) => {
 
 let toastTimer;
 function toast(msg){
-  const t = $('#toast'); t.textContent = msg; t.classList.add('ver');
-  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('ver'), 2600);
+  const t = $('#toast'); t.textContent = msg; t.classList.add('visible');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('visible'), 2600);
 }
 
 async function copyToClipboard(txt){
@@ -1739,7 +1739,7 @@ function listView(){
       const n = consumerIds(it).length;
       return `<div class="card item-card bought-card" data-edit="${escapeHtml(it.id)}" role="button" tabindex="0"
         aria-label="Comprada: ${escapeHtml(it.name)}, ${eur(it.priceCents||0)}. Tocar para corregirla.">
-        <div class="fila" style="align-items:center">
+        <div class="item-row" style="align-items:center">
           <span class="bought-checkIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4.5 12.5l5 5 10-11"/></svg></span>
           <div style="flex:1;min-width:0">
             <div class="name">${escapeHtml(it.name)}</div>
@@ -1773,7 +1773,7 @@ function listView(){
 
     const canRemove = admin || !p;
     return `<div class="card item-card">
-      <div class="fila">
+      <div class="item-row">
         <div style="flex:1;min-width:0">
           <div class="name">${escapeHtml(it.name)}</div>
           ${actions ? `<div class="actions">${actions}</div>` : ''}
