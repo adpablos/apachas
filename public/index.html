@@ -214,7 +214,7 @@
   /* ---------- actionable home / sharing ---------- */
   .hero-mini{display:flex;align-items:center;gap:8px;padding:14px 2px 12px;color:var(--primary)}
   .hero-mini svg{width:24px;height:24px}
-  .hero-mini .marca{font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:-.3px;color:var(--ink)}
+  .hero-mini .wordmark{font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:-.3px;color:var(--ink)}
   .sync-status{color:var(--muted);font-size:12.5px;margin-top:10px}
   .balance-card{display:flex;align-items:center;gap:10px}
   .balance-card .center{flex:1;min-width:0}
@@ -1647,7 +1647,7 @@ function entryView(){
 }
 
 function heroMiniHtml(){
-  return `<div class="hero-mini">${LOGO}<span class="marca">A Pachas</span></div>`;
+  return `<div class="hero-mini">${LOGO}<span class="wordmark">A Pachas</span></div>`;
 }
 
 function partyView(c){

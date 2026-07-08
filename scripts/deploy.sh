@@ -11,11 +11,12 @@ APP_DIR="/opt/apachas"
 PUBLIC_URL="https://apachas.alexdepablos.es"
 
 echo "→ Deploying to ${DEPLOY_USER}@${DEPLOY_HOST}:${APP_DIR}"
-# Restart api because `up` does not detect changes in mounted files such as
-# server/api.js. The service is stateless; data lives in the volume and restart
-# takes about a second.
+# Restart api and web because `up` does not detect changes in mounted files
+# such as server/api.js or deployment/nginx/*.conf. Both services are
+# stateless/config-only; api's data lives in the volume and both restarts
+# take about a second.
 ssh -i "${DEPLOY_SSH_KEY}" -o IdentitiesOnly=yes "${DEPLOY_USER}@${DEPLOY_HOST}" \
-  "cd '${APP_DIR}' && git pull --ff-only && sudo docker compose up -d --wait && sudo docker compose restart api"
+  "cd '${APP_DIR}' && git pull --ff-only && sudo docker compose up -d --wait && sudo docker compose restart api web"
 
 echo "→ Checking ${PUBLIC_URL}"
 curl -fsS -o /dev/null --retry 3 --retry-delay 2 "${PUBLIC_URL}"
