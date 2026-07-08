@@ -1331,6 +1331,34 @@ function assignSheet(itemId){
 }
 
 /* --- person detail --- */
+function renamePersonSheet(pid){
+  const p = personById(pid); if(!p) return abortSheet('Esa persona ya no está en la peña.');
+  if(pid !== S.me && !requireAdmin()) return;
+  openSheet(`
+    <h2 class="sheet-title">Cambiar nombre</h2>
+    <div class="field" style="margin-top:14px">
+      <label class="label" for="personNameEditInput">Nombre en la peña</label>
+      <input type="text" id="personNameEditInput" maxlength="20" value="${escapeHtml(p.name)}" autocomplete="off">
+    </div>
+    <div class="sheet-actions">
+      <button class="btn btn-outline" id="cancelPersonRenameButton" type="button">Cancelar</button>
+      <button class="btn btn-primary" id="savePersonRenameButton" type="button">Guardar</button>
+    </div>
+  `);
+  $('#cancelPersonRenameButton').onclick = closeSheet;
+  $('#savePersonRenameButton').onclick = () => {
+    const q = personById(pid);
+    if(!q) return abortSheet('Esa persona ya no está en la peña.');
+    if(pid !== S.me && !requireAdmin()) return;
+    const n = $('#personNameEditInput').value.trim();
+    if(!n) return toast('Ponle nombre, que alguien será.');
+    q.name = n;
+    touch(q);
+    save(); closeSheet(); render();
+    toast('Nombre cambiado');
+  };
+}
+
 function personSheet(pid){
   const p = personById(pid); if(!p) return;
   const c = accounts();
@@ -1338,6 +1366,7 @@ function personSheet(pid){
   const purchases = S.items.filter(i=>i.status==='bought' && i.payerId===pid);
   const isMe = pid === S.me;
   const canManage = isAdmin() && !isMe;
+  const canRename = isMe || isAdmin();
 
   const assignedList = assignedItems.length
     ? assignedItems.map(i=>`<li>${escapeHtml(i.name)}</li>`).join('')
@@ -1353,6 +1382,12 @@ function personSheet(pid){
     <span class="label">Le toca traer</span>
     <ul style="margin:0 0 6px;padding-left:20px;font-size:14px;line-height:1.7">${assignedList}</ul>
     ${!isMe ? `<button class="btn btn-outline btn-mini" id="remindButton" type="button" style="margin-top:6px">Mandarle un recordatorio</button>` : ''}
+    ${canRename ? `
+      <span class="label">Nombre</span>
+      <button class="menu-option" id="renamePersonButton" type="button">
+        Cambiar nombre
+        <small>Pa corregir un mote torcido antes de que se quede pa siempre.</small>
+      </button>` : ''}
     ${canManage ? `
       <span class="label">Gestión</span>
       <button class="menu-option" id="toggleAdminButton" type="button">
@@ -1369,6 +1404,8 @@ function personSheet(pid){
     if(!personById(pid)) return abortSheet('Esa persona ya no está en la peña.');
     shareSheet('person', pid);
   };
+  const ren = $('#renamePersonButton');
+  if(ren) ren.onclick = () => renamePersonSheet(pid);
   // Handlers re-find by ID and reconfirm admin status; the party may have
   // merged underneath while the sheet was open.
   const tog = $('#toggleAdminButton');
