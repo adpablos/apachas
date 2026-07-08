@@ -91,7 +91,7 @@ it. No accounts, no users, no database: one JSON document per party.
   open, when the app becomes visible, and about every 12 seconds. User-facing
   status is "al día hace un momento". If offline, say changes are saved and will
   upload themselves.
-- **Conflicts**: entity-level merge; latest edit wins by `mod`, and tombstones
+- **Conflicts**: entity-level merge; latest edit wins by `updatedAt`, and tombstones
   prevent deleted entities from coming back. For a 5-15 person group where most
   edits are additions, this is enough. Do not ask users to understand versions.
 
