@@ -890,9 +890,10 @@ async function upload(){
   if(sync.uploadedJson === null && !S.pendingUpload) return;
   if(sync.uploading){ sync.uploadAgain = true; return; }
   sync.uploading = true;
+  let requestedPartyId = null;
   try {
     for(let attempt = 0; attempt < 4; attempt++){
-      const requestedPartyId = S.remote.id;
+      requestedPartyId = S.remote.id;
       const state = sharedState();
       const json = JSON.stringify(state);
       if(json === sync.uploadedJson){
@@ -935,7 +936,11 @@ async function upload(){
         break;
       } else { markOffline(); break; }
     }
-  } catch(e){ markOffline(); }
+  } catch(e){
+    // Same stale-rejection guard as download(): don't mark a party the user
+    // has since switched away from as offline.
+    if(S && S.remote && S.remote.id === requestedPartyId) markOffline();
+  }
   sync.uploading = false;
   if(sync.uploadAgain){ sync.uploadAgain = false; scheduleUpload(); }
 }
@@ -977,7 +982,11 @@ async function download(){
     } else if(r.status === 429 || r.status >= 500){
       markOffline(); // Saturation or outage: same honest treatment as no coverage.
     }
-  } catch(e){ markOffline(); }
+  } catch(e){
+    // A stale rejection (the user switched parties before this GET failed) must
+    // not mark the newly opened party offline.
+    if(S && S.remote && S.remote.id === requestedPartyId) markOffline();
+  }
 }
 
 let creatingRemote = false; // A double tap must not create two parties.
