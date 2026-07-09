@@ -83,9 +83,10 @@ bit of humor, but not overdone.
 - "Pon qué fue." · "Apuntado. Las cuentas ya lo saben."
 - "Todo comprado. Vaya máquinas." · "Cuentas claras y el chocolate espeso."
 - Sync copy must avoid technical language: "En vivo con la peña · al día hace
-  un momento" with green dot, "Solo en este móvil", "Sin red. Tus cambios
-  quedan apuntados y se subirán solos." Do not say sync/version/conflict in
-  user-facing copy.
+  un momento" with green dot, "Solo en este móvil", "Sin red · conecta para
+  cambiar la fiesta", and "Necesitas internet para cambiar la fiesta." Do not
+  say sync/version/conflict in user-facing copy, and do not suggest that shared
+  changes are saved locally for later upload.
 - Admin is "la llave" in the UI, with a discreet key icon. Do not show
   "administrador" to users.
 
@@ -118,6 +119,9 @@ bit of humor, but not overdone.
 5. **Expense sheet**: direct expense, mark bought, or edit. Fields: Qué, Precio,
    Pagó with violet pills, ¿Quiénes lo catan? with green pills, green save
    button, delete with confirmation, and history line.
-6. **Share sheet**: message preview, abbreviated AP2 links, Copiar
-   and WhatsApp green buttons, and "Mandar con otra app" when native share is
-   available.
+6. **Share sheet**: before showing a shareable message, local-only parties try
+   to go live, and live parties confirm they are up to date. If either fails,
+   show a blocking sheet with retry and a calm note that internet is needed.
+   Once live and up to date, show message preview, Copiar and WhatsApp green
+   buttons, and "Mandar con otra app" when native share is available. AP2 copy
+   is a backup, not normal invitation copy.

@@ -413,41 +413,15 @@ try {
   if(S && !['party','list','group','accounts'].includes(S.tab)) S.tab = 'party';
 } catch(e){ S = null; }
 
-function saveLocal(sharedJson){
-  // Snapshot of the shared state as stored. save() compares this to
-  // distinguish real shared changes from purely local saves (tab, me). Callers
-  // that already have the serialization can pass it to avoid recalculating.
-  if(S && S.remote) sync.actualSharedJson = sharedJson || stateJson();
+function saveLocal(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); }catch(e){}
-}
-// Real save: always to the phone, and if the party is live, to the server after
-// a small delay so quick successive taps are batched.
-// S.pendingUpload is local and persisted; it remembers across sessions that
-// there are unsent changes, so reopening does not confuse them with being
-// up-to-date.
-function save(){
-  if(isRemoteParty()){
-    const j = stateJson();
-    const sharedChanged = j !== sync.actualSharedJson;                 // This save touched shared state.
-    if(sharedChanged) sync.rejected = false; // Real change: allow another upload attempt.
-    const notUploaded = sync.uploadedJson !== null && j !== sync.uploadedJson;   // Differs from confirmed server state.
-    if(sharedChanged || notUploaded){
-      S.pendingUpload = true;
-      // Retrying the last server-rejected state without new changes only
-      // repeats the 400 and toast.
-      if(!sync.rejected) scheduleUpload();
-    }
-    saveLocal(j);
-    return;
-  }
-  saveLocal();
 }
 
 // When switching parties (open link, create, import, demoState, start another), the
 // previous party's sync state is irrelevant to the new one.
 function resetSync(){
   clearTimeout(sync.timer);
-  sync.uploadedJson = null; sync.actualSharedJson = null; sync.uploadAgain = false;
+  sync.uploadedJson = null; sync.uploadAgain = false;
   sync.renderLater = false; sync.lastSeenAt = 0; sync.markOffline = false;
   sync.offlineNotified = false; sync.rejected = false;
 }
@@ -617,7 +591,7 @@ async function copyToClipboard(txt){
 /* ================= links ================= */
 // Live link: #F:<id>:<key>. It intentionally lives in the hash so neither nginx
 // nor Cloudflare sees the write key. AP2 full-state links are local backups.
-const LIVE_LINK_RE = /F:([a-z2-9]{6,}):([a-z2-9]{6,})/i;
+const LIVE_LINK_RE = /F:([a-z0-9]{6,}):([a-z0-9]{6,})/i;
 
 function partyCode(){
   // Whitelist through sharedFrom, which defines shared state. A new local
@@ -684,7 +658,6 @@ function importParty(text){
 /* ================= live party sync ================= */
 const sync = {
   uploadedJson: null,       // JSON of the last shared state confirmed by the server.
-  actualSharedJson: null, // JSON of shared state as actually saved locally.
   timer: null,
   uploading: false,
   uploadAgain: false,     // A change arrived while an upload was in flight.
@@ -843,7 +816,7 @@ function markOffline(){
   sync.markOffline = true;
   if(!sync.offlineNotified && S && S.remote){
     sync.offlineNotified = true;
-    toast('Sin red. Tus cambios quedan apuntados y se subirán solos.');
+    toast('Sin red. Conéctate para cambiar la fiesta.');
   }
   refreshSync();
 }
@@ -851,8 +824,8 @@ function syncText(){
   if(!S) return '';
   if(S.party.demo) return 'Fiesta de ejemplo · solo en este móvil';
   if(!S.remote) return 'Solo en este móvil';
-  if(sync.rejected) return 'En vivo · hay cambios que no se han podido subir';
-  if(sync.markOffline) return 'Sin red · los cambios se subirán solos';
+  if(sync.rejected) return 'En vivo · no se pueden guardar cambios ahora';
+  if(sync.markOffline) return 'Sin red · conecta para cambiar la fiesta';
   if(!sync.lastSeenAt) return 'En vivo · poniéndose al día…';
   return 'En vivo con la peña · al día ' + timeAgo(sync.lastSeenAt);
 }
@@ -898,7 +871,7 @@ async function upload(){
       const json = JSON.stringify(state);
       if(json === sync.uploadedJson){
         // Everything is confirmed; clear the persisted pending mark too.
-        if(S.pendingUpload){ S.pendingUpload = false; saveLocal(json); }
+        if(S.pendingUpload){ S.pendingUpload = false; saveLocal(); }
         break;
       }
       const r = await apiRequest('PUT', '/parties/' + requestedPartyId,
@@ -909,7 +882,7 @@ async function upload(){
         S.remote.rev = r.body.rev; sync.uploadedJson = json;
         const current = stateJson();
         if(json === current) S.pendingUpload = false;
-        saveLocal(current); markOnline();
+        saveLocal(); markOnline();
         break;
       } else if(r.status === 409 && r.body && r.body.state){
         // Merge against the CURRENT shared state, not the pre-PUT snapshot. Edits
@@ -931,7 +904,7 @@ async function upload(){
         // The server rejects this state, likely shape or size. This is not a
         // network issue, and blind retries will not fix it.
         sync.rejected = true;
-        toast('Los últimos cambios no han podido subir. De momento se quedan en este móvil.');
+        toast('No se ha podido guardar ese cambio.');
         refreshSync();
         break;
       } else { markOffline(); break; }
@@ -975,7 +948,7 @@ async function download(){
         scheduleUpload(); // The merge has local changes the server has not seen.
       }
       markOnline();
-      saveLocal(afterJson);
+      saveLocal();
       if(afterJson !== beforeJson) renderNowOrLater();
     } else if(r.status === 404){
       disconnectRemote('Esa fiesta ya no está en vivo. Sigues con la copia de tu móvil.');
@@ -1008,7 +981,7 @@ async function createRemote(){
       const current = stateJson();
       if(current !== json){ S.pendingUpload = true; scheduleUpload(); }
       else S.pendingUpload = false;
-      saveLocal(current); markOnline();
+      saveLocal(); markOnline();
       return true;
     }
   } catch(e){}
@@ -1023,6 +996,97 @@ function disconnectRemote(msg){
   renderNowOrLater();
 }
 
+function restoreSharedJson(json){
+  const restored = migrateState(JSON.parse(json));
+  adoptSharedState(restored);
+  S.pendingUpload = false;
+  sync.rejected = false;
+  saveLocal();
+}
+
+function internetNeeded(){
+  toast('Necesitas internet para cambiar la fiesta. Conéctate y prueba otra vez.');
+}
+
+function toastCommitMessage(message){
+  if(message) toast(typeof message === 'function' ? message() : message);
+}
+
+async function syncBeforeSharedChange(){
+  if(!S || !S.remote) return false;
+  const partyId = S.remote.id;
+  clearTimeout(sync.timer);
+  await download();
+  if(!S || !S.remote || S.remote.id !== partyId) return false;
+  if(S.pendingUpload && !sync.rejected && !sync.markOffline){
+    await upload();
+    while(sync.uploading) await new Promise(res => setTimeout(res, 50));
+  }
+  return !!(S && S.remote && S.remote.id === partyId &&
+    !S.pendingUpload && !sync.markOffline && !sync.rejected);
+}
+
+let commitQueue = Promise.resolve();
+async function commitSharedChange(mutator, options){
+  const queued = commitQueue.catch(() => {}).then(() => commitSharedChangeNow(mutator, options));
+  commitQueue = queued.catch(() => {});
+  return queued;
+}
+
+async function commitSharedChangeNow(mutator, options){
+  options = options || {};
+  if(S.party.demo){
+    mutator();
+    saveLocal();
+    if(options.close) closeSheet();
+    if(options.render !== false) render();
+    toastCommitMessage(options.toast);
+    return true;
+  }
+
+  if(!S.remote && !(await createRemote())){
+    internetNeeded();
+    return false;
+  }
+  if(sync.rejected){
+    if(sync.uploadedJson) restoreSharedJson(sync.uploadedJson);
+    else { sync.rejected = false; S.pendingUpload = false; saveLocal(); refreshSync(); }
+  }
+  if(!await syncBeforeSharedChange()){
+    if(S && S.remote) internetNeeded();
+    return false;
+  }
+
+  const beforeJson = stateJson();
+  const beforeRev = S.remote && S.remote.rev;
+  try {
+    mutator();
+  } catch(e){
+    restoreSharedJson(beforeJson);
+    throw e;
+  }
+  S.pendingUpload = true;
+  sync.rejected = false;
+  clearTimeout(sync.timer);
+  await upload();
+  const confirmed = !S.pendingUpload && !sync.markOffline && !sync.rejected;
+  if(!confirmed){
+    const rejected = sync.rejected;
+    const stillRemote = !!(S && S.remote);
+    if(stillRemote) S.remote.rev = beforeRev;
+    if(stillRemote) restoreSharedJson(beforeJson);
+    else saveLocal();
+    if(options.render !== false) render();
+    if(!rejected && stillRemote) internetNeeded();
+    return false;
+  }
+
+  if(options.close) closeSheet();
+  if(options.render !== false) render();
+  toastCommitMessage(options.toast);
+  return true;
+}
+
 async function enableLive(){
   if(S.remote) return shareSheet('invite');
   if(creatingRemote) return; // Already in progress, likely a double tap.
@@ -1032,7 +1096,7 @@ async function enableLive(){
     render(); shareSheet('invite');
   } else {
     if(btn) btn.disabled = false;
-    toast('Ahora mismo no hay manera (¿sin red?). La fiesta sigue en tu móvil; prueba luego.');
+    internetNeeded();
   }
 }
 
@@ -1068,7 +1132,7 @@ async function openLiveLink(id, key){
     S.pendingUpload = true;
     scheduleUpload();
   }
-  saveLocal(json); markOnline(); render();
+  saveLocal(); markOnline(); render();
   if(!S.me) identitySheet(true);
   return true;
 }
@@ -1138,16 +1202,17 @@ function identitySheet(forced){
   document.querySelectorAll('[data-who]').forEach(b => b.onclick = () => {
     const p = personById(b.dataset.who);
     if(!p) return; // Removed while the sheet was open.
-    S.me = p.id; save(); closeSheet(); render();
+    S.me = p.id; saveLocal(); closeSheet(); render();
     toast('Hola, ' + p.name);
   });
-  $('#joinButton').onclick = () => {
+  $('#joinButton').onclick = async () => {
     const n = $('#newNameInput').value.trim();
     if(!n) return toast('Escribe tu nombre, que la lista no adivina.');
     if(S.people.length >= 100) return toast('La peña no da pa más (100). Menuda fiesta.');
-    const p = touch({id: newId('p'), name: n, admin:false});
-    S.people.push(p); S.me = p.id; save(); closeSheet(); render();
-    toast('Bienvenido, ' + n);
+    await commitSharedChange(() => {
+      const p = touch({id: newId('p'), name: n, admin:false});
+      S.people.push(p); S.me = p.id;
+    }, {close:true, toast:'Bienvenido, ' + n});
   };
 }
 
@@ -1221,7 +1286,7 @@ function expenseSheet(itemId){
       x.classList.toggle('on', x.dataset.payer === selectedPayerId));
   });
   $('#cancelButton').onclick = closeSheet;
-  $('#saveExpenseButton').onclick = () => {
+  $('#saveExpenseButton').onclick = async () => {
     const name = $('#expenseNameInput').value.trim();
     if(!name) return toast('Pon qué fue.');
     const priceCents = parsePriceCents($('#priceInput').value);
@@ -1242,60 +1307,73 @@ function expenseSheet(itemId){
       }
       consumers = liveSelectedIds.length === S.people.length ? null : liveSelectedIds;
     }
-    if(direct){
-      if(S.items.length >= 500) return toast('La lista no da pa más (500 cosas). Quita algo primero.');
-      S.items.unshift(touch({id:newId('i'), name, status:'bought', priceCents:priceCents,
-        payerId:selectedPayerId, consumers,
-        createdAt:now(), createdBy:S.me || null}));
-      toast('Apuntado. Las cuentas ya lo saben.');
-    } else {
-      // Find by ID again: the party may have refreshed while the sheet was
-      // open. Permission is revalidated before anything else, including the
-      // resurrection path, so someone who lost admin cannot revive another
-      // person's purchase.
-      let live = S.items.find(x=>x.id===itemId);
-      const target = live || it;
-      if(editing && !isAdmin() && target.payerId !== S.me){
-        return abortSheet('Esa compra acaba de cambiar de manos: solo quien la pagó o la llave pueden tocarla.');
-      }
-      if(live && !editing && live.status === 'bought'){
-        // Someone else bought it while the sheet was open; do not overwrite
-        // their payment with this form.
-        return abortSheet('Alguien la ha apuntado ya como comprada: revísala antes de corregirla.');
-      }
-      if(!live){
-        // If someone else deleted it, add it again: the payment was real.
-        live = it;
-        S.items.unshift(live);
-        S.tombstones = S.tombstones.filter(t=>t.id!==itemId);
-      }
-      live.name = name;
-      live.priceCents = priceCents;
-      live.consumers = consumers;
-      live.payerId = selectedPayerId;
-      touch(live);
-      if(!editing){
-        live.status = 'bought';
-        delete live.claimerId;
-        toast('Apuntada. Las cuentas ya lo saben.');
+    let successMessage = '';
+    await commitSharedChange(() => {
+      if(direct){
+        if(S.items.length >= 500) throw new Error('too_many_items');
+        S.items.unshift(touch({id:newId('i'), name, status:'bought', priceCents:priceCents,
+          payerId:selectedPayerId, consumers,
+          createdAt:now(), createdBy:S.me || null}));
+        successMessage = 'Apuntado. Las cuentas ya lo saben.';
       } else {
-        toast('Guardado');
+        // Find by ID again: the party may have refreshed while the sheet was
+        // open. Permission is revalidated before anything else, including the
+        // resurrection path, so someone who lost admin cannot revive another
+        // person's purchase.
+        let live = S.items.find(x=>x.id===itemId);
+        const target = live || it;
+        if(editing && !isAdmin() && target.payerId !== S.me){
+          throw new Error('payer_changed');
+        }
+        if(live && !editing && live.status === 'bought'){
+          // Someone else bought it while the sheet was open; do not overwrite
+          // their payment with this form.
+          throw new Error('already_bought');
+        }
+        if(!live){
+          // If someone else deleted it, add it again: the payment was real.
+          live = it;
+          S.items.unshift(live);
+          S.tombstones = S.tombstones.filter(t=>t.id!==itemId);
+        }
+        live.name = name;
+        live.priceCents = priceCents;
+        live.consumers = consumers;
+        live.payerId = selectedPayerId;
+        touch(live);
+        if(!editing){
+          live.status = 'bought';
+          delete live.claimerId;
+          successMessage = 'Apuntada. Las cuentas ya lo saben.';
+        } else {
+          successMessage = 'Guardado';
+        }
       }
-    }
-    save(); closeSheet(); render();
+    }, {close:true, toast:() => successMessage}).catch(e => {
+      if(e.message === 'too_many_items') toast('La lista no da pa más (500 cosas). Quita algo primero.');
+      else if(e.message === 'payer_changed') abortSheet('Esa compra acaba de cambiar de manos: solo quien la pagó o la llave pueden tocarla.');
+      else if(e.message === 'already_bought') abortSheet('Alguien la ha apuntado ya como comprada: revísala antes de corregirla.');
+      else throw e;
+    });
   };
   const del = $('#deleteItemButton');
   if(del) del.onclick = () => {
     confirmSheet('¿Borrar esta compra?',
-      `«${it.name}» (${eur(it.priceCents||0)}) se quita de la lista y de las cuentas.`, () => {
+      `«${it.name}» (${eur(it.priceCents||0)}) se quita de la lista y de las cuentas.`, async () => {
         // Revalidate against live state; the party may have changed underneath.
         const live = itemById(itemId);
         if(!live){ render(); return toast('Ya no está: alguien la ha quitado antes.'); }
         if(!isAdmin() && live.payerId !== S.me){
           render(); return toast('Esa compra ha cambiado de manos: solo quien la pagó o la llave pueden borrarla.');
         }
-        tombstoneEntity('items', live);
-        save(); render(); toast('Fuera de la lista');
+        await commitSharedChange(() => {
+          const latest = itemById(itemId);
+          if(!latest) throw new Error('missing_item');
+          tombstoneEntity('items', latest);
+        }, {toast:'Fuera de la lista'}).catch(e => {
+          if(e.message === 'missing_item') abortSheet('Esa compra ya no está en la lista.');
+          else throw e;
+        });
       });
   };
   setTimeout(()=>$(direct ? '#expenseNameInput' : '#priceInput').focus(), 250);
@@ -1314,7 +1392,7 @@ function assignSheet(itemId){
       <button class="pill text-only ${!it.claimerId?'on':''}" type="button" data-assign-person="">Sin dueño</button>
     </div>
   `);
-  document.querySelectorAll('[data-assign-person]').forEach(b => b.onclick = () => {
+  document.querySelectorAll('[data-assign-person]').forEach(b => b.onclick = async () => {
     if(!requireAdmin()) return;
     const who = personById(b.dataset.assignPerson);
     // data-assign-person="" intentionally means "unowned". A person removed underneath
@@ -1323,10 +1401,18 @@ function assignSheet(itemId){
     let live = itemById(itemId);
     if(!live) return abortSheet('Esa cosa ya no está en la lista.');
     if(live.status === 'bought') return abortSheet('Esa ya está comprada: no hay nada que asignar.');
-    if(who){ live.status='claimed'; live.claimerId=who.id; toast('Se la lleva ' + who.name); }
-    else { live.status='pending'; delete live.claimerId; toast('Suelta. A ver quién se la pide ahora.'); }
-    touch(live);
-    save(); closeSheet(); render();
+    await commitSharedChange(() => {
+      live = itemById(itemId);
+      if(!live) throw new Error('missing_item');
+      if(live.status === 'bought') throw new Error('already_bought');
+      if(who){ live.status='claimed'; live.claimerId=who.id; }
+      else { live.status='pending'; delete live.claimerId; }
+      touch(live);
+    }, {close:true, toast: who ? 'Se la lleva ' + who.name : 'Suelta. A ver quién se la pide ahora.'}).catch(e => {
+      if(e.message === 'missing_item') abortSheet('Esa cosa ya no está en la lista.');
+      else if(e.message === 'already_bought') abortSheet('Esa ya está comprada: no hay nada que asignar.');
+      else throw e;
+    });
   });
 }
 
@@ -1346,16 +1432,21 @@ function renamePersonSheet(pid){
     </div>
   `);
   $('#cancelPersonRenameButton').onclick = closeSheet;
-  $('#savePersonRenameButton').onclick = () => {
+  $('#savePersonRenameButton').onclick = async () => {
     const q = personById(pid);
     if(!q) return abortSheet('Esa persona ya no está en la peña.');
     if(pid !== S.me && !requireAdmin()) return;
     const n = $('#personNameEditInput').value.trim();
     if(!n) return toast('Ponle nombre, que alguien será.');
-    q.name = n;
-    touch(q);
-    save(); closeSheet(); render();
-    toast('Nombre cambiado');
+    await commitSharedChange(() => {
+      const live = personById(pid);
+      if(!live) throw new Error('missing_person');
+      live.name = n;
+      touch(live);
+    }, {close:true, toast:'Nombre cambiado'}).catch(e => {
+      if(e.message === 'missing_person') abortSheet('Esa persona ya no está en la peña.');
+      else throw e;
+    });
   };
 }
 
@@ -1409,18 +1500,27 @@ function personSheet(pid){
   // Handlers re-find by ID and reconfirm admin status; the party may have
   // merged underneath while the sheet was open.
   const tog = $('#toggleAdminButton');
-  if(tog) tog.onclick = () => {
+  if(tog) tog.onclick = async () => {
     if(!requireAdmin()) return;
     const q = personById(pid);
     if(!q) return abortSheet('Esa persona ya no está en la peña.');
     if(q.admin && adminCount() === 1) return toast('Alguien tiene que quedarse con la llave');
-    q.admin = !q.admin;
-    touch(q);
-    save(); closeSheet(); render();
-    toast(q.admin ? q.name + ' tiene la llave' : q.name + ' ya no tiene la llave');
+    const nextAdmin = !q.admin;
+    await commitSharedChange(() => {
+      const live = personById(pid);
+      if(!live) throw new Error('missing_person');
+      live.admin = nextAdmin;
+      touch(live);
+    }, {close:true, toast:() => {
+      const live = personById(pid);
+      return nextAdmin ? (live ? live.name : q.name) + ' tiene la llave' : (live ? live.name : q.name) + ' ya no tiene la llave';
+    }}).catch(e => {
+      if(e.message === 'missing_person') abortSheet('Esa persona ya no está en la peña.');
+      else throw e;
+    });
   };
   const eli = $('#removePersonButton');
-  if(eli) eli.onclick = () => {
+  if(eli) eli.onclick = async () => {
     if(!requireAdmin()) return;
     const q = personById(pid);
     if(!q) return abortSheet('Esa persona ya no está en la peña.');
@@ -1438,10 +1538,15 @@ function personSheet(pid){
     // by the derived pass. The same pass runs during merge and only applies if
     // the deletion truly consolidates. If the person is resurrected because they
     // bought something this phone had not seen, their shares remain intact.
-    tombstoneEntity('people', q);
-    normalizeSplits(S.items, S.people);
-    save(); closeSheet(); render();
-    toast(q.name + ' ya no está en la peña');
+    await commitSharedChange(() => {
+      const live = personById(pid);
+      if(!live) throw new Error('missing_person');
+      tombstoneEntity('people', live);
+      normalizeSplits(S.items, S.people);
+    }, {close:true, toast:q.name + ' ya no está en la peña'}).catch(e => {
+      if(e.message === 'missing_person') abortSheet('Esa persona ya no está en la peña.');
+      else throw e;
+    });
   };
 }
 
@@ -1511,32 +1616,59 @@ async function shareSheet(shareType, pid){
   // The demoState is not shareable: its demoState flag would leave the receiver with a
   // party that can never go live.
   if(S.party.demo) return toast('La fiesta de ejemplo no se comparte: monta la tuya, que es un momento.');
+  if(canGoLive()){
+    openSheet(`
+      <h2 class="sheet-title">Poniendo la fiesta en vivo</h2>
+      <p class="sheet-sub">Un momento: así todos entran al mismo sitio y lo que apunte la peña lo ves tú también.</p>
+      <div class="note">Si no hay red, paramos aquí: la fiesta compartida necesita internet para no partirse en copias.</div>
+    `, true);
+    if(await createRemote()){
+      render();
+      return shareSheet(shareType, pid);
+    }
+    openSheet(`
+      <h2 class="sheet-title">Ahora mismo no hay manera</h2>
+      <p class="sheet-sub">Necesitas internet para poner la fiesta en vivo y mandarla al grupo.</p>
+      <div class="note">Así evitamos el lío de tener una fiesta distinta en cada teléfono. Con red, lo intentamos otra vez y arreando.</div>
+      <div class="sheet-actions">
+        <button class="btn btn-outline" id="closeShareBlockButton" type="button">Seguir aquí</button>
+        <button class="btn btn-primary" id="retryLiveShareButton" type="button">Reintentar</button>
+      </div>
+    `);
+    $('#closeShareBlockButton').onclick = closeSheet;
+    $('#retryLiveShareButton').onclick = () => shareSheet(shareType, pid);
+    return;
+  }
   // If there are unsent changes, make one last push before composing the
   // message. Cap it so offline sharing does not hang for the full timeout.
   if(S.remote && S.pendingUpload && !S.party.demo){
     clearTimeout(sync.timer);
-    await Promise.race([upload(), new Promise(res => setTimeout(res, 1500))]);
+    if(sync.rejected && sync.uploadedJson){
+      restoreSharedJson(sync.uploadedJson);
+      render();
+    } else {
+      await Promise.race([upload(), new Promise(res => setTimeout(res, 1500))]);
+    }
+    if(S.pendingUpload){
+      openSheet(`
+        <h2 class="sheet-title">Poniendo todo al día</h2>
+        <p class="sheet-sub">La fiesta está en vivo, pero la app está terminando de cuadrar el estado con el grupo.</p>
+        <div class="note">No mandamos el enlace hasta que lo que ves aquí y lo que verá la peña sea lo mismo.</div>
+        <div class="sheet-actions">
+          <button class="btn btn-outline" id="closePendingShareButton" type="button">Seguir aquí</button>
+          <button class="btn btn-primary" id="retryPendingShareButton" type="button">Reintentar</button>
+        </div>
+      `);
+      $('#closePendingShareButton').onclick = closeSheet;
+      $('#retryPendingShareButton').onclick = () => shareSheet(shareType, pid);
+      return;
+    }
   }
   const txt = shareMessage(shareType, pid);
-  const partyCanGoLive = canGoLive();
-  // If something is still unsent, tell the sharer. A live link shows server
-  // state, not this phone's unsent local state.
-  const pendingNotice = S.remote && S.pendingUpload
-    ? `<div class="note">Hay cambios tuyos aún sin subir (¿sin red?). Quien abra
-      el enlace no los verá hasta que se suban solos.</div>` : '';
-  // In local mode the link embeds the whole party. The preview abbreviates it;
-  // the copied/shared message keeps the full link.
-  const preview = txt.replace(/(#AP2:)[A-Za-z0-9_-]{24,}/g,
-    '$1… (enlace largo: lleva dentro la copia de la fiesta)');
   openSheet(`
     <h2 class="sheet-title">Mandar al grupo</h2>
     <p class="sheet-sub">Así queda el mensaje:</p>
-    <div class="preview">${escapeHtml(preview)}</div>
-    ${pendingNotice}
-    ${partyCanGoLive ? `<div class="note">Esta fiesta va solo en este móvil: el enlace lleva una copia
-      congelada. Ponla en vivo y todos apuntarán en la misma.</div>
-      <button class="btn btn-soft btn-block" id="liveFromShareButton" type="button"
-        style="margin-top:10px">Ponerla en vivo primero</button>` : ''}
+    <div class="preview">${escapeHtml(txt)}</div>
     <div class="sheet-actions">
       <button class="btn btn-outline" id="copyMessageButton" type="button">Copiar</button>
       <button class="btn btn-green" id="whatsappMessageButton" type="button">WhatsApp</button>
@@ -1551,12 +1683,6 @@ async function shareSheet(shareType, pid){
   $('#whatsappMessageButton').onclick = () => {
     window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank', 'noopener');
     closeSheet();
-  };
-  const live = $('#liveFromShareButton');
-  if(live) live.onclick = async () => {
-    live.disabled = true;
-    if(await createRemote()){ render(); shareSheet(shareType, pid); }
-    else { live.disabled = false; toast('Ahora mismo no hay manera (¿sin red?). Prueba luego.'); }
   };
   const alternateApp = $('#alternateAppButton');
   if(alternateApp) alternateApp.onclick = async () => {
@@ -1610,23 +1736,29 @@ function createPartySheet(){
     const btn = $('#createPartyButton');
     btn.disabled = true;
     const pid = newId('p');
-    backupCurrentParty();
-    S = {
+    const previousParty = S;
+    const draftParty = {
       v:5,
       party:{name, date: newDate || null, updatedAt:now()},
       me: pid, tab:'party', remote: null,
       people:[{id:pid, name:participantName, admin:true, updatedAt:now()}],
       items:[], settled:{}, tombstones:[],
     };
-    // Save to the phone immediately. If the POST hangs and the user closes the
-    // app, the party still exists locally.
-    saveLocal();
-    // Go live from minute one if the network is available; otherwise stay local
-    // until the user retries.
+    if(previousParty){
+      S = previousParty;
+      backupCurrentParty();
+    }
+    S = draftParty;
     const liveEnabled = await createRemote();
-    saveLocal(); closeSheet(); render();
-    if(liveEnabled) shareSheet('invite');
-    else toast('Fiesta creada en este móvil (sin red). Ponla en vivo cuando vuelva.');
+    if(liveEnabled){
+      saveLocal(); closeSheet(); render();
+      shareSheet('invite');
+    } else {
+      S = previousParty;
+      btn.disabled = false;
+      render();
+      internetNeeded();
+    }
   };
 }
 
@@ -1647,16 +1779,17 @@ function renameSheet(){
     </div>
   `);
   $('#cancelRenameButton').onclick = closeSheet;
-  $('#saveRenameButton').onclick = () => {
+  $('#saveRenameButton').onclick = async () => {
     if(!requireAdmin()) return;
     const n = $('#partyNameInput').value.trim();
     if(!n) return toast('La fiesta necesita un nombre');
     const f = $('#partyDateInput').value;
     if(f && !DATE_RE.test(f)) return toast('Esa fecha no cuadra: ponla normal o déjala en blanco.');
-    S.party.name = n;
-    S.party.date = f || null;
-    touch(S.party);
-    save(); closeSheet(); render(); toast('Guardado');
+    await commitSharedChange(() => {
+      S.party.name = n;
+      S.party.date = f || null;
+      touch(S.party);
+    }, {close:true, toast:'Guardado'});
   };
 }
 
@@ -2012,13 +2145,13 @@ function bindView(v){
   on('#inviteButton', () => shareSheet('invite'));
   on('#enableLiveButton', enableLive);
   on('#whoAmIButton', () => identitySheet(false));
-  on('#myAccountButton', () => { S.tab='accounts'; save(); render(); });
+  on('#myAccountButton', () => { S.tab='accounts'; saveLocal(); render(); });
   on('#actionButton', e => {
     const target = v.querySelector('#actionButton').dataset.target;
     if(target === 'expense'){
       if(!S.me) return identitySheet(true);
       expenseSheet(null);
-    } else { S.tab = target; save(); render(); }
+    } else { S.tab = target; saveLocal(); render(); }
   });
   on('#renameButton', renameSheet);
   on('#newPartyButton', () => confirmSheet('¿Empezar otra fiesta?',
@@ -2039,14 +2172,15 @@ function bindView(v){
 
   /* list */
   const form = v.querySelector('#addItemForm');
-  if(form) form.onsubmit = e => {
+  if(form) form.onsubmit = async e => {
     e.preventDefault();
     const n = v.querySelector('#itemInput').value.trim();
     if(!n) return toast('Escribe algo, que la lista no adivina.');
     if(S.items.length >= 500) return toast('La lista no da pa más (500 cosas). Quita algo primero.');
-    S.items.unshift(touch({id:newId('i'), name:n, status:'pending',
-      createdAt:now(), createdBy:S.me || null}));
-    save(); render(); toast('«' + n + '» apuntado');
+    await commitSharedChange(() => {
+      S.items.unshift(touch({id:newId('i'), name:n, status:'pending',
+        createdAt:now(), createdBy:S.me || null}));
+    }, {toast:'«' + n + '» apuntado'});
   };
   on('#directExpenseButton', () => {
     if(!S.me) return identitySheet(true);
@@ -2056,17 +2190,23 @@ function bindView(v){
   // The party may have changed underneath while rendering was deferred because
   // an input had half-written text. Every action revalidates item state so it
   // does not overwrite a purchase another phone just resolved.
-  v.querySelectorAll('[data-pillar]').forEach(b => b.onclick = () => {
+  v.querySelectorAll('[data-pillar]').forEach(b => b.onclick = async () => {
     if(!S.me) return identitySheet(true);
     const it = itemById(b.dataset.pillar);
     if(!isUnownedItem(it)){
       render(); return toast('Alguien se ha adelantado: esa ya está resuelta.');
     }
-    it.status='claimed'; it.claimerId=S.me;
-    touch(it);
-    save(); render(); toast('Apuntado: ' + it.name + ' corre de tu cuenta.');
+    await commitSharedChange(() => {
+      const live = itemById(b.dataset.pillar);
+      if(!isUnownedItem(live)) throw new Error('already_taken');
+      live.status='claimed'; live.claimerId=S.me;
+      touch(live);
+    }, {toast:'Apuntado: ' + it.name + ' corre de tu cuenta.'}).catch(err => {
+      if(err.message === 'already_taken') toast('Alguien se ha adelantado: esa ya está resuelta.');
+      else throw err;
+    });
   });
-  v.querySelectorAll('[data-release]').forEach(b => b.onclick = () => {
+  v.querySelectorAll('[data-release]').forEach(b => b.onclick = async () => {
     const it = itemById(b.dataset.release);
     if(!it || it.status !== 'claimed'){
       render(); return toast('Esa ya ha cambiado de manos.');
@@ -2074,9 +2214,15 @@ function bindView(v){
     if(it.claimerId !== S.me && !isAdmin()){
       render(); return toast('Esa la trae ' + (personById(it.claimerId)?.name || 'otro') + ': soltarla es cosa suya o de la llave.');
     }
-    it.status='pending'; delete it.claimerId;
-    touch(it);
-    save(); render(); toast('Suelta. A ver quién se la pide ahora.');
+    await commitSharedChange(() => {
+      const live = itemById(b.dataset.release);
+      if(!live || live.status !== 'claimed') throw new Error('changed');
+      live.status='pending'; delete live.claimerId;
+      touch(live);
+    }, {toast:'Suelta. A ver quién se la pide ahora.'}).catch(err => {
+      if(err.message === 'changed') toast('Esa ya ha cambiado de manos.');
+      else throw err;
+    });
   });
   v.querySelectorAll('[data-assign]').forEach(b => b.onclick = () => {
     if(!isAdmin()) return toast('Eso es cosa de la llave');
@@ -2096,7 +2242,7 @@ function bindView(v){
     }
     expenseSheet(card.dataset.edit);
   });
-  v.querySelectorAll('[data-remove-button]').forEach(b => b.onclick = e => {
+  v.querySelectorAll('[data-remove-button]').forEach(b => b.onclick = async e => {
     e.stopPropagation();
     const it = itemById(b.dataset.removeButton);
     if(!it) return render();
@@ -2109,38 +2255,51 @@ function bindView(v){
     if(!isAdmin() && it.claimerId){
       render(); return toast('Esa ya la trae ' + (personById(it.claimerId)?.name || 'alguien') + ': no se quita así como así.');
     }
-    tombstoneEntity('items', it);
-    save(); render();
+    await commitSharedChange(() => {
+      const live = itemById(b.dataset.removeButton);
+      if(!live) throw new Error('missing_item');
+      if(live.status === 'bought') throw new Error('already_bought');
+      if(!isAdmin() && live.claimerId) throw new Error('claimed');
+      tombstoneEntity('items', live);
+    }).catch(err => {
+      if(err.message === 'missing_item') render();
+      else if(err.message === 'already_bought') toast('Esa ya está comprada: tócala si quieres corregirla.');
+      else if(err.message === 'claimed') toast('Esa ya la trae alguien: no se quita así como así.');
+      else throw err;
+    });
   });
 
   /* group */
   const formP = v.querySelector('#addPersonForm');
-  if(formP) formP.onsubmit = e => {
+  if(formP) formP.onsubmit = async e => {
     e.preventDefault();
     const n = v.querySelector('#personInput').value.trim();
     if(!n) return;
     if(S.people.length >= 100) return toast('La peña no da pa más (100). Menuda fiesta.');
-    S.people.push(touch({id:newId('p'), name:n, admin:false}));
-    save(); render(); toast(n + ' se une a la peña');
+    await commitSharedChange(() => {
+      S.people.push(touch({id:newId('p'), name:n, admin:false}));
+    }, {toast:n + ' se une a la peña'});
   };
   v.querySelectorAll('[data-person]').forEach(f => f.onclick = () => personSheet(f.dataset.person));
 
   /* accounts */
-  v.querySelectorAll('[data-bizum]').forEach(b => b.onclick = () => {
+  v.querySelectorAll('[data-bizum]').forEach(b => b.onclick = async () => {
     const key = b.dataset.bizum;
     const c = accounts();
     const bz = c.bizums.find(x => bizumKey(x) === key);
     if(!bz) return render(); // Accounts changed underneath.
     const done = !isBizumDone(bz);
-    // Store the paid amount with the mark. If the Bizum amount later changes,
-    // the new amount becomes pending again.
-    S.settled[key] = {done, at:now(), by:S.me || null, cents: bz.cents};
-    pruneSettled(S.settled, S.people); // Keep this path bounded too.
+    let message = '';
     if(done){
-      if(c.bizums.every(x => bizumKey(x) === key || isBizumDone(x))) toast('Cuentas claras y el chocolate espeso.');
-      else toast('Bizum apuntado');
+      if(c.bizums.every(x => bizumKey(x) === key || isBizumDone(x))) message = 'Cuentas claras y el chocolate espeso.';
+      else message = 'Bizum apuntado';
     }
-    save(); render();
+    await commitSharedChange(() => {
+      // Store the paid amount with the mark. If the Bizum amount later changes,
+      // the new amount becomes pending again.
+      S.settled[key] = {done, at:now(), by:S.me || null, cents: bz.cents};
+      pruneSettled(S.settled, S.people); // Keep this path bounded too.
+    }, {toast:message});
   });
   v.querySelectorAll('[data-copy-bizum]').forEach(b => b.onclick = async () => {
     const who = personById(b.dataset.copyBizum);
@@ -2153,14 +2312,11 @@ function bindView(v){
 
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
   if(!S) return;
-  S.tab = t.dataset.tab; save(); render();
+  S.tab = t.dataset.tab; saveLocal(); render();
 }));
 
 /* startup: live link (#F:id:key), snapshot (#AP2:), or saved state */
 (function(){
-  // Shared-state baseline as loaded. Without this, the first local-only save
-  // (switching tabs) would count as a party change.
-  if(S && S.remote) sync.actualSharedJson = stateJson();
   let hash = location.hash || '';
   try { hash = decodeURIComponent(hash); } catch(e){ /* A stray % must not crash the app. */ }
   const clearHash = () => {

@@ -84,13 +84,20 @@ it. No accounts, no users, no database: one JSON document per party.
   the hash, so nginx and Cloudflare never see it in logs. Anyone with the link
   can edit, matching the current trust model; sensitive actions remain guarded
   by "la llave" inside the app.
-- **Local mode stays alive**: if the network or server is down, the app keeps
-  working through localStorage and `AP2:` snapshot links. A local party can be
-  made live in one tap.
-- **No technical sync language**: upload shortly after each change; download on
-  open, when the app becomes visible, and about every 12 seconds. User-facing
-  status is "al día hace un momento". If offline, say changes are saved and will
-  upload themselves.
+- **Live edits require the API**: localStorage keeps only the opened party,
+  identity, tab, and recovery backup. A shared party change is shown as saved
+  only after the server accepts it. If the network or server is down, the user
+  gets a clear "necesitas internet" error instead of a local change that might
+  sync later.
+- **AP2 is backup, not invitation**: local snapshot links can still be decoded
+  for recovery/import, but normal group sharing is live-only. If a local party
+  cannot be made live, or if the app is still reconciling state, WhatsApp/copy
+  sharing is blocked instead of sending a frozen or stale state that looks like
+  an invitation.
+- **No technical sync language**: save shared changes directly through the API;
+  download on open, when the app becomes visible, and about every 12 seconds.
+  User-facing status is "al día hace un momento". If offline, say internet is
+  needed to change the party.
 - **Conflicts**: entity-level merge; latest edit wins by `updatedAt`, and tombstones
   prevent deleted entities from coming back. For a 5-15 person group where most
   edits are additions, this is enough. Do not ask users to understand versions.
@@ -205,10 +212,14 @@ local-mode backups. The app does not accept Spanish payload aliases.
 4. **Accounts**: first thing visible is the user's own status and action. "Per
    head" appears only when true.
 5. **WhatsApp**: all four messages have preview, native share, WhatsApp button,
-   and copy fallback.
-6. **Offline / no server**: the app does not break; it saves locally, warns
-   once, and uploads when network returns.
-7. **Local to live**: an existing local party can go live in one tap; the demo
+   and copy fallback once the party has a live `#F:` link and the current phone
+   has uploaded its latest changes. Local-only parties must be made live first;
+   if the API is unavailable, the app must not send an `AP2:` snapshot or stale
+   live link as a normal group invitation.
+6. **Offline / no server**: viewing and local identity remain usable, but shared
+   changes and group sharing require internet. Failed edits are not shown as
+   saved locally.
+7. **Local to live**: an imported local party can go live in one tap; the demo
    never uploads.
 
 ## P1, Next Batch
