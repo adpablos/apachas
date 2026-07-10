@@ -96,10 +96,12 @@ bit of humor, but not overdone.
    right; violet party card with oculus watermark, translucent white label/meta,
    white "Mandar al grupo" button, translucent "Ponerla en vivo" when local, and
    live-status line with green dot; "¿QUÉ TOCA?" card with Bricolage 18px
-   statement and exactly one action; "TU SALDO" card with large colored number
+   statement and exactly one personalized action (own assigned item first,
+   missing group items second, own Bizum third); "TU SALDO" card with large colored number
    and "Mis cuentas"; identity row with avatar and violet "Cambiar"; access
    links for rename/date when key holder, start another party, and demo. Without
-   a party: large centered hero plus join/create/demo.
+   a party: large centered hero plus join/create/demo and up to five recent live
+   parties stored on that phone.
 2. **Lista**: subtitle "{n} cosas por resolver de {total}"; add row with violet
    button; dashed "+ Apuntar un gasto ya pagado"; cards with state chips ("La
    trae X" primarysoft/primary, "Sin dueño" chip/muted) and actions ("Me lo
@@ -109,19 +111,30 @@ bit of humor, but not overdone.
    exist.
 3. **Peña**: avatar rows with violet initials, name, optional key, and balance
    ("le deben" green, "debe" coral, "en paz"); "Mandar al grupo"; manual add.
-   Person sheet on tap, with breakdown and shareable reminder.
+   Person sheet on tap, with breakdown and shareable reminder. Leaving the group
+   makes someone inactive for future expenses; historical purchases, transfers,
+   and balances remain visible. Inactive people appear after active people.
 4. **Cuentas**: "TU CUENTA" card first: Debes X / Te deben X / Estás en paz in
    Bricolage 800/32px colored text, breakdown "Pagaste · te tocaba", and user's
    Bizums with copy; total card in row with 28px figure left and note right.
-   Show "por cabeza" only if every purchase is consumed by everyone. "BIZUMS DE
-   TODOS" rows have circular checks; done rows are green-filled and 55% opacity.
+   Show "por cabeza" only if every purchase is consumed by everyone. "BIZUMS
+   PENDIENTES" rows have circular checks. Marking one creates a real transfer
+   that changes the balance; completed transfers live under "BIZUMS HECHOS" and
+   can be corrected with confirmation.
    "Mandar las cuentas al grupo" in violet.
 5. **Expense sheet**: direct expense, mark bought, or edit. Fields: Qué, Precio,
-   Pagó with violet pills, ¿Quiénes lo catan? with green pills, green save
-   button, delete with confirmation, and history line.
+   compact summaries for Pagó and ¿Quiénes lo catan?, with pills revealed only
+   after "Cambiar". Consumer options include Todos and Solo yo; payer options can
+   suggest who should pay next to balance the group. Green save button, delete
+   with confirmation, and history line.
 6. **Share sheet**: before showing a shareable message, local-only parties try
    to go live, and live parties confirm they are up to date. If either fails,
    show a blocking sheet with retry and a calm note that internet is needed.
    Once live and up to date, show message preview, Copiar and WhatsApp green
    buttons, and "Mandar con otra app" when native share is available. AP2 copy
    is a backup, not normal invitation copy.
+7. **Sheets and controls**: every non-blocking sheet has a visible close button,
+   closes with Escape, traps focus, returns focus to its opener, and disappears
+   from the accessibility tree after closing. Clickable rows are native buttons;
+   destructive actions ask for confirmation and important touch targets are at
+   least 44px tall.

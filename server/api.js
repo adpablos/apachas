@@ -31,6 +31,7 @@ const RATE_MAX = 600;
 const MAX_PARTIES = 5000;             // Guardrail against bots filling disk.
 const ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'; // No i/l/o/0/1.
 const PARTY_ID_RE = new RegExp(`^[${ALPHABET}]{10}$`);
+const STATE_VERSION = 6;
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
@@ -55,7 +56,10 @@ const metadata = new Map(); // id -> { rev, key }
 function normalizeDocument(doc) {
   if (!doc || typeof doc !== 'object') return null;
   const key = doc.key;
-  const state = validState(doc.state);
+  // Stored v5 parties are upgraded on read. Network writes must use the current
+  // contract so an old browser cannot silently discard transfers or frozen
+  // consumer lists introduced in v6.
+  const state = validState(doc.state, { allowLegacy: true });
   if (!key || !state || !Number.isInteger(doc.rev)) return null;
   return {
     key,
@@ -128,7 +132,6 @@ function stateResponse(doc) {
 
 // Shared party state excludes client-local fields and uses English keys.
 const ENTITY_ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
-const SETTLED_KEY_RE = /^[A-Za-z0-9_-]{1,40}>[A-Za-z0-9_-]{1,40}$/;
 const validId = (x) => typeof x === 'string' && ENTITY_ID_RE.test(x);
 const optionalNumber = (x) => x == null || (typeof x === 'number' && isFinite(x));
 const optionalId = (x) => x == null || validId(x);
@@ -136,6 +139,46 @@ const ITEM_STATUSES = ['pending', 'claimed', 'bought'];
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
+}
+
+function stableEntityId(prefix, text) {
+  let first = 2166136261;
+  let second = 3335557771;
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    first = Math.imul(first ^ code, 16777619);
+    second = Math.imul(second ^ code, 2246822519);
+  }
+  return `${prefix}${(first >>> 0).toString(36)}${(second >>> 0).toString(36)}`;
+}
+
+function legacyTransferId(key, value) {
+  return stableEntityId('tl', `${key}|${value.cents || 0}|${value.at || 0}`);
+}
+
+function migrateLegacyTransfers(input, people) {
+  const transfers = [];
+  const peopleIds = new Set(people.map((person) => person.id));
+  const settled = input && typeof input === 'object' && !Array.isArray(input)
+    ? input : {};
+  for (const key of Object.keys(settled)) {
+    const value = settled[key];
+    const [fromId, toId, extra] = key.split('>');
+    if (extra !== undefined || !value || !value.done ||
+        !peopleIds.has(fromId) || !peopleIds.has(toId) || fromId === toId ||
+        !Number.isInteger(value.cents) || value.cents <= 0) continue;
+    const at = Number(value.at) || 0;
+    transfers.push({
+      id: legacyTransferId(key, value),
+      fromId,
+      toId,
+      cents: value.cents,
+      createdAt: at,
+      ...(value.by != null ? { createdBy: value.by } : {}),
+      updatedAt: at,
+    });
+  }
+  return transfers;
 }
 
 function migrateState(input) {
@@ -147,8 +190,13 @@ function migrateState(input) {
     id: person && person.id,
     name: person && person.name,
     admin: person && person.admin !== undefined ? !!person.admin : index < 2,
+    active: person && person.active !== undefined ? !!person.active : true,
     updatedAt: person && (person.updatedAt ?? 0),
   }));
+  if (people.length && !people.some((person) => person.active)) people[0].active = true;
+  if (people.length && !people.some((person) => person.active && person.admin)) {
+    people.find((person) => person.active).admin = true;
+  }
 
   const items = asArray(input.items).map((item) => {
     const migrated = {
@@ -174,21 +222,35 @@ function migrateState(input) {
     return migrated;
   });
 
-  const settled = {};
-  const rawSettled = input.settled || {};
-  if (rawSettled && typeof rawSettled === 'object' && !Array.isArray(rawSettled)) {
-    for (const key of Object.keys(rawSettled)) {
-      const value = rawSettled[key];
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
-        const entry = {
-          done: !!value.done,
-          at: value.at ?? 0,
-        };
-        if (value.by != null) entry.by = value.by;
-        if (value.cents != null) entry.cents = value.cents;
-        settled[key] = entry;
-      }
+  const activeIds = people.filter((person) => person.active).map((person) => person.id);
+  const activeIdSet = new Set(activeIds);
+  const peopleIds = new Set(people.map((person) => person.id));
+  for (const item of items) {
+    // In v5, null meant "whoever is currently in the group". Freeze that set
+    // during migration so later joins and departures cannot rewrite history.
+    if (item.status === 'bought') {
+      const validConsumers = Array.isArray(item.consumers)
+        ? [...new Set(item.consumers.filter((id) => peopleIds.has(id)))] : [];
+      item.consumers = validConsumers.length ? validConsumers : activeIds.slice();
     }
+    if (item.status === 'claimed' && !activeIdSet.has(item.claimerId)) {
+      item.status = 'pending';
+      delete item.claimerId;
+    }
+  }
+
+  const transfers = asArray(input.transfers).map((transfer) => ({
+    id: transfer && transfer.id,
+    fromId: transfer && transfer.fromId,
+    toId: transfer && transfer.toId,
+    cents: transfer && transfer.cents,
+    createdAt: transfer && (transfer.createdAt ?? 0),
+    ...(transfer && transfer.createdBy != null ? { createdBy: transfer.createdBy } : {}),
+    updatedAt: transfer && (transfer.updatedAt ?? transfer.createdAt ?? 0),
+    ...(transfer && transfer.updatedBy != null ? { updatedBy: transfer.updatedBy } : {}),
+  }));
+  if (!transfers.length && input.settled) {
+    transfers.push(...migrateLegacyTransfers(input.settled, people));
   }
 
   const tombstones = asArray(input.tombstones).map((mark) => ({
@@ -198,7 +260,7 @@ function migrateState(input) {
   }));
 
   return {
-    v: 5,
+    v: STATE_VERSION,
     party: {
       name: rawParty.name,
       date: rawParty.date ?? null,
@@ -207,12 +269,14 @@ function migrateState(input) {
     },
     people,
     items,
-    settled,
+    transfers,
     tombstones,
   };
 }
 
-function validState(payload) {
+function validState(payload, options = {}) {
+  const sourceVersion = payload && Number(payload.v);
+  if (!options.allowLegacy && sourceVersion !== STATE_VERSION) return null;
   const state = migrateState(payload);
   if (!state) return null;
 
@@ -224,8 +288,15 @@ function validState(payload) {
   if (!optionalNumber(party.updatedAt)) return null;
 
   if (!Array.isArray(state.people) || state.people.length > 100) return null;
+  if (!state.people.length || !state.people.some((person) => person.active)) return null;
+  if (!state.people.some((person) => person.active && person.admin)) return null;
+  const entityIds = new Set();
+  const peopleIds = new Set();
   for (const person of state.people) {
     if (!person || typeof person !== 'object' || !validId(person.id)) return null;
+    if (entityIds.has(person.id)) return null;
+    entityIds.add(person.id);
+    peopleIds.add(person.id);
     if (typeof person.name !== 'string' || !person.name.trim() || person.name.length > 40) return null;
     if (!optionalNumber(person.updatedAt)) return null;
   }
@@ -233,6 +304,8 @@ function validState(payload) {
   if (!Array.isArray(state.items) || state.items.length > 500) return null;
   for (const item of state.items) {
     if (!item || typeof item !== 'object' || !validId(item.id)) return null;
+    if (entityIds.has(item.id)) return null;
+    entityIds.add(item.id);
     if (typeof item.name !== 'string' || !item.name.trim() || item.name.length > 80) return null;
     if (!ITEM_STATUSES.includes(item.status)) return null;
     if (item.priceCents != null &&
@@ -241,23 +314,30 @@ function validState(payload) {
         !optionalId(item.createdBy) || !optionalId(item.updatedBy)) return null;
     if (item.consumers != null && (!Array.isArray(item.consumers) ||
         item.consumers.length > 100 || !item.consumers.every(validId))) return null;
+    if (item.status === 'bought' && (!Array.isArray(item.consumers) || !item.consumers.length)) return null;
+    if (item.status === 'bought' && (!peopleIds.has(item.payerId) ||
+        !item.consumers.every((id) => peopleIds.has(id)))) return null;
     if (!optionalNumber(item.updatedAt) || !optionalNumber(item.createdAt)) return null;
   }
 
-  if (!state.settled || typeof state.settled !== 'object' || Array.isArray(state.settled)) return null;
-  const settledKeys = Object.keys(state.settled);
-  if (settledKeys.length > 500) return null;
-  for (const key of settledKeys) {
-    if (!SETTLED_KEY_RE.test(key)) return null;
-    const value = state.settled[key];
-    if (!(value && typeof value === 'object' && !Array.isArray(value) &&
-        optionalId(value.by) && optionalNumber(value.at) && optionalNumber(value.cents))) return null;
+  if (!Array.isArray(state.transfers) || state.transfers.length > 500) return null;
+  for (const transfer of state.transfers) {
+    if (!transfer || typeof transfer !== 'object' || !validId(transfer.id) ||
+        !validId(transfer.fromId) || !validId(transfer.toId) ||
+        transfer.fromId === transfer.toId || !Number.isInteger(transfer.cents) ||
+        transfer.cents <= 0 || transfer.cents > 100000000 ||
+        !optionalId(transfer.createdBy) || !optionalId(transfer.updatedBy) ||
+        !optionalNumber(transfer.createdAt) || !optionalNumber(transfer.updatedAt)) return null;
+    if (entityIds.has(transfer.id) || !peopleIds.has(transfer.fromId) ||
+        !peopleIds.has(transfer.toId)) return null;
+    entityIds.add(transfer.id);
   }
 
   if (!Array.isArray(state.tombstones) || state.tombstones.length > 500) return null;
   for (const mark of state.tombstones) {
     if (!mark || typeof mark !== 'object' || !validId(mark.id) ||
         !optionalNumber(mark.at) || !optionalNumber(mark.seenAt)) return null;
+    if (entityIds.has(mark.id)) return null;
   }
 
   // Whitelist rebuild: unknown fields are not stored. Without this, anyone
@@ -265,7 +345,7 @@ function validState(payload) {
   // clients would keep re-uploading until the size cap turns the party
   // effectively read-only.
   const cleaned = {
-    v: 5,
+    v: STATE_VERSION,
     party: {
       name: party.name,
       date: party.date ? party.date : null,
@@ -276,6 +356,7 @@ function validState(payload) {
       id: person.id,
       name: person.name,
       admin: !!person.admin,
+      active: !!person.active,
       updatedAt: person.updatedAt || 0,
     })),
     items: state.items.map((item) => {
@@ -289,22 +370,22 @@ function validState(payload) {
       if (item.updatedBy != null) entry.updatedBy = item.updatedBy;
       return entry;
     }),
-    settled: {},
+    transfers: state.transfers.map((transfer) => ({
+      id: transfer.id,
+      fromId: transfer.fromId,
+      toId: transfer.toId,
+      cents: transfer.cents,
+      createdAt: transfer.createdAt || 0,
+      ...(transfer.createdBy != null ? { createdBy: transfer.createdBy } : {}),
+      updatedAt: transfer.updatedAt || 0,
+      ...(transfer.updatedBy != null ? { updatedBy: transfer.updatedBy } : {}),
+    })),
     tombstones: state.tombstones.map((mark) => ({
       id: mark.id,
       at: mark.at || 0,
       seenAt: mark.seenAt == null ? (mark.at || 0) : mark.seenAt,
     })),
   };
-  for (const key of settledKeys) {
-    const value = state.settled[key];
-    cleaned.settled[key] = {
-      done: !!value.done,
-      at: value.at || 0,
-      ...(value.by != null ? { by: value.by } : {}),
-      ...(value.cents != null ? { cents: value.cents } : {}),
-    };
-  }
   return cleaned;
 }
 

@@ -24,9 +24,9 @@ https://apachas.alexdepablos.es                               └─ /api/ → a
   exposed on `127.0.0.1:3200` on the server for operator smoke tests.
 - `api`: `server/api.js` on `node:22-alpine`, with no `npm install` and no
   runtime dependencies. It stores one JSON document per shared party in the
-  `api-data` volume. If it goes down, static serving stays up and the app keeps
-  working in local mode by design; `web` only waits for `api` to start, not for
-  it to be healthy.
+  `api-data` volume. If it goes down, static serving stays up and the last
+  confirmed party remains readable, but shared edits and invitations stop until
+  the API returns; `web` only waits for `api` to start, not for it to be healthy.
 - `cloudflared`: this app's own tunnel, following the same pattern as the World
   Cup production and staging stacks: one tunnel per stack, zero coupling
   between apps.

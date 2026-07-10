@@ -1,6 +1,7 @@
 # Product — What A Pachas Improves and Why
 
-Product specification dated 2026-07-05. It starts from market research done
+Product specification started on 2026-07-05 and updated for the v6 trust and
+simplicity pass. It starts from market research done
 with Codex (Tricount, Splitwise, Settle Up, Splid, Spliit, Tab, Google Pay
 split), compares it with the real code in `public/index.html`, and records
 decisions rather than open options. The appendix captures where the original
@@ -14,15 +15,15 @@ narrower and more valuable promise for a village party group:
 > Send it to the group, everyone records their part, and the final Bizums fall
 > out automatically.
 
-Today the app delivers half of that promise. It calculates correctly (consumer
-splits, minimum Bizums, per-person balances) and entry is low friction (no
-accounts, no install, demo available). What it does not deliver is "everyone
-records their part": the link is a **snapshot** of the party, not the party.
-Each phone stores its own copy, and the app has to warn that one person should
-record purchases. That is the main weakness; almost everything else is
-secondary.
+Today the app delivers that promise with live shared parties, explicit
+consumer splits, real transfer history, minimum pending Bizums, and a low-
+friction entry with no accounts or install. WhatsApp remains the door and
+loudspeaker; A Pachas is the shared source of truth.
 
-## Diagnosis, Ordered by Damage
+## Original Diagnosis, Resolved in v2
+
+The list below records the problems that justified the v2 rebuild. It is
+historical context, not the current product state.
 
 1. **Collaboration by copy, not live state.** Two people edit different copies
    while believing "the app" is current. This forces a scribe mode: one person
@@ -49,7 +50,8 @@ secondary.
 ## Market Lessons
 
 - **Tricount**: wins because everyone sees the same thing and everyone can add,
-  not because of multicurrency. That is exactly what A Pachas lacks.
+  not because of multicurrency. That was A Pachas' original gap; live parties
+  now cover it without adding accounts.
 - **Splitwise**: shows where not to grow first: categories, recurring expenses,
   IOUs. Copy balance clarity, not density.
 - **Settle Up**: "who pays now" fits party shopping lists: spread the burden
@@ -154,33 +156,67 @@ Each item stores who created it and when, plus who last touched it. The edit
 sheet shows that in one line. Deleting a priced purchase asks for explicit
 confirmation. No activity feed in P0.
 
+### D8. Completed Bizums Are Transfers, Not Checkboxes
+
+Marking a suggested Bizum creates a transfer entity that changes both people's
+balances. Later expenses are calculated on top of those real money movements,
+so nobody is asked to pay the same debt twice. Completed transfers remain
+visible and can be undone with confirmation when marked by mistake. If two
+phones confirm the same recommendation from the same accounting state, both
+derive the same transfer ID so concurrent merging retains one payment. Undo
+tombstones are part of that basis, so confirming the recommendation again after
+a correction creates a new transfer rather than colliding with the old record.
+
+### D9. Membership Changes Never Rewrite History
+
+Bought items store the exact consumer IDs present when the expense is saved;
+"everyone" is a UI shortcut, not a dynamic relationship. People can become
+inactive for future expenses while their purchases, shares, transfers, and
+balances remain intact. Permanent deletion is available only with no history.
+
+### D10. Progressive Expense Details
+
+Payer and consumers use compact summaries by default. "Cambiar" reveals the
+full pills, with Todos and Solo yo shortcuts. A discreet suggestion identifies
+the active person with the lowest balance as the best next payer, without
+changing the real payer automatically.
+
+### D11. Continuity Without Accounts
+
+Each phone remembers up to five live party links and can reopen them from the
+entry screen. Key holders can start a new party from the current pending list;
+prices, assignments, transfers, and balances never carry over.
+
 ## P0 Specification
 
 Everything in this section is implemented by this branch.
 
-### Data Model, v5
+### Data Model, v6
 
 ```js
 // Shared: sent to the server and encoded in links.
 {
-  v: 5,
+  v: 6,
   party: { name, date, updatedAt },
-  people: [{ id, name, admin, updatedAt }],
+  people: [{ id, name, admin, active, updatedAt }],
   items:  [{
     id, name,
     status: 'pending' | 'claimed' | 'bought',
     claimerId?,                             // only for claimed
-    priceCents?, payerId?, consumers?,      // only for bought; null consumers = everyone
+    priceCents?, payerId?, consumers?,      // bought items use explicit consumer IDs
     createdAt?, createdBy?, updatedAt, updatedBy?,
   }],
-  settled: { 'pFrom>pTo': { done, at, by, cents } },
+  transfers: [{ id, fromId, toId, cents, createdAt, createdBy?, updatedAt, updatedBy? }],
   tombstones: [{ id, at, seenAt }],
 }
 // Local only, never uploaded: me, tab, remote: { id, key, rev }, pendingUpload
 ```
 
 The localStorage key remains `a-pachas-v2`. `AP2:` links are generated as
-local-mode backups. The app does not accept Spanish payload aliases.
+local-mode backups. Stored v5 parties migrate to v6 on read: null consumer lists
+freeze to the people present at migration and completed settlement marks become
+transfers. The API rejects new v5 writes so a stale browser cannot erase v6
+history. The app does not accept Spanish payload aliases.
 
 ### API
 
@@ -221,21 +257,29 @@ local-mode backups. The app does not accept Spanish payload aliases.
    saved locally.
 7. **Local to live**: an imported local party can go live in one tap; the demo
    never uploads.
+8. **Transfers**: after a suggested Bizum is marked complete, later expenses
+   calculate from the remaining balance rather than charging that transfer
+   again. Undoing the transfer recalculates the recommendations.
+9. **Membership**: adding or deactivating a person never changes consumers or
+   balances for earlier expenses. Inactive people remain available for account
+   settlement and can be reactivated.
+10. **Safe interaction**: money and membership writes disable their initiating
+    control while saving; destructive actions confirm; sheets support close,
+    Escape, focus trapping, focus return, and hidden closed state.
+11. **Continuity**: the entry screen can reopen up to five recent live parties,
+    and repeating a pending list creates a clean party with no old money state.
 
 ## P1, Next Batch
 
-1. **Who pays now**: suggest that the person who has paid least should pay the
-   next purchase.
-2. **Receipt photo without OCR**: client-compressed thumbnail on the expense.
+1. **Receipt photo without OCR**: client-compressed thumbnail on the expense.
    Raises trust and reduces arguments. Requires choosing backend upload shape.
-3. **Read-only link**: no write key in the hash, for sending accounts to people
+2. **Read-only link**: no write key in the hash, for sending accounts to people
    who should not edit.
-4. **Exact per-consumer amounts**: useful for bar tabs; hidden behind "more
+3. **Exact per-consumer amounts**: useful for bar tabs; hidden behind "more
    options", never in the default flow.
-5. **Multiple parties per phone**: archive, duplicate last year's party, delete
-   local copy.
-6. **List templates**: stew, barbecue, birthday. They remove the blank state and
-   reinforce the village-party specificity.
+4. **Recent-party management**: manually forget a recent party, name a favorite,
+   or archive a fully settled party. The current five-item automatic list is
+   intentionally the simple first version.
 
 ## P2 Bets
 
@@ -256,9 +300,12 @@ local-mode backups. The app does not accept Spanish payload aliases.
 ## Risks and Mitigations
 
 - **Backend breaks the "no infra" magic**: one file, one JSON per party, zero
-  dependencies; full local mode remains; `AP2:` links remain manual backup.
+  dependencies; confirmed data stays readable without the API; `AP2:` links
+  remain manual backup.
 - **Anyone with the link can edit**: acceptable for village groups and matches
-  the current trust model. Destructive actions remain behind "la llave";
+  the current trust model. Identity and "la llave" coordinate the group but are
+  not authentication: anyone with the link can choose an existing identity.
+  Confirmations and visible transfer history limit accidental damage;
   read-only links are P1; IDs are not guessable and the key stays in the hash.
 - **Edit conflicts**: entity merge with last-write-wins and tombstones. The
   realistic worst case, two people editing the same price, resolves by arrival

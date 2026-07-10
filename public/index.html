@@ -103,11 +103,12 @@
     color:var(--muted);display:block;margin:16px 0 7px}
   .card .label:first-child, .field .label{margin-top:0}
   .btn{border:none;border-radius:11px;padding:12px 16px;font-size:15px;font-weight:600;cursor:pointer}
+  .btn:disabled,button[aria-busy="true"]{opacity:.62;cursor:wait}
   .btn-primary{background:var(--primary);color:var(--onprimary)}
   .btn-green{background:var(--green);color:var(--onprimary)}
   .btn-soft{background:var(--primarysoft);color:var(--primary)}
   .btn-outline{background:var(--card);border:1px solid var(--line);color:var(--ink)}
-  .btn-mini{padding:8px 13px;font-size:13.5px;border-radius:9px}
+  .btn-mini{min-height:44px;padding:8px 13px;font-size:13.5px;border-radius:9px}
   .btn-block{width:100%}
   .quiet-link{background:none;border:none;color:var(--muted);font-size:13px;font-weight:500;
     cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:4px 2px}
@@ -162,10 +163,11 @@
   .item-card .item-row{display:flex;align-items:flex-start;gap:10px;justify-content:space-between}
   .item-card .name{font-weight:600;font-size:15px;line-height:1.35;padding-top:2px}
   .item-card .meta{color:var(--muted);font-size:13px;margin-top:3px}
-  .item-card .actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:11px}
+  .item-card .actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:11px}
+  .item-card .actions .btn,.item-card .actions .quiet-link{min-height:44px}
   .remove-button{background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;
-    padding:4px 6px;line-height:1;opacity:.6;flex:none}
-  .bought-card{cursor:pointer}
+    width:44px;height:44px;padding:0;line-height:1;opacity:.65;flex:none}
+  .bought-card{cursor:pointer;width:100%;text-align:left;color:var(--ink);font-family:inherit}
   .bought-card:active{filter:brightness(.97)}
   .bought-checkIcon{width:26px;height:26px;border-radius:999px;background:var(--greensoft);
     color:var(--green);display:inline-flex;align-items:center;justify-content:center;
@@ -174,14 +176,17 @@
     stroke-linecap:round;stroke-linejoin:round}
 
   /* ---------- group ---------- */
-  .person-row{display:flex;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid var(--line);cursor:pointer}
+  .person-row{display:flex;width:100%;align-items:center;gap:12px;padding:12px 2px;
+    border:0;border-bottom:1px solid var(--line);background:none;color:var(--ink);
+    text-align:left;font-family:inherit;cursor:pointer}
   .person-row:last-child{border-bottom:none}
   .person-row .center{flex:1;min-width:0}
   .person-row .name{font-weight:600;font-size:15px;display:flex;align-items:center;gap:6px}
-  .person-row .secondary-text{color:var(--muted);font-size:13px;margin-top:1px}
+  .person-row .secondary-text{display:block;color:var(--muted);font-size:13px;margin-top:1px}
   .person-row .balance{text-align:right;font-variant-numeric:tabular-nums}
   .person-row .balance .amount{font-weight:600;font-size:14.5px}
   .person-row .balance .status{display:block;font-size:11px;color:var(--muted)}
+  .inactive-note{display:block;color:var(--muted);font-size:12px;font-weight:600}
   .balance-green{color:var(--green)}
   .balance-coral{color:var(--coral)}
   .balance-neutral{color:var(--muted)}
@@ -198,7 +203,7 @@
   .bizum-row .who svg{width:14px;height:14px;color:var(--muted);vertical-align:-2px;margin:0 3px}
   .bizum-row .transfer-amount{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
   .checkIcon{
-    width:30px;height:30px;border-radius:999px;border:1.5px solid var(--line);
+    width:44px;height:44px;border-radius:999px;border:1.5px solid var(--line);
     background:transparent;cursor:pointer;flex:none;
     display:inline-flex;align-items:center;justify-content:center;color:transparent;
   }
@@ -230,6 +235,17 @@
     border-radius:11px;padding:12px 13px;font-size:13px;line-height:1.55;max-height:36dvh;overflow-y:auto}
   .history-line{color:var(--muted);font-size:12.5px;text-align:center;margin-top:14px}
   .centered{display:block;margin:10px auto 0;text-align:center}
+  .selection-summary{display:flex;align-items:center;gap:10px;padding:11px 0}
+  .selection-summary .value{flex:1;font-weight:600}
+  .selection-options{border-top:1px solid var(--line);padding-top:10px;margin-bottom:8px}
+  .selection-options[hidden]{display:none}
+  .quick-picks{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+  .recent-list{display:grid;gap:8px;margin-top:8px}
+  .recent-party{display:flex;width:100%;align-items:center;gap:10px;text-align:left;background:var(--card);
+    border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--ink);cursor:pointer}
+  .recent-party .recent-copy{flex:1;min-width:0}
+  .recent-party .recent-name{font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .recent-party .recent-meta{font-size:12.5px;color:var(--muted);display:block;margin-top:2px}
 
   /* ---------- tab bar ---------- */
   nav#tabbar{
@@ -263,10 +279,13 @@
     border-radius:18px 18px 0 0;border-top:1px solid var(--line);
     padding:8px 20px calc(24px + env(safe-area-inset-bottom));
     max-width:480px;margin:0 auto;transform:translateY(105%);transition:transform .25s;
-    max-height:85dvh;overflow-y:auto;
+    max-height:85dvh;overflow-y:auto;pointer-events:none;
   }
-  #sheet.open{transform:translateY(0)}
+  #sheet.open{transform:translateY(0);pointer-events:auto}
+  #sheet[hidden]{display:block;visibility:hidden}
   .sheet-handle{width:36px;height:4px;border-radius:99px;background:var(--line);margin:6px auto 16px}
+  .sheet-close{position:absolute;right:12px;top:10px;width:44px;height:44px;border:0;border-radius:999px;
+    background:transparent;color:var(--muted);font-size:22px;cursor:pointer}
   .sheet-title{font-family:var(--display);font-size:20px;font-weight:700;margin:0 0 4px;text-wrap:balance}
   .sheet-sub{color:var(--muted);font-size:13.5px;margin:0 0 14px;line-height:1.5}
   .pills{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
@@ -311,7 +330,7 @@
 </head>
 <body>
 
-<button id="themeButton" type="button" aria-label="Cambiar entre modo claro y oscuro">
+<button id="themeButton" type="button" aria-label="Usar modo oscuro">
   <svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>
 </button>
 
@@ -336,26 +355,52 @@
 </div>
 
 <div id="overlay"></div>
-<div id="sheet" role="dialog" aria-modal="true"></div>
+<div id="sheet" role="dialog" aria-modal="true" hidden></div>
 <div id="toast" role="status"></div>
 
 <script>
 'use strict';
 /* ================= state ================= */
 const STORAGE_KEY = 'a-pachas-v2';
+const RECENT_PARTIES_KEY = 'a-pachas-recent-v1';
 const THEME_KEY = 'a-pachas-theme';
 const API = '/api';
+const STATE_VERSION = 6;
 const now = () => Date.now();
 
-// Normalize current v5 state loaded from localStorage, AP2 links, or the server.
+// Normalize current state loaded from localStorage, AP2 links, or the server.
 // IDs are sanitized because they eventually get interpolated into DOM attributes;
 // a poisoned state cannot smuggle a weird ID into HTML.
 const ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
-const SETTLED_KEY_RE = /^[A-Za-z0-9_-]{1,40}>[A-Za-z0-9_-]{1,40}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+function stableEntityId(prefix, text){
+  let first = 2166136261, second = 3335557771;
+  for(let i=0; i<text.length; i++){
+    const code = text.charCodeAt(i);
+    first = Math.imul(first ^ code, 16777619);
+    second = Math.imul(second ^ code, 2246822519);
+  }
+  return `${prefix}${(first >>> 0).toString(36)}${(second >>> 0).toString(36)}`;
+}
+function legacyTransferId(key, value){
+  return stableEntityId('tl', `${key}|${value.cents || 0}|${value.at || 0}`);
+}
+function migrateLegacyTransfers(settled, people){
+  if(!settled || typeof settled !== 'object' || Array.isArray(settled)) return [];
+  const peopleIds = new Set(people.map(p=>p.id));
+  return Object.entries(settled).flatMap(([key,value]) => {
+    const [fromId,toId,extra] = key.split('>');
+    if(extra !== undefined || !value || !value.done || fromId === toId ||
+       !peopleIds.has(fromId) || !peopleIds.has(toId) ||
+       !Number.isInteger(value.cents) || value.cents <= 0) return [];
+    const at = Number(value.at) || 0;
+    return [{id:legacyTransferId(key,value), fromId, toId, cents:value.cents,
+      createdAt:at, createdBy:value.by || null, updatedAt:at, updatedBy:null}];
+  });
+}
 function migrateState(o){
   if(!o) return o;
-  o.v = 5;
+  o.v = STATE_VERSION;
   if(!o.party || typeof o.party !== 'object') o.party = {name:'A Pachas', date:null, updatedAt:0};
   if(!o.party.updatedAt) o.party.updatedAt = 0;
   // The date ends up in value="...": it is YYYY-MM-DD or nothing.
@@ -363,16 +408,38 @@ function migrateState(o){
   o.people = (o.people || []).filter(p => p && typeof p.id === 'string' && ID_RE.test(p.id));
   o.people.forEach((p,i) => {
     if(p.admin === undefined) p.admin = i < 2;
+    if(p.active === undefined) p.active = true;
     if(!p.updatedAt) p.updatedAt = 0;
   });
+  if(o.people.length && !o.people.some(p=>p.active)) o.people[0].active = true;
+  if(o.people.length && !o.people.some(p=>p.active && p.admin)) o.people.find(p=>p.active).admin = true;
   o.items = (o.items || []).filter(it => it && typeof it.id === 'string' && ID_RE.test(it.id));
-  o.items.forEach(it => { if(!it.updatedAt) it.updatedAt = 0; });
-  o.settled = o.settled || {};
-  for(const k in o.settled){
-    if(!SETTLED_KEY_RE.test(k)){ delete o.settled[k]; continue; }
-    if(!o.settled[k] || typeof o.settled[k] !== 'object') delete o.settled[k];
-    else if(!o.settled[k].at) o.settled[k].at = 0;
-  }
+  const activeIds = o.people.filter(p=>p.active).map(p=>p.id);
+  const activeIdSet = new Set(activeIds);
+  const peopleIds = new Set(o.people.map(p=>p.id));
+  o.items.forEach(it => {
+    if(!it.updatedAt) it.updatedAt = 0;
+    // v5 used null as a dynamic "everyone" split. Freeze the people present
+    // during migration so future joins and departures cannot rewrite history.
+    if(it.status === 'bought'){
+      const validConsumers = Array.isArray(it.consumers)
+        ? [...new Set(it.consumers.filter(id=>peopleIds.has(id)))] : [];
+      it.consumers = validConsumers.length ? validConsumers : activeIds.slice();
+    }
+    if(it.status === 'claimed' && !activeIdSet.has(it.claimerId)){
+      it.status = 'pending'; delete it.claimerId;
+    }
+  });
+  o.transfers = (Array.isArray(o.transfers) ? o.transfers : [])
+    .filter(t => t && typeof t.id === 'string' && ID_RE.test(t.id) &&
+      peopleIds.has(t.fromId) && peopleIds.has(t.toId) && t.fromId!==t.toId &&
+      Number.isInteger(t.cents) && t.cents>0);
+  if(!o.transfers.length && o.settled) o.transfers.push(...migrateLegacyTransfers(o.settled,o.people));
+  o.transfers.forEach(t => {
+    if(!t.createdAt) t.createdAt = 0;
+    if(!t.updatedAt) t.updatedAt = t.createdAt;
+  });
+  delete o.settled;
   o.tombstones = (o.tombstones || []).filter(l => l && typeof l.id === 'string' && ID_RE.test(l.id));
   o.tombstones.forEach(l => {
     if(!l.at) l.at = 0;
@@ -391,26 +458,27 @@ function demoState(){
     tab: 'party',
     remote: null,
     people: [
-      {id:'p1', name:'Edu',    admin:true},
-      {id:'p2', name:'Marta',  admin:true},
-      {id:'p3', name:'Paco',   admin:false},
-      {id:'p4', name:'Lucía',  admin:false},
-      {id:'p5', name:'Andrés', admin:false},
+      {id:'p1', name:'Edu',    admin:true,  active:true},
+      {id:'p2', name:'Marta',  admin:true,  active:true},
+      {id:'p3', name:'Paco',   admin:false, active:true},
+      {id:'p4', name:'Lucía',  admin:false, active:true},
+      {id:'p5', name:'Andrés', admin:false, active:true},
     ],
     items: [
-      {id:'i1', name:'Leña para la caldereta', status:'bought', payerId:'p3', priceCents:1800, consumers:null},
+      {id:'i1', name:'Leña para la caldereta', status:'bought', payerId:'p3', priceCents:1800, consumers:['p1','p2','p3','p4','p5']},
       {id:'i2', name:'Barril de cerveza',      status:'bought', payerId:'p1', priceCents:8450, consumers:['p1','p2','p3','p5']},
-      {id:'i3', name:'Hielo (3 bolsas)',       status:'bought', payerId:'p4', priceCents:600,  consumers:null},
+      {id:'i3', name:'Hielo (3 bolsas)',       status:'bought', payerId:'p4', priceCents:600,  consumers:['p1','p2','p3','p4','p5']},
       {id:'i4', name:'Cordero',                status:'claimed',  claimerId:'p1'},
       {id:'i5', name:'Vasos y servilletas',    status:'claimed',  claimerId:'p2'},
       {id:'i6', name:'Pan (mucho pan)',        status:'pending'},
       {id:'i7', name:'Café y orujo pa después',status:'pending'},
     ],
-    settled: {},
+    transfers: [],
   });
 }
 
 let S = null;
+let openingParty = false;
 try {
   S = JSON.parse(localStorage.getItem(STORAGE_KEY));
   if(S) migrateState(S);
@@ -419,6 +487,30 @@ try {
 
 function saveLocal(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); }catch(e){}
+  rememberCurrentParty();
+}
+
+function loadRecentParties(){
+  try {
+    const value = JSON.parse(localStorage.getItem(RECENT_PARTIES_KEY));
+    if(!Array.isArray(value)) return [];
+    return value.filter(x => x && ID_RE.test(x.id) && ID_RE.test(x.key)).slice(0,5);
+  } catch(e){ return []; }
+}
+function rememberCurrentParty(){
+  if(!S || !S.remote || S.party.demo) return;
+  try {
+    const recent = loadRecentParties().filter(x => x.id !== S.remote.id);
+    recent.unshift({id:S.remote.id, key:S.remote.key, name:S.party.name,
+      date:S.party.date || null, lastOpenedAt:now()});
+    localStorage.setItem(RECENT_PARTIES_KEY, JSON.stringify(recent.slice(0,5)));
+  } catch(e){}
+}
+function forgetRecentParty(id){
+  try {
+    const recent = loadRecentParties().filter(party=>party.id!==id);
+    localStorage.setItem(RECENT_PARTIES_KEY,JSON.stringify(recent));
+  } catch(e){}
 }
 
 // When switching parties (open link, create, import, demoState, start another), the
@@ -435,26 +527,43 @@ function resetSync(){
   const t = localStorage.getItem(THEME_KEY);
   if(t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
 })();
+function currentTheme(){
+  return document.documentElement.dataset.theme ||
+    (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+}
+function refreshThemeButton(){
+  const dark = currentTheme() === 'dark';
+  const button = document.getElementById('themeButton');
+  document.querySelector('meta[name="theme-color"]').setAttribute('content',dark ? '#101218' : '#F5F6FA');
+  button.setAttribute('aria-label', dark ? 'Usar modo claro' : 'Usar modo oscuro');
+  button.innerHTML = dark
+    ? '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
+    : '<svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>';
+}
+refreshThemeButton();
 document.getElementById('themeButton').addEventListener('click', () => {
   const root = document.documentElement;
-  const currentTheme = root.dataset.theme ||
-    (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  const newTheme = currentTheme() === 'dark' ? 'light' : 'dark';
   root.dataset.theme = newTheme;
   try{ localStorage.setItem(THEME_KEY, newTheme); }catch(e){}
+  refreshThemeButton();
 });
 
 /* ================= utilities ================= */
 const $ = sel => document.querySelector(sel);
 const eur = c => (c/100).toLocaleString('es-ES',{style:'currency',currency:'EUR'});
 const personById = id => S && S.people.find(p=>p.id===id);
+const activePeople = () => S ? S.people.filter(p=>p.active) : [];
 const initial = n => n.trim()[0].toUpperCase();
 const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const consumerIds = it => (it.consumers && it.consumers.length ? it.consumers : S.people.map(p=>p.id));
+const consumerIds = it => Array.isArray(it.consumers) ? it.consumers.filter(id=>personById(id)) : [];
 const isUnownedItem = it => it && (it.status === 'pending' ||
-  (it.status === 'claimed' && !personById(it.claimerId)));
-const isAdmin = () => { const p = personById(S && S.me); return !!(p && p.admin); };
-const adminCount = () => S.people.filter(p=>p.admin).length;
+  (it.status === 'claimed' && (!personById(it.claimerId) || !personById(it.claimerId).active)));
+const isAdmin = () => { const p = personById(S && S.me); return !!(p && p.active && p.admin); };
+const adminCount = () => activePeople().filter(p=>p.admin).length;
+const normalizeName = name => String(name).trim().toLocaleLowerCase('es-ES')
+  .normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
+const personByName = name => S && S.people.find(p=>normalizeName(p.name)===normalizeName(name));
 // New ID = prefix + timestamp + random component + counter. Randomness is
 // required for live parties: two phones creating their first entity in the same
 // millisecond would otherwise collide and merge into one.
@@ -477,15 +586,23 @@ function prettyDate(f){
   } catch(e){ return null; }
 }
 
-// The mark stores the amount that was actually paid; if later accounts change
-// the Bizum between the same pair, the new amount becomes pending again.
-const bizumKey = b => b.de + '>' + b.a;
-const isBizumDone = b => {
-  const v = S.settled[bizumKey(b)];
-  return !!(v && v.done && (v.cents == null || v.cents === b.cents));
-};
-const pendingBizums = c => c.bizums.filter(b => !isBizumDone(b));
 const balanceClass = s => s > 0 ? 'balance-green' : (s < 0 ? 'balance-coral' : 'balance-neutral');
+
+async function withBusyButton(button, pendingText, task){
+  if(!button || button.dataset.busy === 'true') return false;
+  const previousHtml = button.innerHTML;
+  button.dataset.busy = 'true';
+  button.disabled = true;
+  button.setAttribute('aria-busy','true');
+  if(pendingText) button.textContent = pendingText;
+  try { return await task(); }
+  finally {
+    button.dataset.busy = 'false';
+    button.disabled = false;
+    button.removeAttribute('aria-busy');
+    if(button.isConnected && pendingText) button.innerHTML = previousHtml;
+  }
+}
 
 // Last-edit stamp: cross-phone merging depends on this. It is monotonic against
 // the edited entity, so even if this phone's clock moves backwards, a real edit
@@ -503,37 +620,16 @@ function tombstoneEntity(collection, entity){
 
 const itemById = id => S && S.items.find(x => x.id === id);
 
-// Remove deleted people from split lists. If an expense would be left with no
-// consumers, fall back to "everyone" rather than breaking accounts. No new edit
-// stamp: this is derived cleanup, not an edit, so merging never lets it
-// overwrite something this phone has not seen.
-function normalizeSplits(items, people){
-  const liveIds = new Set(people.map(p => p.id));
-  for(let i = 0; i < items.length; i++){
-    const it = items[i];
-    if(!it.consumers) continue;
-    const liveConsumerIds = it.consumers.filter(id => liveIds.has(id));
-    if(liveConsumerIds.length !== it.consumers.length){
-      items[i] = {...it, consumers: liveConsumerIds.length ? liveConsumerIds : null};
-    }
-  }
-}
-
-// Bizum marks cannot grow without bound or reference removed people; the server
-// rejects states with more than 500 keys. Prune both while merging and while
-// marking, because the normal single-phone path never merges.
-// Deterministic: the same state prunes the same way on every phone.
-function pruneSettled(settled, people){
-  const liveIds = new Set(people.map(p => p.id));
-  for(const k of Object.keys(settled)){
-    const pair = k.split('>');
-    if(!liveIds.has(pair[0]) || !liveIds.has(pair[1])) delete settled[k];
-  }
-  const keys = Object.keys(settled);
-  if(keys.length > 400){
-    keys.sort((x, y) => ((settled[x].at || 0) - (settled[y].at || 0)));
-    for(const k of keys.slice(0, keys.length - 400)) delete settled[k];
-  }
+// Two phones may confirm the same recommendation from the same server revision.
+// Give that payment the same ID on both phones so the entity merge keeps one.
+// Later expenses or payments change the basis, allowing a genuinely new Bizum
+// with the same people and amount to remain a separate transfer.
+function transferCompletionId(fromId, toId, cents){
+  const itemBasis = S.items.map(item=>`${item.id}:${item.updatedAt || 0}`).sort().join(',');
+  const transferBasis = S.transfers.map(transfer=>transfer.id).sort().join(',');
+  const tombstoneBasis = S.tombstones.map(tombstone=>tombstone.id).sort().join(',');
+  return stableEntityId('t',
+    `${fromId}>${toId}|${cents}|${itemBasis}|${transferBasis}|${tombstoneBasis}`);
 }
 
 // Abort a sheet action whose premise is no longer true because the party changed
@@ -544,9 +640,15 @@ function requireAdmin(){
   abortSheet('La llave ya no es tuya: eso no te toca.');
   return false;
 }
+function requireActivePerson(){
+  const person = personById(S && S.me);
+  if(!person){ identitySheet(true); return false; }
+  if(!person.active){ toast('Ya no sales en gastos nuevos. La llave puede volverte a meter.'); return false; }
+  return true;
+}
 
 const personPill = (p, attr, classes) =>
-  `<button class="pill ${classes}" type="button" data-${attr}="${escapeHtml(p.id)}">${avatarHtml(p.id,true)}${escapeHtml(p.name)}</button>`;
+  `<button class="pill ${classes}" type="button" data-${attr}="${escapeHtml(p.id)}">${avatarHtml(p.id,true)}${escapeHtml(p.name)}${p.active?'':' · ya no participa'}</button>`;
 
 // Parse price into cents using Spanish notation: comma decimals and dot
 // thousands ("1.000" is one thousand euros, not one euro).
@@ -601,10 +703,6 @@ function partyCode(){
   // Whitelist through sharedFrom, which defines shared state. A new local
   // field can never accidentally leak into snapshot links.
   const snapshot = {...sharedFrom(S), me:null, tab:'party'};
-  snapshot.settled = {};
-  accounts().bizums.forEach(b => {
-    if(isBizumDone(b)) snapshot.settled[bizumKey(b)] = {...S.settled[bizumKey(b)]};
-  });
   const json = JSON.stringify(snapshot);
   const b64 = btoa(unescape(encodeURIComponent(json)))
     .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -692,8 +790,8 @@ async function apiRequest(method, route, body){
 // What travels to the server and in links: the party without local fields
 // (me, tab, remote). sharedFrom also canonicalizes key order because
 // comparisons are JSON-based.
-const sharedFrom = o => ({v:5, party:o.party, people:o.people, items:o.items,
-  settled:o.settled, tombstones:o.tombstones});
+const sharedFrom = o => ({v:STATE_VERSION, party:o.party, people:o.people, items:o.items,
+  transfers:o.transfers, tombstones:o.tombstones});
 const sharedState = () => sharedFrom(S);
 const stateJson = () => JSON.stringify(sharedState());
 
@@ -742,17 +840,12 @@ function mergeStates(a, b){
     }
     return res;
   };
-  const settled = {...a.settled};
-  for(const k in (b.settled||{})){
-    const va = settled[k], vb = b.settled[k];
-    if(!va || ((vb && vb.at) || 0) > ((va && va.at) || 0)) settled[k] = vb;
-  }
   const people = mergeEntities(a.people, b.people);
   const items = mergeEntities(a.items, b.items);
+  const transfers = mergeEntities(a.transfers || [], b.transfers || []);
   // Person-deletion cleanup is derived here, not written at delete time. A
-  // rewrite from a stale view would overwrite unseen edits. First: a payer of a
-  // surviving expense cannot disappear because their credit would vanish; and
-  // if removing someone would leave an expense with no consumers, recover them.
+  // rewrite from a stale view would overwrite unseen edits. Anyone referenced by
+  // a surviving expense or transfer must remain so history and balances stay true.
   const presentIds = new Set(people.map(p => p.id));
   const candidates = new Map();
   [...(a.people||[]), ...(b.people||[])].forEach(p => {
@@ -762,9 +855,11 @@ function mergeStates(a, b){
   const restoreIds = new Set();
   for(const it of items){
     if(it.payerId && !presentIds.has(it.payerId)) restoreIds.add(it.payerId);
-    if(it.consumers && it.consumers.length && it.consumers.every(id => !presentIds.has(id))){
-      it.consumers.forEach(id => restoreIds.add(id));
-    }
+    (it.consumers || []).forEach(id => { if(!presentIds.has(id)) restoreIds.add(id); });
+  }
+  for(const transfer of transfers){
+    if(!presentIds.has(transfer.fromId)) restoreIds.add(transfer.fromId);
+    if(!presentIds.has(transfer.toId)) restoreIds.add(transfer.toId);
   }
   for(const id of restoreIds){
     if(!presentIds.has(id) && candidates.has(id)){
@@ -780,25 +875,27 @@ function mergeStates(a, b){
     people.push(survivor);
     presentIds.add(survivor.id);
   }
-  // The admin role cannot disappear. If two admins demote each other at the
-  // same time, merging would leave nobody able to fix the party. The lowest ID
-  // inherits the role deterministically.
-  if(people.length && !people.some(p => p.admin)){
-    [...people].sort(byLowestId)[0].admin = true;
+  // Active membership and the admin role cannot disappear through concurrent
+  // edits. The lowest ID inherits each role deterministically.
+  if(people.length && !people.some(p => p.active)){
+    [...people].sort(byLowestId)[0].active = true;
   }
-  // Once the people set is settled, including resurrections and fallback
-  // restores, remove people whose deletion consolidated from split lists.
-  normalizeSplits(items, people);
-  // Prune settled after resurrections so settled marks for restored people are
-  // not deleted and shown as pending again.
-  pruneSettled(settled, people);
-  const liveIds = new Set([...people, ...items].map(x => x.id));
+  if(people.length && !people.some(p => p.active && p.admin)){
+    [...people].filter(p=>p.active).sort(byLowestId)[0].admin = true;
+  }
+  const activePersonIds = new Set(people.filter(p=>p.active).map(p=>p.id));
+  for(const item of items){
+    if(item.status === 'claimed' && !activePersonIds.has(item.claimerId)){
+      item.status = 'pending'; delete item.claimerId;
+    }
+  }
+  const liveIds = new Set([...people, ...items, ...transfers].map(x => x.id));
   return {
-    v: 5,
+    v: STATE_VERSION,
     party: mod(b.party) > mod(a.party) ? b.party : a.party,
     people,
     items,
-    settled,
+    transfers,
     // Drop tombstones that lost to a newer edit. The cap removes the oldest
     // tombstones, not the most recently arrived ones.
     tombstones: [...tombstoneMap.values()].filter(l => !liveIds.has(l.id))
@@ -807,8 +904,8 @@ function mergeStates(a, b){
 }
 
 function adoptSharedState(c){
-  S.v = 5; S.party = c.party; S.people = c.people; S.items = c.items;
-  S.settled = c.settled; S.tombstones = c.tombstones;
+  S.v = STATE_VERSION; S.party = c.party; S.people = c.people; S.items = c.items;
+  S.transfers = c.transfers; S.tombstones = c.tombstones;
   if(S.me && !personById(S.me)) S.me = null;
 }
 
@@ -1106,9 +1203,12 @@ async function enableLive(){
 
 async function openLiveLink(id, key){
   const openParty = S; // If S changes during the GET, the response is stale.
+  if(!openParty){ openingParty = true; render(); }
   const r = await apiRequest('GET', '/parties/' + id).catch(() => ({status: 0}));
   if(S !== openParty) return false;
   if(r.status !== 200 || !r.body || !r.body.state){
+    openingParty = false;
+    if(r.status === 404) forgetRecentParty(id);
     toast(r.status === 404
       ? 'Ese enlace ya no lleva a ninguna fiesta.'
       : 'No se ha podido abrir la fiesta del enlace. ¿Hay red?');
@@ -1123,6 +1223,7 @@ async function openLiveLink(id, key){
   // overwriting it.
   const base = isSameParty ? mergeStates(remoteState, sharedState()) : remoteState;
   resetSync();
+  openingParty = false;
   S = {...base, me, tab:'party', remote:{id, key, rev:r.body.rev}};
   // The opener may have been removed from the group; do not let them act as a
   // ghost participant.
@@ -1159,13 +1260,21 @@ function accounts(){
   const balance = {};
   S.people.forEach(p => balance[p.id] = payerTotals[p.id] - owes[p.id]);
 
+  // Completed Bizums are real money movements. Applying them to the balance
+  // keeps future expenses from asking somebody to pay the same debt twice.
+  for(const transfer of S.transfers){
+    if(balance[transfer.fromId] === undefined || balance[transfer.toId] === undefined) continue;
+    balance[transfer.fromId] += transfer.cents;
+    balance[transfer.toId] -= transfer.cents;
+  }
+
   const debtors = S.people.filter(p=>balance[p.id]<0).map(p=>({id:p.id, v:-balance[p.id]})).sort((a,b)=>b.v-a.v);
   const creditors = S.people.filter(p=>balance[p.id]>0).map(p=>({id:p.id, v:balance[p.id]})).sort((a,b)=>b.v-a.v);
   const bizums = [];
   let i=0, j=0;
   while(i<debtors.length && j<creditors.length){
     const m = Math.min(debtors[i].v, creditors[j].v);
-    if(m>0) bizums.push({de:debtors[i].id, a:creditors[j].id, cents:m});
+    if(m>0) bizums.push({fromId:debtors[i].id, toId:creditors[j].id, cents:m});
     debtors[i].v -= m; creditors[j].v -= m;
     if(debtors[i].v===0) i++;
     if(creditors[j].v===0) j++;
@@ -1174,24 +1283,94 @@ function accounts(){
 }
 
 /* ================= sheet ================= */
+let sheetReturnFocus = null;
+let sheetHideTimer = null;
+function sheetFocusableElements(){
+  return [...$('#sheet').querySelectorAll('button:not([disabled]),input:not([disabled]),textarea:not([disabled]),[tabindex="0"]')]
+    .filter(el => !el.hidden && el.getClientRects().length);
+}
 function openSheet(html, locked){
-  $('#sheet').innerHTML = '<div class="sheet-handle"></div>' + html;
-  $('#sheet').classList.add('open');
+  const sheet = $('#sheet');
+  const wasOpen = sheet.classList.contains('open');
+  if(!wasOpen) sheetReturnFocus = document.activeElement;
+  clearTimeout(sheetHideTimer);
+  sheet.hidden = false;
+  sheet.dataset.locked = locked ? 'true' : 'false';
+  sheet.innerHTML = '<div class="sheet-handle" aria-hidden="true"></div>' +
+    (locked ? '' : '<button class="sheet-close" type="button" aria-label="Cerrar">×</button>') + html;
+  const title = sheet.querySelector('.sheet-title');
+  if(title){ title.id = 'sheetTitle'; sheet.setAttribute('aria-labelledby','sheetTitle'); }
+  else sheet.setAttribute('aria-label','Ventana de A Pachas');
+  requestAnimationFrame(() => sheet.classList.add('open'));
   $('#overlay').classList.add('open');
   $('#overlay').onclick = locked ? null : closeSheet;
+  $('#app').inert = true;
+  $('#themeButton').inert = true;
+  const close = sheet.querySelector('.sheet-close');
+  if(close) close.onclick = closeSheet;
+  requestAnimationFrame(() => {
+    const focusable = sheetFocusableElements();
+    if(focusable.length) focusable[0].focus();
+    else {
+      sheet.setAttribute('tabindex','-1');
+      sheet.focus();
+    }
+  });
 }
 function closeSheet(){
-  $('#sheet').classList.remove('open');
+  const sheet = $('#sheet');
+  if(!sheet.classList.contains('open')) return;
+  sheet.classList.remove('open');
   $('#overlay').classList.remove('open');
+  $('#app').inert = false;
+  $('#themeButton').inert = false;
   // Without this, a sheet input keeps focus and leaves the keyboard open.
   const a = document.activeElement;
-  if(a && a.blur && $('#sheet').contains(a)) a.blur();
+  if(a && a.blur && sheet.contains(a)) a.blur();
+  if(sheetReturnFocus && sheetReturnFocus.isConnected) sheetReturnFocus.focus();
+  sheetReturnFocus = null;
+  sheetHideTimer = setTimeout(() => {
+    if(sheet.classList.contains('open')) return;
+    sheet.hidden = true;
+    sheet.innerHTML = '';
+    sheet.removeAttribute('aria-labelledby');
+    sheet.removeAttribute('aria-label');
+    sheet.removeAttribute('tabindex');
+  }, 260);
   if(sync.renderLater) renderNowOrLater();
 }
+document.addEventListener('keydown', e => {
+  const sheet = $('#sheet');
+  if(!sheet.classList.contains('open')) return;
+  if(e.key === 'Escape' && sheet.dataset.locked !== 'true'){
+    e.preventDefault(); closeSheet(); return;
+  }
+  if(e.key !== 'Tab') return;
+  const focusable = sheetFocusableElements();
+  if(!focusable.length){ e.preventDefault(); sheet.focus(); return; }
+  const first = focusable[0], last = focusable[focusable.length-1];
+  if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+  else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+});
 
 /* --- identity --- */
-function identitySheet(forced){
-  const pills = S.people.map(p =>
+function duplicateIdentitySheet(existing, typedName){
+  openSheet(`
+    <h2 class="sheet-title">Ya hay un ${escapeHtml(existing.name)}</h2>
+    <p class="sheet-sub">¿Eres tú o sois dos con el mismo nombre?</p>
+    <div class="sheet-actions">
+      <button class="btn btn-outline" id="differentPersonButton" type="button">Soy otra persona</button>
+      <button class="btn btn-primary" id="existingPersonButton" type="button">Sí, soy yo</button>
+    </div>
+  `);
+  $('#existingPersonButton').onclick = () => {
+    S.me = existing.id; saveLocal(); closeSheet(); render(); toast('Hola, ' + existing.name);
+  };
+  $('#differentPersonButton').onclick = () => identitySheet(true, typedName);
+}
+function identitySheet(forced, suggestedName){
+  const people = [...S.people].sort((a,b)=>Number(b.active)-Number(a.active));
+  const pills = people.map(p =>
     personPill(p, 'who', 'pill-primary ' + (p.id===S.me?'on':''))).join('');
   openSheet(`
     <h2 class="sheet-title">¿Quién eres?</h2>
@@ -1202,21 +1381,32 @@ function identitySheet(forced){
       <input type="text" id="newNameInput" placeholder="Tu nombre" maxlength="20" autocomplete="off">
       <button class="btn btn-primary" id="joinButton" type="button">Entrar</button>
     </div>
-  `, forced);
+    ${forced && !S.me ? '<button class="quiet-link centered" id="lookOnlyButton" type="button">Solo quiero mirar</button>' : ''}
+  `);
+  if(suggestedName){ $('#newNameInput').value = suggestedName; $('#newNameInput').select(); }
   document.querySelectorAll('[data-who]').forEach(b => b.onclick = () => {
     const p = personById(b.dataset.who);
     if(!p) return; // Removed while the sheet was open.
     S.me = p.id; saveLocal(); closeSheet(); render();
     toast('Hola, ' + p.name);
   });
+  const lookOnly = $('#lookOnlyButton');
+  if(lookOnly) lookOnly.onclick = closeSheet;
   $('#joinButton').onclick = async () => {
     const n = $('#newNameInput').value.trim();
     if(!n) return toast('Escribe tu nombre, que la lista no adivina.');
+    const existing = personByName(n);
+    if(existing) return duplicateIdentitySheet(existing,n);
     if(S.people.length >= 100) return toast('La peña no da pa más (100). Menuda fiesta.');
-    await commitSharedChange(() => {
-      const p = touch({id: newId('p'), name: n, admin:false});
+    const button = $('#joinButton');
+    await withBusyButton(button,'Entrando…',() => commitSharedChange(() => {
+      if(personByName(n)) throw new Error('duplicate_name');
+      const p = touch({id:newId('p'), name:n, admin:false, active:true});
       S.people.push(p); S.me = p.id;
-    }, {close:true, toast:'Bienvenido, ' + n});
+    }, {close:true, toast:'Bienvenido, ' + n})).catch(e => {
+      if(e.message === 'duplicate_name') duplicateIdentitySheet(personByName(n),n);
+      else throw e;
+    });
   };
 }
 
@@ -1226,15 +1416,19 @@ function expenseSheet(itemId){
   if(itemId && !it){ render(); return toast('Esa ya no está en la lista.'); }
   const direct = !it;
   const editing = !!(it && it.status === 'bought');
-  let touchedConsumers = false; // If pills are never touched, "everyone" means everyone.
-  const selectedIds = new Set(it ? consumerIds(it) : S.people.map(p=>p.id));
+  const currentActivePeople = activePeople();
+  const selectedIds = new Set(editing ? consumerIds(it) : currentActivePeople.map(p=>p.id));
   let selectedPayerId = editing ? it.payerId : ((it && it.claimerId) || S.me);
   if(!personById(selectedPayerId)) selectedPayerId = personById(S.me) ? S.me : null;
 
-  const consumerPills = S.people.map(p =>
+  const consumerCandidates = S.people.filter(p => p.active || selectedIds.has(p.id));
+  const payerCandidates = S.people.filter(p => p.active || p.id === selectedPayerId);
+  const consumerPills = consumerCandidates.map(p =>
     personPill(p, 'consumer', selectedIds.has(p.id)?'on':'off')).join('');
-  const payerPills = S.people.map(p =>
+  const payerPills = payerCandidates.map(p =>
     personPill(p, 'payer', 'pill-primary ' + (p.id===selectedPayerId?'on':''))).join('');
+  const c = accounts();
+  const suggestedPayer = [...currentActivePeople].sort((a,b)=>(c.balance[a.id]||0)-(c.balance[b.id]||0))[0];
 
   let history = '';
   if(editing){
@@ -1263,9 +1457,27 @@ function expenseSheet(itemId){
       <span class="eur">€</span>
     </div>
     <span class="label">Pagó</span>
-    <div class="pills">${payerPills}</div>
+    <div class="selection-summary">
+      <span class="value" id="payerSummary"></span>
+      <button class="btn btn-outline btn-mini" id="togglePayersButton" type="button" aria-expanded="false">Cambiar</button>
+    </div>
+    <div class="selection-options" id="payerOptions" hidden>
+      <div class="pills">${payerPills}</div>
+      ${suggestedPayer && suggestedPayer.id !== selectedPayerId && (c.balance[suggestedPayer.id]||0)<0
+        ? `<button class="quiet-link" id="suggestedPayerButton" type="button">Pa equilibrar, que pague ${escapeHtml(suggestedPayer.name)}</button>` : ''}
+    </div>
     <span class="label">¿Quiénes lo catan?</span>
-    <div class="pills">${consumerPills}</div>
+    <div class="selection-summary">
+      <span class="value" id="consumerSummary"></span>
+      <button class="btn btn-outline btn-mini" id="toggleConsumersButton" type="button" aria-expanded="false">Cambiar</button>
+    </div>
+    <div class="selection-options" id="consumerOptions" hidden>
+      <div class="quick-picks">
+        <button class="btn btn-outline btn-mini" id="allConsumersButton" type="button">Todos</button>
+        ${personById(S.me)?.active ? '<button class="btn btn-outline btn-mini" id="onlyMeConsumerButton" type="button">Solo yo</button>' : ''}
+      </div>
+      <div class="pills">${consumerPills}</div>
+    </div>
     <div class="sheet-actions">
       <button class="btn btn-outline" id="cancelButton" type="button">Cancelar</button>
       <button class="btn btn-green" id="saveExpenseButton" type="button">
@@ -1274,21 +1486,59 @@ function expenseSheet(itemId){
     ${editing ? '<button class="delete-link" id="deleteItemButton" type="button">Borrar esta compra</button>' : ''}
     ${history}
   `);
+  const updatePayerSummary = () => {
+    const payer = personById(selectedPayerId);
+    $('#payerSummary').textContent = payer ? (payer.id === S.me ? 'Pagaste tú' : 'Pagó ' + payer.name) : 'Elige quién pagó';
+  };
+  const updateConsumerSummary = () => {
+    const activeIds = new Set(activePeople().map(p=>p.id));
+    const selectedActiveCount = [...selectedIds].filter(id=>activeIds.has(id)).length;
+    const includesOnlyActive = [...selectedIds].every(id=>activeIds.has(id));
+    $('#consumerSummary').textContent = includesOnlyActive && selectedActiveCount === activeIds.size
+      ? `Entre todos (${selectedIds.size})` : `Entre ${selectedIds.size}`;
+  };
+  const updateConsumerPills = () => {
+    document.querySelectorAll('[data-consumer]').forEach(b => {
+      b.classList.toggle('on',selectedIds.has(b.dataset.consumer));
+      b.classList.toggle('off',!selectedIds.has(b.dataset.consumer));
+    });
+    updateConsumerSummary();
+  };
+  const toggleOptions = (button, options) => {
+    const expanded = button.getAttribute('aria-expanded') === 'true';
+    button.setAttribute('aria-expanded',String(!expanded));
+    options.hidden = expanded;
+  };
+  $('#togglePayersButton').onclick = () => toggleOptions($('#togglePayersButton'),$('#payerOptions'));
+  $('#toggleConsumersButton').onclick = () => toggleOptions($('#toggleConsumersButton'),$('#consumerOptions'));
   document.querySelectorAll('[data-consumer]').forEach(b => b.onclick = () => {
     const id = b.dataset.consumer;
-    touchedConsumers = true; // No longer an intentional "everyone" split.
     if(selectedIds.has(id)){
       if(selectedIds.size === 1) return toast('Alguien lo catará, digo yo.');
       selectedIds.delete(id);
     } else selectedIds.add(id);
-    b.classList.toggle('on', selectedIds.has(id));
-    b.classList.toggle('off', !selectedIds.has(id));
+    updateConsumerPills();
   });
   document.querySelectorAll('[data-payer]').forEach(b => b.onclick = () => {
     selectedPayerId = b.dataset.payer;
     document.querySelectorAll('[data-payer]').forEach(x =>
       x.classList.toggle('on', x.dataset.payer === selectedPayerId));
+    updatePayerSummary();
   });
+  $('#allConsumersButton').onclick = () => {
+    selectedIds.clear(); activePeople().forEach(p=>selectedIds.add(p.id)); updateConsumerPills();
+  };
+  const onlyMe = $('#onlyMeConsumerButton');
+  if(onlyMe) onlyMe.onclick = () => { selectedIds.clear(); selectedIds.add(S.me); updateConsumerPills(); };
+  const suggested = $('#suggestedPayerButton');
+  if(suggested) suggested.onclick = () => {
+    selectedPayerId = suggestedPayer.id;
+    document.querySelectorAll('[data-payer]').forEach(x =>
+      x.classList.toggle('on',x.dataset.payer===selectedPayerId));
+    updatePayerSummary();
+  };
+  updatePayerSummary();
+  updateConsumerSummary();
   $('#cancelButton').onclick = closeSheet;
   $('#saveExpenseButton').onclick = async () => {
     const name = $('#expenseNameInput').value.trim();
@@ -1297,22 +1547,19 @@ function expenseSheet(itemId){
     if(isNaN(priceCents) || priceCents<=0) return toast('Ponle precio, que gratis no fue.');
     if(priceCents > 100000000) return toast('¿' + eur(priceCents) + '? Repasa ese precio, anda.');
     if(!personById(selectedPayerId)) return toast('¿Quién lo pagó?');
-    // The group may have changed while the sheet was open. A removed ID in
-    // consumers would resurrect that person in the next merge. If the user never
-    // touched the pills from an "everyone" starting point, the intent is still
-    // EVERYONE, so a new joiner during the sheet is included.
-    let consumers;
-    if(!touchedConsumers && (!it || !it.consumers)){
-      consumers = null;
-    } else {
-      const liveSelectedIds = [...selectedIds].filter(id => personById(id));
-      if(!liveSelectedIds.length){
-        return abortSheet('La peña ha cambiado por debajo: revisa quiénes lo catan.');
-      }
-      consumers = liveSelectedIds.length === S.people.length ? null : liveSelectedIds;
+    const consumers = [...selectedIds].filter(id => personById(id));
+    if(!consumers.length){
+      return abortSheet('La peña ha cambiado por debajo: revisa quiénes lo catan.');
     }
     let successMessage = '';
-    await commitSharedChange(() => {
+    const button = $('#saveExpenseButton');
+    await withBusyButton(button,'Guardando…',() => commitSharedChange(() => {
+      const livePayer = personById(selectedPayerId);
+      const liveConsumers = consumers.map(id=>personById(id));
+      if(!livePayer || liveConsumers.some(person=>!person) ||
+         (!editing && (!livePayer.active || liveConsumers.some(person=>!person.active)))){
+        throw new Error('group_changed');
+      }
       if(direct){
         if(S.items.length >= 500) throw new Error('too_many_items');
         S.items.unshift(touch({id:newId('i'), name, status:'bought', priceCents:priceCents,
@@ -1353,10 +1600,11 @@ function expenseSheet(itemId){
           successMessage = 'Guardado';
         }
       }
-    }, {close:true, toast:() => successMessage}).catch(e => {
+    }, {close:true, toast:() => successMessage})).catch(e => {
       if(e.message === 'too_many_items') toast('La lista no da pa más (500 cosas). Quita algo primero.');
       else if(e.message === 'payer_changed') abortSheet('Esa compra acaba de cambiar de manos: solo quien la pagó o la llave pueden tocarla.');
       else if(e.message === 'already_bought') abortSheet('Alguien la ha apuntado ya como comprada: revísala antes de corregirla.');
+      else if(e.message === 'group_changed') abortSheet('La peña ha cambiado: revisa quién pagó y quiénes lo catan.');
       else throw e;
     });
   };
@@ -1386,7 +1634,7 @@ function expenseSheet(itemId){
 /* --- assign, admins only --- */
 function assignSheet(itemId){
   const it = S.items.find(x=>x.id===itemId); if(!it) return;
-  const pills = S.people.map(p =>
+  const pills = activePeople().map(p =>
     personPill(p, 'assign-person', 'pill-primary ' + (it.claimerId===p.id?'on':''))).join('');
   openSheet(`
     <h2 class="sheet-title">¿Quién trae «${escapeHtml(it.name)}»?</h2>
@@ -1401,20 +1649,22 @@ function assignSheet(itemId){
     const who = personById(b.dataset.assignPerson);
     // data-assign-person="" intentionally means "unowned". A person removed underneath
     // must not be confused with that, because it would release the item.
-    if(b.dataset.assignPerson && !who) return abortSheet('Esa persona ya no está en la peña.');
+    if(b.dataset.assignPerson && (!who || !who.active)) return abortSheet('Esa persona ya no está en la peña.');
     let live = itemById(itemId);
     if(!live) return abortSheet('Esa cosa ya no está en la lista.');
     if(live.status === 'bought') return abortSheet('Esa ya está comprada: no hay nada que asignar.');
-    await commitSharedChange(() => {
+    await withBusyButton(b,'Guardando…',() => commitSharedChange(() => {
+      if(!isAdmin()) throw new Error('not_admin');
       live = itemById(itemId);
       if(!live) throw new Error('missing_item');
       if(live.status === 'bought') throw new Error('already_bought');
       if(who){ live.status='claimed'; live.claimerId=who.id; }
       else { live.status='pending'; delete live.claimerId; }
       touch(live);
-    }, {close:true, toast: who ? 'Se la lleva ' + who.name : 'Suelta. A ver quién se la pide ahora.'}).catch(e => {
+    }, {close:true, toast: who ? 'Se la lleva ' + who.name : 'Suelta. A ver quién se la pide ahora.'})).catch(e => {
       if(e.message === 'missing_item') abortSheet('Esa cosa ya no está en la lista.');
       else if(e.message === 'already_bought') abortSheet('Esa ya está comprada: no hay nada que asignar.');
+      else if(e.message === 'not_admin') abortSheet('La llave ya no es tuya: eso no te toca.');
       else throw e;
     });
   });
@@ -1442,16 +1692,31 @@ function renamePersonSheet(pid){
     if(pid !== S.me && !requireAdmin()) return;
     const n = $('#personNameEditInput').value.trim();
     if(!n) return toast('Ponle nombre, que alguien será.');
-    await commitSharedChange(() => {
+    const duplicate = personByName(n);
+    if(duplicate && duplicate.id !== pid) return toast('Ya hay alguien con ese nombre. Ponle un mote distinto.');
+    const button = $('#savePersonRenameButton');
+    await withBusyButton(button,'Guardando…',() => commitSharedChange(() => {
       const live = personById(pid);
       if(!live) throw new Error('missing_person');
+      if(pid !== S.me && !isAdmin()) throw new Error('not_admin');
+      const duplicate = personByName(n);
+      if(duplicate && duplicate.id !== pid) throw new Error('duplicate_name');
       live.name = n;
       touch(live);
-    }, {close:true, toast:'Nombre cambiado'}).catch(e => {
+    }, {close:true, toast:'Nombre cambiado'})).catch(e => {
       if(e.message === 'missing_person') abortSheet('Esa persona ya no está en la peña.');
+      else if(e.message === 'not_admin') abortSheet('La llave ya no es tuya: eso no te toca.');
+      else if(e.message === 'duplicate_name') toast('Ya hay alguien con ese nombre. Ponle un mote distinto.');
       else throw e;
     });
   };
+}
+
+function personHasHistory(pid){
+  return S.items.some(item => item.payerId===pid || item.claimerId===pid ||
+      item.createdBy===pid || item.updatedBy===pid || consumerIds(item).includes(pid)) ||
+    S.transfers.some(transfer => transfer.fromId===pid || transfer.toId===pid ||
+      transfer.createdBy===pid || transfer.updatedBy===pid);
 }
 
 function personSheet(pid){
@@ -1471,7 +1736,7 @@ function personSheet(pid){
   const balanceText = s === 0 ? 'está en paz' : s > 0 ? `le deben ${eur(s)}` : `debe ${eur(-s)}`;
 
   openSheet(`
-    <h2 class="sheet-title">${escapeHtml(p.name)}${p.admin?' '+KEY_ICON:''}${isMe?' <span class="status-chip chip-primary">tú</span>':''}</h2>
+    <h2 class="sheet-title">${escapeHtml(p.name)}${p.admin?' '+KEY_ICON:''}${isMe?' <span class="status-chip chip-primary">tú</span>':''}${p.active?'':' <span class="status-chip chip-neutral">ya no participa</span>'}</h2>
     <p class="sheet-sub">Ha pagado <strong>${eur(c.payerTotals[pid]||0)}</strong> en ${purchases.length} compra${purchases.length===1?'':'s'} ·
       le tocaba ${eur(c.owes[pid]||0)} · ${balanceText}.</p>
     <span class="label">Le toca traer</span>
@@ -1485,14 +1750,17 @@ function personSheet(pid){
       </button>` : ''}
     ${canManage ? `
       <span class="label">Gestión</span>
-      <button class="menu-option" id="toggleAdminButton" type="button">
-        ${p.admin ? 'Quitarle la llave' : 'Darle la llave (admin)'}
+      ${p.active ? `<button class="menu-option" id="toggleAdminButton" type="button">
+        ${p.admin ? 'Quitarle la llave' : 'Darle la llave'}
         <small>Los de la llave asignan cosas, corrigen precios y gestionan la peña.</small>
-      </button>
-      <button class="menu-option" id="removePersonButton" type="button">
-        Quitar de la peña
-        <small>Solo si no tiene compras apuntadas.</small>
       </button>` : ''}
+      <button class="menu-option" id="removePersonButton" type="button">
+        ${p.active ? 'Sacar de futuros gastos' : 'Volver a meter en la peña'}
+        <small>${p.active
+          ? 'Conserva sus compras, su saldo y sus Bizums. Solo deja de salir en gastos nuevos.'
+          : 'Volverá a salir en la lista y en los gastos nuevos.'}</small>
+      </button>
+      ${!p.active && !personHasHistory(pid) ? `<button class="delete-link" id="deletePersonButton" type="button">Borrar del todo</button>` : ''}` : ''}
   `);
   const rec = $('#remindButton');
   if(rec) rec.onclick = () => {
@@ -1510,16 +1778,20 @@ function personSheet(pid){
     if(!q) return abortSheet('Esa persona ya no está en la peña.');
     if(q.admin && adminCount() === 1) return toast('Alguien tiene que quedarse con la llave');
     const nextAdmin = !q.admin;
-    await commitSharedChange(() => {
+    await withBusyButton(tog,'Guardando…',() => commitSharedChange(() => {
       const live = personById(pid);
       if(!live) throw new Error('missing_person');
+      if(!isAdmin()) throw new Error('not_admin');
+      if(live.admin && adminCount() === 1) throw new Error('last_admin');
       live.admin = nextAdmin;
       touch(live);
     }, {close:true, toast:() => {
       const live = personById(pid);
       return nextAdmin ? (live ? live.name : q.name) + ' tiene la llave' : (live ? live.name : q.name) + ' ya no tiene la llave';
-    }}).catch(e => {
+    }})).catch(e => {
       if(e.message === 'missing_person') abortSheet('Esa persona ya no está en la peña.');
+      else if(e.message === 'not_admin') abortSheet('La llave ya no es tuya: eso no te toca.');
+      else if(e.message === 'last_admin') toast('Alguien tiene que quedarse con la llave');
       else throw e;
     });
   };
@@ -1528,30 +1800,60 @@ function personSheet(pid){
     if(!requireAdmin()) return;
     const q = personById(pid);
     if(!q) return abortSheet('Esa persona ya no está en la peña.');
-    if(S.items.some(i=>i.status==='bought' && i.payerId===pid))
-      return toast('Tiene compras apuntadas: reasígnalas antes');
-    // If this person is the sole explicit consumer of a purchase, removing them
-    // would leave consumers empty, which means "everyone"; the expense would
-    // silently reallocate itself.
-    if(S.items.some(i=>i.status==='bought' && i.consumers &&
-        i.consumers.length === 1 && i.consumers[0] === pid))
-      return toast('Hay compras que solo cata esa persona: corrígelas antes');
-    if(q.admin && adminCount() === 1) return toast('Alguien tiene que quedarse con la llave');
-    // Do NOT rewrite this person's items with a new stamp here. Their claims
-    // become orphaned; the UI treats them as "unowned", and splits are cleaned
-    // by the derived pass. The same pass runs during merge and only applies if
-    // the deletion truly consolidates. If the person is resurrected because they
-    // bought something this phone had not seen, their shares remain intact.
-    await commitSharedChange(() => {
-      const live = personById(pid);
-      if(!live) throw new Error('missing_person');
-      tombstoneEntity('people', live);
-      normalizeSplits(S.items, S.people);
-    }, {close:true, toast:q.name + ' ya no está en la peña'}).catch(e => {
-      if(e.message === 'missing_person') abortSheet('Esa persona ya no está en la peña.');
-      else throw e;
-    });
+    if(q.active && activePeople().length === 1) return toast('Alguien tiene que quedarse en la peña');
+    if(q.active && q.admin && adminCount() === 1) return toast('Alguien tiene que quedarse con la llave');
+    if(!q.active){
+      await withBusyButton(eli,'Guardando…',() => commitSharedChange(() => {
+        const live = personById(pid);
+        if(!live) throw new Error('missing_person');
+        if(!isAdmin()) throw new Error('not_admin');
+        live.active = true;
+        touch(live);
+      }, {close:true, toast:q.name + ' vuelve a la peña'})).catch(e => {
+        if(e.message === 'missing_person') abortSheet('Esa persona ya no está en la peña.');
+        else if(e.message === 'not_admin') abortSheet('La llave ya no es tuya: eso no te toca.');
+        else throw e;
+      });
+      return;
+    }
+    confirmSheet('¿Sacar a ' + q.name + '?',
+      'Dejará de salir en gastos nuevos, pero sus compras, su saldo y sus Bizums se quedan tal cual.', async () => {
+        await commitSharedChange(() => {
+          const live = personById(pid);
+          if(!live) throw new Error('missing_person');
+          if(!isAdmin()) throw new Error('not_admin');
+          if(!live.active) throw new Error('person_changed');
+          if(activePeople().length === 1) throw new Error('last_active');
+          if(live.admin && adminCount() === 1) throw new Error('last_admin');
+          live.active = false;
+          live.admin = false;
+          touch(live);
+          S.items.filter(item=>item.status==='claimed' && item.claimerId===pid).forEach(item => {
+            item.status = 'pending'; delete item.claimerId; touch(item);
+          });
+        }, {toast:q.name + ' ya no sale en gastos nuevos'}).catch(e => {
+          if(e.message === 'missing_person' || e.message === 'person_changed') abortSheet('La peña ha cambiado: abre de nuevo a esa persona.');
+          else if(e.message === 'not_admin') abortSheet('La llave ya no es tuya: eso no te toca.');
+          else if(e.message === 'last_active') toast('Alguien tiene que quedarse en la peña');
+          else if(e.message === 'last_admin') toast('Alguien tiene que quedarse con la llave');
+          else throw e;
+        });
+      });
   };
+  const deletePerson = $('#deletePersonButton');
+  if(deletePerson) deletePerson.onclick = () => confirmSheet('¿Borrar a ' + p.name + '?',
+    'No aparece en ningún gasto ni Bizum. Esta acción no se puede deshacer.', async () => {
+      await commitSharedChange(() => {
+        const live = personById(pid);
+        if(!isAdmin()) throw new Error('not_admin');
+        if(!live || live.active || personHasHistory(pid)) throw new Error('person_changed');
+        tombstoneEntity('people',live);
+      }, {toast:p.name + ' ya no está en la peña'}).catch(e => {
+        if(e.message === 'person_changed') toast('Ya no se puede borrar: la peña ha cambiado.');
+        else if(e.message === 'not_admin') toast('La llave ya no es tuya: eso no te toca.');
+        else throw e;
+      });
+    });
 }
 
 /* --- share with the group: moment-specific messages --- */
@@ -1570,18 +1872,21 @@ function shareMessage(shareType, pid){
   }
   if(shareType === 'accounts'){
     const c = accounts();
-    const pending = pendingBizums(c);
     const lines = [`Cuentas de «${n}» — A Pachas`,
-      `Total: ${eur(c.total)} entre ${S.people.length}`, ''];
+      `Total de gastos: ${eur(c.total)}`, ''];
+    if(S.transfers.length){
+      lines.push('Bizums hechos:');
+      S.transfers.forEach(transfer => lines.push(
+        `✓ ${personById(transfer.fromId).name} → ${personById(transfer.toId).name}: ${eur(transfer.cents)}`));
+      lines.push('');
+    }
     if(!c.bizums.length){
       lines.push('Cuentas en paz. Ni pa ti ni pa mí.');
     } else {
       c.bizums.forEach(b => lines.push(
-        (isBizumDone(b) ? '✓ ' : '· ') +
-        personById(b.de).name + ' → ' + personById(b.a).name + ': ' + eur(b.cents)));
+        '· ' + personById(b.fromId).name + ' → ' + personById(b.toId).name + ': ' + eur(b.cents)));
       lines.push('');
-      lines.push(pending.length
-        ? 'Marca el tuyo cuando lo hagas:' : 'Todo saldado. Cuentas claras y el chocolate espeso.');
+      lines.push('Marca el tuyo cuando lo hagas:');
     }
     lines.push(link);
     return lines.join('\n');
@@ -1597,15 +1902,15 @@ function shareMessage(shareType, pid){
       lines.push('Te toca traer:');
       assignedItems.forEach(i => lines.push('· ' + i.name));
     }
-    const outgoingBizums = pendingBizums(c).filter(b => b.de === pid);
-    const isOwed = pendingBizums(c).filter(b => b.a === pid);
-    if(outgoingBizums.length || isOwed.length){
+    const outgoingBizums = c.bizums.filter(b => b.fromId === pid);
+    const incomingBizums = c.bizums.filter(b => b.toId === pid);
+    if(outgoingBizums.length || incomingBizums.length){
       lines.push('');
       lines.push('De cuentas te sale:');
-      outgoingBizums.forEach(b => lines.push(`· Bizum de ${eur(b.cents)} a ${personById(b.a).name}`));
-      isOwed.forEach(b => lines.push(`· ${personById(b.de).name} te debe ${eur(b.cents)}`));
+      outgoingBizums.forEach(b => lines.push(`· Bizum de ${eur(b.cents)} a ${personById(b.toId).name}`));
+      incomingBizums.forEach(b => lines.push(`· ${personById(b.fromId).name} te debe ${eur(b.cents)}`));
     }
-    if(!assignedItems.length && !outgoingBizums.length && !isOwed.length){
+    if(!assignedItems.length && !outgoingBizums.length && !incomingBizums.length){
       lines.push('nada pendiente. Estás al día, máquina.');
     }
     lines.push('');
@@ -1712,9 +2017,10 @@ function joinSheet(){
 }
 
 /* --- create party --- */
-function createPartySheet(){
+function createPartySheet(templateItems){
+  const templateNames = [...new Set((templateItems || []).map(item=>item.name.trim()).filter(Boolean))];
   openSheet(`
-    <h2 class="sheet-title">Fiesta nueva</h2>
+    <h2 class="sheet-title">${templateNames.length ? 'Repetir la lista' : 'Fiesta nueva'}</h2>
     <div class="field" style="margin-top:14px">
       <label class="label" for="newPartyNameInput">Nombre de la fiesta</label>
       <input type="text" id="newPartyNameInput" placeholder="Matanza en casa de Paco" maxlength="40" autocomplete="off">
@@ -1727,6 +2033,7 @@ function createPartySheet(){
       <label class="label" for="newPartyDateInput">Fecha (opcional)</label>
       <input type="date" id="newPartyDateInput">
     </div>
+    ${templateNames.length ? `<div class="note">Copiaremos ${templateNames.length} cosa${templateNames.length===1?'':'s'} como pendientes. Los precios, responsables y cuentas empiezan de cero.</div>` : ''}
     <button class="btn btn-primary btn-block" id="createPartyButton" type="button" style="padding:14px">Crear la fiesta</button>
   `);
   $('#createPartyButton').onclick = async () => {
@@ -1741,12 +2048,15 @@ function createPartySheet(){
     btn.disabled = true;
     const pid = newId('p');
     const previousParty = S;
+    const createdAt = now();
     const draftParty = {
-      v:5,
-      party:{name, date: newDate || null, updatedAt:now()},
+      v:STATE_VERSION,
+      party:{name, date: newDate || null, updatedAt:createdAt},
       me: pid, tab:'party', remote: null,
-      people:[{id:pid, name:participantName, admin:true, updatedAt:now()}],
-      items:[], settled:{}, tombstones:[],
+      people:[{id:pid, name:participantName, admin:true, active:true, updatedAt:createdAt}],
+      items:templateNames.map(itemName => ({id:newId('i'), name:itemName, status:'pending',
+        createdAt, createdBy:pid, updatedAt:createdAt, updatedBy:pid})),
+      transfers:[], tombstones:[],
     };
     if(previousParty){
       S = previousParty;
@@ -1789,11 +2099,16 @@ function renameSheet(){
     if(!n) return toast('La fiesta necesita un nombre');
     const f = $('#partyDateInput').value;
     if(f && !DATE_RE.test(f)) return toast('Esa fecha no cuadra: ponla normal o déjala en blanco.');
-    await commitSharedChange(() => {
+    const button = $('#saveRenameButton');
+    await withBusyButton(button,'Guardando…',() => commitSharedChange(() => {
+      if(!isAdmin()) throw new Error('not_admin');
       S.party.name = n;
       S.party.date = f || null;
       touch(S.party);
-    }, {close:true, toast:'Guardado'});
+    }, {close:true, toast:'Guardado'})).catch(e => {
+      if(e.message === 'not_admin') abortSheet('La llave ya no es tuya: eso no te toca.');
+      else throw e;
+    });
   };
 }
 
@@ -1807,7 +2122,14 @@ function confirmSheet(title, message, action){
     </div>
   `);
   $('#confirmNoButton').onclick = closeSheet;
-  $('#confirmYesButton').onclick = () => { closeSheet(); action(); };
+  $('#confirmYesButton').onclick = async () => {
+    const button = $('#confirmYesButton');
+    if(button.dataset.busy === 'true') return;
+    button.dataset.busy = 'true';
+    button.disabled = true;
+    closeSheet();
+    await action();
+  };
 }
 
 /* ================= views ================= */
@@ -1820,6 +2142,22 @@ function heroHtml(){
 }
 
 function entryView(){
+  if(openingParty) return `${heroHtml()}
+    <div class="card empty-state" role="status" style="padding:24px 20px">
+      <strong style="color:var(--ink)">Abriendo la fiesta del grupo…</strong><br>
+      Un momento, que estamos poniendo todo al día.
+    </div>`;
+  const recent = loadRecentParties();
+  const recentHtml = recent.length ? `
+    <span class="label" style="margin-top:26px">Tus fiestas</span>
+    <div class="recent-list">${recent.map((party,index) => `
+      <button class="recent-party" type="button" data-recent-index="${index}">
+        <span class="recent-copy">
+          <span class="recent-name">${escapeHtml(party.name)}</span>
+          <span class="recent-meta">${party.date ? escapeHtml(prettyDate(party.date) || party.date) : 'En vivo con la peña'}</span>
+        </span>
+        <span aria-hidden="true">→</span>
+      </button>`).join('')}</div>` : '';
   return `${heroHtml()}
     <div class="add-row">
       <input type="text" id="linkInput" placeholder="Pega el enlace del grupo" autocomplete="off">
@@ -1828,7 +2166,7 @@ function entryView(){
     <button class="create-dashed" id="createButton" type="button">+ Crear fiesta nueva</button>
     <div style="text-align:center;margin-top:22px">
       <button class="quiet-link" id="demoButton" type="button">Ver una fiesta de ejemplo</button>
-    </div>`;
+    </div>${recentHtml}`;
 }
 
 function heroMiniHtml(){
@@ -1837,19 +2175,35 @@ function heroMiniHtml(){
 
 function partyView(c){
   const me = personById(S.me);
+  const participants = activePeople();
   const f = prettyDate(S.party.date);
   const unownedCount = S.items.filter(isUnownedItem).length;
   const openItems = S.items.filter(i=>i.status!=='bought').length;
-  const pendingBizumCount = pendingBizums(c).length;
+  const pendingBizumCount = c.bizums.length;
+  const myClaimedItems = me && me.active
+    ? S.items.filter(item=>item.status==='claimed' && item.claimerId===me.id) : [];
+  const myOutgoingBizums = me ? c.bizums.filter(bizum=>bizum.fromId===me.id) : [];
 
   // Current next step: exactly one action based on party state.
   let action;
-  if(!S.items.length && !c.total){
+  if(!me){
+    action = {txt:'Di quién eres y te digo qué te toca.',btn:'Decir quién soy',target:'identity'};
+  } else if(!me.active){
+    action = {txt:'Ya no sales en gastos nuevos, pero tus cuentas siguen aquí.',btn:'Ver mi cuenta',target:'accounts'};
+  } else if(!S.items.length && !c.total){
     action = {txt:'La lista está vacía. Apunta lo que hace falta pa la fiesta.',
       btn:'Apuntar lo que falta', target:'list'};
+  } else if(myClaimedItems.length === 1){
+    action = {txt:`Te toca traer ${escapeHtml(myClaimedItems[0].name)}.`,
+      btn:'Marcar como comprada',target:'buy',itemId:myClaimedItems[0].id};
+  } else if(myClaimedItems.length > 1){
+    action = {txt:`Te toca traer ${myClaimedItems.length} cosas.`,btn:'Ver lo tuyo',target:'list'};
   } else if(unownedCount){
     action = {txt:`Hay ${unownedCount === 1 ? 'una cosa' : unownedCount + ' cosas'} sin dueño en la lista.`,
       btn:'Ver la lista', target:'list'};
+  } else if(myOutgoingBizums.length){
+    action = {txt:`Te queda ${myOutgoingBizums.length===1?'un Bizum':myOutgoingBizums.length+' Bizums'} pa quedar en paz.`,
+      btn:'Ver mi cuenta',target:'accounts'};
   } else if(openItems === 0 && pendingBizumCount){
     action = {txt:'Todo comprado. Solo quedan los bizums pa quedar en paz.',
       btn:'A las cuentas', target:'accounts'};
@@ -1881,7 +2235,7 @@ function partyView(c){
       <span class="brand-mark" aria-hidden="true">${LOGO}</span>
       <span class="label">Tu fiesta</span>
       <div class="title">${escapeHtml(S.party.name)}</div>
-      <div class="meta">${f ? escapeHtml(f) + ' · ' : ''}${S.people.length} en la peña · ${S.items.length} cosa${S.items.length===1?'':'s'} en la lista · ${eur(c.total)}</div>
+      <div class="meta">${f ? escapeHtml(f) + ' · ' : ''}${participants.length} en la peña · ${S.items.length} cosa${S.items.length===1?'':'s'} en la lista · ${eur(c.total)}</div>
       <button class="btn btn-white btn-block" id="inviteButton" type="button">Mandar al grupo</button>
       ${canGoLive() ? `
         <button class="btn btn-live btn-block" id="enableLiveButton" type="button" style="margin-top:8px">
@@ -1891,17 +2245,18 @@ function partyView(c){
     <div class="card">
       <span class="label">¿Qué toca?</span>
       <p class="next-action-text">${action.txt}</p>
-      <button class="btn ${action.target==='expense'?'btn-green':'btn-soft'} btn-block" id="actionButton"
-        data-target="${action.target}" type="button">${action.btn}</button>
+      <button class="btn ${['expense','buy'].includes(action.target)?'btn-green':'btn-soft'} btn-block" id="actionButton"
+        data-target="${action.target}" ${action.itemId?`data-item-id="${escapeHtml(action.itemId)}"`:''} type="button">${action.btn}</button>
     </div>
     ${myLine}
     <div class="card identity-row">
       ${me ? avatarHtml(S.me) : ''}
-      <span class="who">${me ? `Eres <b>${escapeHtml(me.name)}</b>` : 'Aún no has dicho quién eres'}</span>
+      <span class="who">${me ? `Eres <b>${escapeHtml(me.name)}</b>${me.active?'':' · ya no participas en gastos nuevos'}` : 'Aún no has dicho quién eres'}</span>
       <button class="btn-text" id="whoAmIButton" type="button">${me ? 'Cambiar' : '¿Quién eres?'}</button>
     </div>
     <div style="display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:22px">
       ${isAdmin() ? '<button class="quiet-link" id="renameButton" type="button">Cambiar nombre o fecha</button>' : ''}
+      ${isAdmin() && openItems ? '<button class="quiet-link" id="repeatPartyButton" type="button">Repetir esta lista en otra fiesta</button>' : ''}
       <button class="quiet-link" id="newPartyButton" type="button">Empezar otra fiesta</button>
       <button class="quiet-link" id="demoButton" type="button">Ver la fiesta de ejemplo</button>
     </div>`;
@@ -1922,16 +2277,18 @@ function listView(){
     // Bought item: green checkIcon on the left, tap to edit.
     if(isBought){
       const n = consumerIds(it).length;
-      return `<div class="card item-card bought-card" data-edit="${escapeHtml(it.id)}" role="button" tabindex="0"
+      const activeIds = new Set(activePeople().map(p=>p.id));
+      const allActive = n === activeIds.size && consumerIds(it).every(id=>activeIds.has(id));
+      return `<button class="card item-card bought-card" data-edit="${escapeHtml(it.id)}" type="button"
         aria-label="Comprada: ${escapeHtml(it.name)}, ${eur(it.priceCents||0)}. Tocar para corregirla.">
         <div class="item-row" style="align-items:center">
           <span class="bought-checkIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4.5 12.5l5 5 10-11"/></svg></span>
           <div style="flex:1;min-width:0">
             <div class="name">${escapeHtml(it.name)}</div>
-            <div class="meta" style="margin-top:1px">${eur(it.priceCents||0)} · pagó ${escapeHtml(personById(it.payerId)?.name || '—')} · entre ${n===S.people.length?'todos':n}</div>
+            <div class="meta" style="margin-top:1px">${eur(it.priceCents||0)} · pagó ${escapeHtml(personById(it.payerId)?.name || '—')} · entre ${allActive?'todos':n}</div>
           </div>
         </div>
-      </div>`;
+      </button>`;
     }
 
     const p = it.claimerId ? personById(it.claimerId) : null;
@@ -1994,7 +2351,9 @@ function listView(){
 }
 
 function groupView(c){
-  const rows = S.people.map(p => {
+  const participants = activePeople();
+  const orderedPeople = [...S.people].sort((a,b)=>Number(b.active)-Number(a.active));
+  const rows = orderedPeople.map(p => {
     const assignedItems = S.items.filter(i=>i.status==='claimed' && i.claimerId===p.id).length;
     const s = c.balance[p.id];
     const cls = balanceClass(s);
@@ -2003,20 +2362,22 @@ function groupView(c){
     if(p.admin) subs.push('Organiza la fiesta');
     if(assignedItems) subs.push(`trae ${assignedItems} cosa${assignedItems===1?'':'s'}`);
     return `
-    <div class="person-row" data-person="${escapeHtml(p.id)}">
+    <button class="person-row" data-person="${escapeHtml(p.id)}" type="button">
       ${avatarHtml(p.id)}
-      <div class="center">
-        <div class="name">${escapeHtml(p.name)}${p.id===S.me?' (tú)':''}${p.admin?KEY_ICON:''}</div>
-        ${subs.length?`<div class="secondary-text">${escapeHtml(subs.join(' · '))}</div>`:''}
-      </div>
-      <div class="balance ${cls}">
+      <span class="center">
+        <span class="name">${escapeHtml(p.name)}${p.id===S.me?' (tú)':''}${p.admin?KEY_ICON:''}</span>
+        ${p.active && subs.length?`<span class="secondary-text">${escapeHtml(subs.join(' · '))}</span>`:''}
+        ${p.active?'':'<span class="inactive-note">Ya no participa en gastos nuevos</span>'}
+      </span>
+      <span class="balance ${cls}">
         <span class="amount">${s>0?'+':''}${eur(s)}</span>
         <span class="status">${statusText}</span>
-      </div>
-    </div>`;
+      </span>
+    </button>`;
   }).join('');
+  const inactiveCount = S.people.length - participants.length;
   return `
-    <div class="screen-header"><h1>La peña</h1><div class="sub">${S.people.length} en la cuadrilla</div></div>
+    <div class="screen-header"><h1>La peña</h1><div class="sub">${participants.length} en la cuadrilla${inactiveCount?` · ${inactiveCount} fuera de gastos nuevos`:''}</div></div>
     <div class="card" style="padding:4px 14px">${rows}</div>
     <button class="btn btn-primary btn-block" id="inviteButton" type="button" style="margin-top:6px">Mandar al grupo</button>
     <form class="add-row" id="addPersonForm" style="margin-top:14px">
@@ -2027,7 +2388,7 @@ function groupView(c){
 }
 
 function accountsView(c){
-  if(c.total === 0){
+  if(c.total === 0 && !S.transfers.length){
     return `
       <div class="screen-header"><h1>Las cuentas</h1><div class="sub">Bizums mínimos pa quedar en paz</div></div>
       <div class="empty-state">Aún no hay gastos apuntados.<br>En cuanto la peña compre cosas, aquí salen las cuentas.</div>
@@ -2036,7 +2397,6 @@ function accountsView(c){
 
   const arrow = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M14 6l6 6-6 6"/></svg>';
   const checkIcon = '<svg viewBox="0 0 24 24"><path d="M4.5 12.5l5 5 10-11"/></svg>';
-  const pending = pendingBizums(c);
 
   // Your account comes first.
   let myAccount;
@@ -2052,40 +2412,51 @@ function accountsView(c){
     const s = c.balance[S.me] || 0;
     const cls = balanceClass(s);
     const title = s === 0 ? 'Estás en paz' : s > 0 ? `Te deben ${eur(s)}` : `Debes ${eur(-s)}`;
-    const myBizums = pending.filter(b => b.de === S.me || b.a === S.me);
-    const actions = myBizums.map(b => b.de === S.me
+    const myBizums = c.bizums.filter(b => b.fromId === S.me || b.toId === S.me);
+    const actions = myBizums.map(b => b.fromId === S.me
       ? `<div class="my-account-action">
-          <span class="text">Haz bizum de <b>${eur(b.cents)}</b> a <b>${escapeHtml(personById(b.a).name)}</b></span>
-          <button class="btn btn-soft btn-mini" data-copy-bizum="${escapeHtml(b.a)}" data-cents="${b.cents}" type="button">Copiar</button>
+          <span class="text">Haz bizum de <b>${eur(b.cents)}</b> a <b>${escapeHtml(personById(b.toId).name)}</b></span>
+          <button class="btn btn-soft btn-mini" data-copy-bizum="${escapeHtml(b.toId)}" data-cents="${b.cents}" type="button">Copiar</button>
         </div>`
       : `<div class="my-account-action">
-          <span class="text"><b>${escapeHtml(personById(b.de).name)}</b> te debe <b>${eur(b.cents)}</b></span>
+          <span class="text"><b>${escapeHtml(personById(b.fromId).name)}</b> te debe <b>${eur(b.cents)}</b></span>
         </div>`).join('');
+    const sent = S.transfers.filter(t=>t.fromId===S.me).reduce((sum,t)=>sum+t.cents,0);
+    const received = S.transfers.filter(t=>t.toId===S.me).reduce((sum,t)=>sum+t.cents,0);
+    const transferBreakdown = sent || received
+      ? ` · Bizums hechos: enviaste ${eur(sent)} · recibiste ${eur(received)}` : '';
     myAccount = `<div class="card">
       <span class="label">Tu cuenta</span>
       <div class="my-account-amount ${cls}">${title}</div>
-      <div class="my-account-breakdown">Pagaste ${eur(c.payerTotals[S.me]||0)} · te tocaba ${eur(c.owes[S.me]||0)}</div>
+      <div class="my-account-breakdown">Pagaste ${eur(c.payerTotals[S.me]||0)} · te tocaba ${eur(c.owes[S.me]||0)}${transferBreakdown}</div>
       ${actions || (s === 0 ? '<div class="my-account-action"><span class="text">Ni pa ti ni pa mí. Así da gusto.</span></div>' : '')}
     </div>`;
   }
 
   // "Per head" only when true: all purchases consumed by everyone.
-  const uniform = S.items.every(i => i.status !== 'bought' || !i.consumers || !i.consumers.length);
+  const participants = activePeople();
+  const activeIds = new Set(participants.map(p=>p.id));
+  const uniform = S.items.every(item => item.status !== 'bought' ||
+    (consumerIds(item).length === activeIds.size && consumerIds(item).every(id=>activeIds.has(id))));
   const subtotalText = uniform
-    ? `${eur(Math.round(c.total / S.people.length))} por cabeza`
+    ? `${eur(Math.round(c.total / participants.length))} por cabeza`
     : 'repartido según quién cata cada cosa';
 
-  const bizumsHtml = c.bizums.map(b => {
-    const key = bizumKey(b), done = isBizumDone(b);
-    return `<div class="card bizum-row ${done?'done':''}">
-      <div class="who">${escapeHtml(personById(b.de).name)}${arrow}${escapeHtml(personById(b.a).name)}</div>
+  const bizumsHtml = c.bizums.map(b => `
+    <div class="card bizum-row">
+      <div class="who">${escapeHtml(personById(b.fromId).name)}${arrow}${escapeHtml(personById(b.toId).name)}</div>
       <span class="transfer-amount">${eur(b.cents)}</span>
-      <button class="checkIcon ${done?'on':''}" data-bizum="${escapeHtml(key)}" type="button"
-        aria-label="${done?'Deshacer':'Marcar'} bizum de ${escapeHtml(personById(b.de).name)} a ${escapeHtml(personById(b.a).name)}">${checkIcon}</button>
-    </div>`;
-  }).join('');
-
-  const allSettled = c.bizums.length>0 && pending.length===0;
+      <button class="checkIcon" data-bizum-from="${escapeHtml(b.fromId)}" data-bizum-to="${escapeHtml(b.toId)}"
+        data-cents="${b.cents}" type="button"
+        aria-label="Marcar Bizum de ${escapeHtml(personById(b.fromId).name)} a ${escapeHtml(personById(b.toId).name)} como hecho">${checkIcon}</button>
+    </div>`).join('');
+  const transfersHtml = [...S.transfers].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(transfer => `
+    <div class="card bizum-row done">
+      <div class="who">${escapeHtml(personById(transfer.fromId)?.name || '—')}${arrow}${escapeHtml(personById(transfer.toId)?.name || '—')}</div>
+      <span class="transfer-amount">${eur(transfer.cents)}</span>
+      <button class="checkIcon on" data-transfer="${escapeHtml(transfer.id)}" type="button"
+        aria-label="Deshacer Bizum de ${escapeHtml(personById(transfer.fromId)?.name || '—')} a ${escapeHtml(personById(transfer.toId)?.name || '—')}">${checkIcon}</button>
+    </div>`).join('');
 
   return `
     <div class="screen-header"><h1>Las cuentas</h1><div class="sub">Bizums mínimos pa quedar en paz</div></div>
@@ -2094,11 +2465,12 @@ function accountsView(c){
       <div class="amount">${eur(c.total)}</div>
       <div class="per-head">${subtotalText}</div>
     </div>
-    ${c.bizums.length ? '<span class="label">Bizums de todos</span>' : ''}
+    ${c.bizums.length ? '<span class="label">Bizums pendientes</span>' : ''}
     ${bizumsHtml}
-    ${allSettled ? '<div class="settled-message">Cuentas claras y el chocolate espeso.</div>'
-      : c.bizums.length ? '<div class="footnote">Marca el círculo cuando el bizum esté hecho.</div>'
+    ${c.bizums.length ? '<div class="footnote">Marca el círculo cuando el Bizum esté hecho.</div>'
       : '<div class="settled-message">Cuentas en paz. Ni pa ti ni pa mí.</div>'}
+    ${S.transfers.length ? '<span class="label">Bizums hechos</span>' : ''}
+    ${transfersHtml}
     <button class="btn btn-primary btn-block" id="shareAccountsButton" type="button" style="margin-top:14px;padding:14px">
       Mandar las cuentas al grupo</button>
   `;
@@ -2114,10 +2486,14 @@ function render(){
     bindEntry(v);
     return;
   }
-  document.querySelectorAll('.tab').forEach(t =>
-    t.classList.toggle('active', t.dataset.tab === S.tab));
+  document.querySelectorAll('.tab').forEach(t => {
+    const active = t.dataset.tab === S.tab;
+    t.classList.toggle('active',active);
+    if(active) t.setAttribute('aria-current','page');
+    else t.removeAttribute('aria-current');
+  });
   const c = accounts();
-  const pendingItems = pendingBizums(c).length;
+  const pendingItems = c.bizums.length;
   const badge = $('#accountsBadge');
   badge.hidden = pendingItems===0;
   badge.textContent = pendingItems;
@@ -2135,11 +2511,17 @@ function bindEntry(v){
     if(!txt) return joinSheet();
     if(!importParty(txt)) toast('Ahí no hay ninguna fiesta que valga');
   };
-  v.querySelector('#createButton').onclick = createPartySheet;
+  v.querySelector('#createButton').onclick = () => createPartySheet();
   v.querySelector('#demoButton').onclick = () => {
     resetSync();
     S = demoState(); saveLocal(); render(); identitySheet(true);
   };
+  const recent = loadRecentParties();
+  v.querySelectorAll('[data-recent-index]').forEach(button => button.onclick = async () => {
+    const party = recent[Number(button.dataset.recentIndex)];
+    if(!party) return render();
+    await withBusyButton(button,'Abriendo…',() => openLiveLink(party.id,party.key));
+  });
 }
 
 function bindView(v){
@@ -2150,14 +2532,20 @@ function bindView(v){
   on('#enableLiveButton', enableLive);
   on('#whoAmIButton', () => identitySheet(false));
   on('#myAccountButton', () => { S.tab='accounts'; saveLocal(); render(); });
-  on('#actionButton', e => {
+  on('#actionButton', () => {
     const target = v.querySelector('#actionButton').dataset.target;
+    if(target === 'identity') return identitySheet(true);
+    if(target === 'buy'){
+      if(!requireActivePerson()) return;
+      return expenseSheet(v.querySelector('#actionButton').dataset.itemId);
+    }
     if(target === 'expense'){
-      if(!S.me) return identitySheet(true);
+      if(!requireActivePerson()) return;
       expenseSheet(null);
     } else { S.tab = target; saveLocal(); render(); }
   });
   on('#renameButton', renameSheet);
+  on('#repeatPartyButton', () => createPartySheet(S.items.filter(item=>item.status!=='bought')));
   on('#newPartyButton', () => confirmSheet('¿Empezar otra fiesta?',
     S.remote
       ? 'Se quita de tu móvil, pero sigue en vivo pa la peña: con el enlace del grupo vuelves cuando quieras.'
@@ -2178,16 +2566,22 @@ function bindView(v){
   const form = v.querySelector('#addItemForm');
   if(form) form.onsubmit = async e => {
     e.preventDefault();
+    if(!requireActivePerson()) return;
     const n = v.querySelector('#itemInput').value.trim();
     if(!n) return toast('Escribe algo, que la lista no adivina.');
     if(S.items.length >= 500) return toast('La lista no da pa más (500 cosas). Quita algo primero.');
-    await commitSharedChange(() => {
+    const button = form.querySelector('button[type="submit"]');
+    await withBusyButton(button,'Guardando…',() => commitSharedChange(() => {
+      if(!personById(S.me)?.active) throw new Error('inactive_person');
       S.items.unshift(touch({id:newId('i'), name:n, status:'pending',
         createdAt:now(), createdBy:S.me || null}));
-    }, {toast:'«' + n + '» apuntado'});
+    }, {toast:'«' + n + '» apuntado'})).catch(err => {
+      if(err.message === 'inactive_person') toast('Ya no sales en gastos nuevos. La llave puede volverte a meter.');
+      else throw err;
+    });
   };
   on('#directExpenseButton', () => {
-    if(!S.me) return identitySheet(true);
+    if(!requireActivePerson()) return;
     expenseSheet(null);
   });
   on('#shareListButton', () => shareSheet('list'));
@@ -2195,18 +2589,20 @@ function bindView(v){
   // an input had half-written text. Every action revalidates item state so it
   // does not overwrite a purchase another phone just resolved.
   v.querySelectorAll('[data-pillar]').forEach(b => b.onclick = async () => {
-    if(!S.me) return identitySheet(true);
+    if(!requireActivePerson()) return;
     const it = itemById(b.dataset.pillar);
     if(!isUnownedItem(it)){
       render(); return toast('Alguien se ha adelantado: esa ya está resuelta.');
     }
-    await commitSharedChange(() => {
+    await withBusyButton(b,'Guardando…',() => commitSharedChange(() => {
       const live = itemById(b.dataset.pillar);
       if(!isUnownedItem(live)) throw new Error('already_taken');
+      if(!personById(S.me)?.active) throw new Error('inactive_person');
       live.status='claimed'; live.claimerId=S.me;
       touch(live);
-    }, {toast:'Apuntado: ' + it.name + ' corre de tu cuenta.'}).catch(err => {
+    }, {toast:'Apuntado: ' + it.name + ' corre de tu cuenta.'})).catch(err => {
       if(err.message === 'already_taken') toast('Alguien se ha adelantado: esa ya está resuelta.');
+      else if(err.message === 'inactive_person') toast('Ya no sales en gastos nuevos. La llave puede volverte a meter.');
       else throw err;
     });
   });
@@ -2218,13 +2614,15 @@ function bindView(v){
     if(it.claimerId !== S.me && !isAdmin()){
       render(); return toast('Esa la trae ' + (personById(it.claimerId)?.name || 'otro') + ': soltarla es cosa suya o de la llave.');
     }
-    await commitSharedChange(() => {
+    await withBusyButton(b,'Guardando…',() => commitSharedChange(() => {
       const live = itemById(b.dataset.release);
       if(!live || live.status !== 'claimed') throw new Error('changed');
+      if(live.claimerId !== S.me && !isAdmin()) throw new Error('not_allowed');
       live.status='pending'; delete live.claimerId;
       touch(live);
-    }, {toast:'Suelta. A ver quién se la pide ahora.'}).catch(err => {
+    }, {toast:'Suelta. A ver quién se la pide ahora.'})).catch(err => {
       if(err.message === 'changed') toast('Esa ya ha cambiado de manos.');
+      else if(err.message === 'not_allowed') toast('Soltarla es cosa de quien la trae o de la llave.');
       else throw err;
     });
   });
@@ -2233,11 +2631,10 @@ function bindView(v){
     assignSheet(b.dataset.assign);
   });
   v.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => {
-    if(!S.me) return identitySheet(true);
+    if(!requireActivePerson()) return;
     expenseSheet(b.dataset.buy);
   });
-  v.querySelectorAll('[data-edit]').forEach(card => card.onclick = e => {
-    if(e.target.closest('button')) return;
+  v.querySelectorAll('[data-edit]').forEach(card => card.onclick = () => {
     const it = S.items.find(x=>x.id===card.dataset.edit);
     if(!it) return;
     if(!isAdmin() && it.payerId !== S.me){
@@ -2246,7 +2643,7 @@ function bindView(v){
     }
     expenseSheet(card.dataset.edit);
   });
-  v.querySelectorAll('[data-remove-button]').forEach(b => b.onclick = async e => {
+  v.querySelectorAll('[data-remove-button]').forEach(b => b.onclick = e => {
     e.stopPropagation();
     const it = itemById(b.dataset.removeButton);
     if(!it) return render();
@@ -2259,17 +2656,19 @@ function bindView(v){
     if(!isAdmin() && it.claimerId){
       render(); return toast('Esa ya la trae ' + (personById(it.claimerId)?.name || 'alguien') + ': no se quita así como así.');
     }
-    await commitSharedChange(() => {
-      const live = itemById(b.dataset.removeButton);
-      if(!live) throw new Error('missing_item');
-      if(live.status === 'bought') throw new Error('already_bought');
-      if(!isAdmin() && live.claimerId) throw new Error('claimed');
-      tombstoneEntity('items', live);
-    }).catch(err => {
-      if(err.message === 'missing_item') render();
-      else if(err.message === 'already_bought') toast('Esa ya está comprada: tócala si quieres corregirla.');
-      else if(err.message === 'claimed') toast('Esa ya la trae alguien: no se quita así como así.');
-      else throw err;
+    confirmSheet('¿Quitar «' + it.name + '»?', 'Se borrará de la lista para toda la peña.', async () => {
+      await commitSharedChange(() => {
+        const live = itemById(b.dataset.removeButton);
+        if(!live) throw new Error('missing_item');
+        if(live.status === 'bought') throw new Error('already_bought');
+        if(!isAdmin() && live.claimerId) throw new Error('claimed');
+        tombstoneEntity('items',live);
+      }, {toast:'Fuera de la lista'}).catch(err => {
+        if(err.message === 'missing_item') render();
+        else if(err.message === 'already_bought') toast('Esa ya está comprada: tócala si quieres corregirla.');
+        else if(err.message === 'claimed') toast('Esa ya la trae alguien: no se quita así como así.');
+        else throw err;
+      });
     });
   });
 
@@ -2277,33 +2676,61 @@ function bindView(v){
   const formP = v.querySelector('#addPersonForm');
   if(formP) formP.onsubmit = async e => {
     e.preventDefault();
+    if(!requireActivePerson()) return;
     const n = v.querySelector('#personInput').value.trim();
     if(!n) return;
+    if(personByName(n)) return toast('Ya hay alguien con ese nombre. Ponle un mote distinto.');
     if(S.people.length >= 100) return toast('La peña no da pa más (100). Menuda fiesta.');
-    await commitSharedChange(() => {
-      S.people.push(touch({id:newId('p'), name:n, admin:false}));
-    }, {toast:n + ' se une a la peña'});
+    const button = formP.querySelector('button[type="submit"]');
+    await withBusyButton(button,'Guardando…',() => commitSharedChange(() => {
+      if(!personById(S.me)?.active) throw new Error('inactive_person');
+      if(personByName(n)) throw new Error('duplicate_name');
+      S.people.push(touch({id:newId('p'), name:n, admin:false, active:true}));
+    }, {toast:n + ' se une a la peña'})).catch(err => {
+      if(err.message === 'inactive_person') toast('Ya no sales en gastos nuevos. La llave puede volverte a meter.');
+      else if(err.message === 'duplicate_name') toast('Ya hay alguien con ese nombre. Ponle un mote distinto.');
+      else throw err;
+    });
   };
   v.querySelectorAll('[data-person]').forEach(f => f.onclick = () => personSheet(f.dataset.person));
 
   /* accounts */
-  v.querySelectorAll('[data-bizum]').forEach(b => b.onclick = async () => {
-    const key = b.dataset.bizum;
-    const c = accounts();
-    const bz = c.bizums.find(x => bizumKey(x) === key);
-    if(!bz) return render(); // Accounts changed underneath.
-    const done = !isBizumDone(bz);
-    let message = '';
-    if(done){
-      if(c.bizums.every(x => bizumKey(x) === key || isBizumDone(x))) message = 'Cuentas claras y el chocolate espeso.';
-      else message = 'Bizum apuntado';
-    }
-    await commitSharedChange(() => {
-      // Store the paid amount with the mark. If the Bizum amount later changes,
-      // the new amount becomes pending again.
-      S.settled[key] = {done, at:now(), by:S.me || null, cents: bz.cents};
-      pruneSettled(S.settled, S.people); // Keep this path bounded too.
-    }, {toast:message});
+  v.querySelectorAll('[data-bizum-from]').forEach(b => b.onclick = async () => {
+    if(!personById(S.me)) return identitySheet(true);
+    const fromId = b.dataset.bizumFrom;
+    const toId = b.dataset.bizumTo;
+    const cents = Number(b.dataset.cents);
+    const current = accounts().bizums.find(x =>
+      x.fromId===fromId && x.toId===toId && x.cents===cents);
+    if(!current) return render();
+    if(S.transfers.length >= 500) return toast('Hay demasiados Bizums guardados. Corrige alguno antes.');
+    await withBusyButton(b,'',() => commitSharedChange(() => {
+      const liveBizum = accounts().bizums.find(item =>
+        item.fromId===fromId && item.toId===toId && item.cents===cents);
+      if(!liveBizum) throw new Error('changed_bizum');
+      const at = now();
+      S.transfers.push({id:transferCompletionId(fromId,toId,cents), fromId, toId, cents,
+        createdAt:at, createdBy:S.me || null, updatedAt:at, updatedBy:S.me || null});
+    }, {toast:accounts().bizums.length === 1
+      ? 'Cuentas claras y el chocolate espeso.' : 'Bizum apuntado'})).catch(e => {
+        if(e.message === 'changed_bizum') abortSheet('Las cuentas han cambiado: revisa el Bizum antes de marcarlo.');
+        else throw e;
+      });
+  });
+  v.querySelectorAll('[data-transfer]').forEach(b => b.onclick = () => {
+    const transfer = S.transfers.find(item=>item.id===b.dataset.transfer);
+    if(!transfer) return render();
+    confirmSheet('¿Deshacer este Bizum?',
+      `${personById(transfer.fromId)?.name || '—'} → ${personById(transfer.toId)?.name || '—'} · ${eur(transfer.cents)}. Úsalo solo si se marcó por error.`, async () => {
+        await commitSharedChange(() => {
+          const live = S.transfers.find(item=>item.id===transfer.id);
+          if(!live) throw new Error('missing_transfer');
+          tombstoneEntity('transfers',live);
+        }, {toast:'Bizum corregido'}).catch(e => {
+          if(e.message === 'missing_transfer') render();
+          else throw e;
+        });
+      });
   });
   v.querySelectorAll('[data-copy-bizum]').forEach(b => b.onclick = async () => {
     const who = personById(b.dataset.copyBizum);

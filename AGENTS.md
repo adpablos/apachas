@@ -39,7 +39,10 @@ the whole frontend lives in `public/index.html` and the whole backend lives in
    system fallback.
 2. Use the current English-only data contract. The localStorage key is
    `a-pachas-v2`; live links use `#F:id:key`; local snapshot links use `AP2:`.
-   Do not add Spanish payload aliases unless explicitly requested.
+   Do not add Spanish payload aliases unless explicitly requested. Shared state
+   is v6: bought-item consumers are explicit IDs, people have an `active` flag,
+   and completed Bizums are transfer entities that affect balances. Recent live
+   party pointers use `a-pachas-recent-v1` and remain local to the phone.
 3. Local mode must keep working. If the API is unavailable, the app remains
    usable from localStorage and explains the situation without technical jargon.
 4. The deployment server is shared with the World Cup pool production app. Do
@@ -47,8 +50,9 @@ the whole frontend lives in `public/index.html` and the whole backend lives in
 5. Cloudflare tunnel credentials never enter the repo.
 6. Verify before declaring work done. Run the local app with `node
    server/api.js` and test the full mobile flow: create, join by link, list,
-   quick expense, bought item with price and consumers, Bizums, and share
-   messages. After deployment, confirm `https://apachas.alexdepablos.es`
+   quick expense, bought item with price and consumers, Bizums, a later expense
+   after a completed Bizum, inactive participants, recent-party reopening, and
+   share messages. After deployment, confirm `https://apachas.alexdepablos.es`
    responds; `scripts/deploy.sh` already checks web and API health.
 
 ## Testing
