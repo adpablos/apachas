@@ -590,7 +590,7 @@ const balanceClass = s => s > 0 ? 'balance-green' : (s < 0 ? 'balance-coral' : '
 
 async function withBusyButton(button, pendingText, task){
   if(!button || button.dataset.busy === 'true') return false;
-  const previousText = button.textContent;
+  const previousHtml = button.innerHTML;
   button.dataset.busy = 'true';
   button.disabled = true;
   button.setAttribute('aria-busy','true');
@@ -600,7 +600,7 @@ async function withBusyButton(button, pendingText, task){
     button.dataset.busy = 'false';
     button.disabled = false;
     button.removeAttribute('aria-busy');
-    if(button.isConnected && pendingText) button.textContent = previousText;
+    if(button.isConnected && pendingText) button.innerHTML = previousHtml;
   }
 }
 
@@ -627,7 +627,9 @@ const itemById = id => S && S.items.find(x => x.id === id);
 function transferCompletionId(fromId, toId, cents){
   const itemBasis = S.items.map(item=>`${item.id}:${item.updatedAt || 0}`).sort().join(',');
   const transferBasis = S.transfers.map(transfer=>transfer.id).sort().join(',');
-  return stableEntityId('t', `${fromId}>${toId}|${cents}|${itemBasis}|${transferBasis}`);
+  const tombstoneBasis = S.tombstones.map(tombstone=>tombstone.id).sort().join(',');
+  return stableEntityId('t',
+    `${fromId}>${toId}|${cents}|${itemBasis}|${transferBasis}|${tombstoneBasis}`);
 }
 
 // Abort a sheet action whose premise is no longer true because the party changed
@@ -2192,7 +2194,7 @@ function partyView(c){
     action = {txt:'La lista está vacía. Apunta lo que hace falta pa la fiesta.',
       btn:'Apuntar lo que falta', target:'list'};
   } else if(myClaimedItems.length === 1){
-    action = {txt:`Te toca traer ${myClaimedItems[0].name}.`,
+    action = {txt:`Te toca traer ${escapeHtml(myClaimedItems[0].name)}.`,
       btn:'Marcar como comprada',target:'buy',itemId:myClaimedItems[0].id};
   } else if(myClaimedItems.length > 1){
     action = {txt:`Te toca traer ${myClaimedItems.length} cosas.`,btn:'Ver lo tuyo',target:'list'};
