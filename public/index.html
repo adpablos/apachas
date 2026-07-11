@@ -95,6 +95,16 @@
   .hero .logo svg{width:76px;height:76px}
   .hero h1{font-family:var(--display);font-weight:800;font-size:34px;letter-spacing:-.5px;margin:10px 0 6px}
   .hero .tagline{color:var(--muted);font-size:14px;line-height:1.5;margin:0 auto 24px;max-width:34ch}
+  .beta-badge{display:inline-flex;align-items:center;border-radius:999px;background:var(--primarysoft);
+    color:var(--primary);font-size:11.5px;font-weight:700;padding:5px 10px;margin-bottom:6px}
+  .how-it-works{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 18px}
+  .how-step{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 8px;
+    color:var(--muted);font-size:11.5px;text-align:center;line-height:1.35}
+  .how-step strong{display:block;color:var(--ink);font-size:13px;margin-bottom:2px}
+  .app-footer{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin:22px 0 6px;
+    color:var(--muted);font-size:12px}
+  .app-footer button{background:none;border:0;color:inherit;text-decoration:underline;
+    text-underline-offset:3px;cursor:pointer;padding:4px}
 
   /* ---------- common ---------- */
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
@@ -106,6 +116,7 @@
   .btn:disabled,button[aria-busy="true"]{opacity:.62;cursor:wait}
   .btn-primary{background:var(--primary);color:var(--onprimary)}
   .btn-green{background:var(--green);color:var(--onprimary)}
+  .btn-danger{background:var(--coral);color:var(--onprimary)}
   .btn-soft{background:var(--primarysoft);color:var(--primary)}
   .btn-outline{background:var(--card);border:1px solid var(--line);color:var(--ink)}
   .btn-mini{min-height:44px;padding:8px 13px;font-size:13.5px;border-radius:9px}
@@ -169,6 +180,8 @@
     width:44px;height:44px;padding:0;line-height:1;opacity:.65;flex:none}
   .bought-card{cursor:pointer;width:100%;text-align:left;color:var(--ink);font-family:inherit}
   .bought-card:active{filter:brightness(.97)}
+  .bought-card.read-only{cursor:default}
+  .bought-card.read-only:active{filter:none}
   .bought-checkIcon{width:26px;height:26px;border-radius:999px;background:var(--greensoft);
     color:var(--green);display:inline-flex;align-items:center;justify-content:center;
     flex:none;margin-top:1px}
@@ -234,6 +247,11 @@
   .preview{white-space:pre-wrap;overflow-wrap:break-word;background:var(--bg);border:1px solid var(--line);
     border-radius:11px;padding:12px 13px;font-size:13px;line-height:1.55;max-height:36dvh;overflow-y:auto}
   .history-line{color:var(--muted);font-size:12.5px;text-align:center;margin-top:14px}
+  .activity-list{display:flex;flex-direction:column;gap:0;margin-top:10px}
+  .activity-row{padding:12px 0;border-bottom:1px solid var(--line)}
+  .activity-row:last-child{border-bottom:0}
+  .activity-title{font-size:14px;line-height:1.35;color:var(--ink)}
+  .activity-meta{font-size:11.5px;color:var(--muted);margin-top:3px}
   .centered{display:block;margin:10px auto 0;text-align:center}
   .selection-summary{display:flex;align-items:center;gap:10px;padding:11px 0}
   .selection-summary .value{flex:1;font-weight:600}
@@ -246,6 +264,14 @@
   .recent-party .recent-copy{flex:1;min-width:0}
   .recent-party .recent-name{font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .recent-party .recent-meta{font-size:12.5px;color:var(--muted);display:block;margin-top:2px}
+  .access-note{border:1px solid var(--line);border-radius:11px;padding:11px 12px;
+    color:var(--muted);font-size:12.5px;line-height:1.45;margin:12px 0}
+  .access-note strong{color:var(--ink)}
+  .recovery-card{border-color:var(--coral);background:var(--coralsoft)}
+  .recovery-card .title{font-weight:700;margin-bottom:3px}
+  .read-only-badge{display:inline-flex;align-items:center;border-radius:999px;
+    background:rgba(255,255,255,.18);color:#fff;font-size:11.5px;font-weight:700;
+    padding:4px 9px;margin-bottom:7px}
 
   /* ---------- tab bar ---------- */
   nav#tabbar{
@@ -363,9 +389,15 @@
 /* ================= state ================= */
 const STORAGE_KEY = 'a-pachas-v2';
 const RECENT_PARTIES_KEY = 'a-pachas-recent-v1';
+const PREVIOUS_PARTY_KEY = STORAGE_KEY + '-previous';
+const DELETED_PARTIES_KEY = 'a-pachas-deleted-v1';
+const DEVICE_KEY = 'a-pachas-device-v1';
 const THEME_KEY = 'a-pachas-theme';
+const SUPPORT_EMAIL = 'alex@alexdepablos.com';
 const API = '/api';
 const STATE_VERSION = 6;
+const LOCAL_RETENTION_MS = 90 * 24 * 3600 * 1000;
+const PREVIOUS_RETENTION_MS = 7 * 24 * 3600 * 1000;
 const now = () => Date.now();
 
 // Normalize current state loaded from localStorage, AP2 links, or the server.
@@ -373,6 +405,9 @@ const now = () => Date.now();
 // a poisoned state cannot smuggle a weird ID into HTML.
 const ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const PARTY_ID_RE = /^[abcdefghjkmnpqrstuvwxyz23456789]{10}$/i;
+const WRITE_KEY_RE = /^[abcdefghjkmnpqrstuvwxyz23456789]{14}$/i;
+const OWNER_KEY_RE = /^[abcdefghjkmnpqrstuvwxyz23456789]{24}$/i;
 function stableEntityId(prefix, text){
   let first = 2166136261, second = 3335557771;
   for(let i=0; i<text.length; i++){
@@ -396,6 +431,22 @@ function migrateLegacyTransfers(settled, people){
     const at = Number(value.at) || 0;
     return [{id:legacyTransferId(key,value), fromId, toId, cents:value.cents,
       createdAt:at, createdBy:value.by || null, updatedAt:at, updatedBy:null}];
+  });
+}
+function normalizeAudit(value){
+  if(!Array.isArray(value)) return [];
+  return value.slice(-200).flatMap(event => {
+    if(!event || !ID_RE.test(event.id || '') || typeof event.action !== 'string' ||
+       !Number.isInteger(event.rev) || typeof event.at !== 'string') return [];
+    const changes = Array.isArray(event.changes) ? event.changes.slice(0,12).flatMap(change =>
+      change && typeof change.field === 'string'
+        ? [{field:change.field, before:change.before ?? null, after:change.after ?? null}] : []) : [];
+    return [{id:event.id, action:event.action, rev:event.rev, at:event.at,
+      ...(ID_RE.test(event.entityId || '') ? {entityId:event.entityId} : {}),
+      ...(ID_RE.test(event.actorId || '') ? {actorId:event.actorId} : {}),
+      ...(typeof event.deviceRef === 'string' ? {deviceRef:event.deviceRef.slice(0,16)} : {}),
+      ...(typeof event.label === 'string' ? {label:event.label.slice(0,80)} : {}),
+      changes}];
   });
 }
 function migrateState(o){
@@ -445,6 +496,7 @@ function migrateState(o){
     if(!l.at) l.at = 0;
     if(l.seenAt == null) l.seenAt = l.at;
   });
+  o.audit = normalizeAudit(o.audit);
   return o;
 }
 
@@ -479,13 +531,56 @@ function demoState(){
 
 let S = null;
 let openingParty = false;
+let deviceId = null;
+
+function currentDeviceId(){
+  if(deviceId) return deviceId;
+  try {
+    const stored = localStorage.getItem(DEVICE_KEY);
+    if(stored && /^[A-Za-z0-9_-]{16,64}$/.test(stored)){ deviceId = stored; return deviceId; }
+  } catch(e){}
+  try {
+    const bytes = new Uint8Array(16); crypto.getRandomValues(bytes);
+    deviceId = 'd' + [...bytes].map(byte=>byte.toString(16).padStart(2,'0')).join('');
+  } catch(e){
+    deviceId = 'd' + Array.from({length:4},()=>Math.random().toString(36).slice(2,10)).join('');
+  }
+  try { localStorage.setItem(DEVICE_KEY,deviceId); } catch(e){}
+  return deviceId;
+}
+
+function purgeExpiredPreviousParty(){
+  try {
+    const raw = localStorage.getItem(PREVIOUS_PARTY_KEY);
+    if(!raw) return;
+    const backup = JSON.parse(raw);
+    if(!backup || !Number.isFinite(backup.savedAt) || now()-backup.savedAt>PREVIOUS_RETENTION_MS){
+      localStorage.removeItem(PREVIOUS_PARTY_KEY);
+    }
+  } catch(e){
+    try { localStorage.removeItem(PREVIOUS_PARTY_KEY); } catch(ignore){}
+  }
+}
+
+purgeExpiredPreviousParty();
 try {
   S = JSON.parse(localStorage.getItem(STORAGE_KEY));
-  if(S) migrateState(S);
+  if(S && Number.isFinite(S.localSavedAt) && now()-S.localSavedAt>LOCAL_RETENTION_MS){
+    localStorage.removeItem(STORAGE_KEY); S = null;
+  }
+  if(S){
+    migrateState(S);
+    S.localSavedAt = now();
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(S));
+  }
   if(S && !['party','list','group','accounts'].includes(S.tab)) S.tab = 'party';
-} catch(e){ S = null; }
+} catch(e){
+  S = null;
+  try { localStorage.removeItem(STORAGE_KEY); } catch(ignore){}
+}
 
 function saveLocal(){
+  if(S) S.localSavedAt = now();
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); }catch(e){}
   rememberCurrentParty();
 }
@@ -494,14 +589,32 @@ function loadRecentParties(){
   try {
     const value = JSON.parse(localStorage.getItem(RECENT_PARTIES_KEY));
     if(!Array.isArray(value)) return [];
-    return value.filter(x => x && ID_RE.test(x.id) && ID_RE.test(x.key)).slice(0,5);
+    const recent = value.flatMap(x => {
+      if(!x || !PARTY_ID_RE.test(x.id || '') ||
+         !Number.isFinite(x.lastOpenedAt) || now()-x.lastOpenedAt>LOCAL_RETENTION_MS) return [];
+      const key = WRITE_KEY_RE.test(x.key || '') ? x.key : null;
+      if(!key && x.readOnly !== true) return [];
+      return [{id:x.id, key, readOnly:!key,
+        ...(OWNER_KEY_RE.test(x.ownerKey || '') ? {ownerKey:x.ownerKey} : {}),
+        name:typeof x.name === 'string' ? x.name.slice(0,80) : 'Fiesta',
+        date:DATE_RE.test(x.date || '') ? x.date : null,
+        lastOpenedAt:x.lastOpenedAt}];
+    }).slice(0,5);
+    if(recent.length !== value.length) localStorage.setItem(RECENT_PARTIES_KEY,JSON.stringify(recent));
+    return recent;
   } catch(e){ return []; }
 }
 function rememberCurrentParty(){
   if(!S || !S.remote || S.party.demo) return;
   try {
-    const recent = loadRecentParties().filter(x => x.id !== S.remote.id);
-    recent.unshift({id:S.remote.id, key:S.remote.key, name:S.party.name,
+    const stored = loadRecentParties();
+    const previous = stored.find(x => x.id === S.remote.id);
+    const key = WRITE_KEY_RE.test(S.remote.key || '') ? S.remote.key : (previous && previous.key);
+    const ownerKey = OWNER_KEY_RE.test(S.remote.ownerKey || '')
+      ? S.remote.ownerKey : (previous && previous.ownerKey);
+    const recent = stored.filter(x => x.id !== S.remote.id);
+    recent.unshift({id:S.remote.id, key:key || null, readOnly:!key,
+      ...(ownerKey ? {ownerKey} : {}), name:S.party.name,
       date:S.party.date || null, lastOpenedAt:now()});
     localStorage.setItem(RECENT_PARTIES_KEY, JSON.stringify(recent.slice(0,5)));
   } catch(e){}
@@ -510,6 +623,36 @@ function forgetRecentParty(id){
   try {
     const recent = loadRecentParties().filter(party=>party.id!==id);
     localStorage.setItem(RECENT_PARTIES_KEY,JSON.stringify(recent));
+  } catch(e){}
+}
+
+function loadDeletedParties(){
+  try {
+    const value = JSON.parse(localStorage.getItem(DELETED_PARTIES_KEY));
+    if(!Array.isArray(value)) return [];
+    const deleted = value.flatMap(entry => {
+      if(!entry || !PARTY_ID_RE.test(entry.id || '') || !WRITE_KEY_RE.test(entry.key || '') ||
+         !OWNER_KEY_RE.test(entry.ownerKey || '') || !Number.isFinite(entry.purgeAt) ||
+         entry.purgeAt <= now()) return [];
+      return [{id:entry.id, key:entry.key, ownerKey:entry.ownerKey,
+        name:typeof entry.name === 'string' ? entry.name.slice(0,80) : 'Fiesta borrada',
+        purgeAt:entry.purgeAt}];
+    }).slice(0,3);
+    if(deleted.length !== value.length) localStorage.setItem(DELETED_PARTIES_KEY,JSON.stringify(deleted));
+    return deleted;
+  } catch(e){ return []; }
+}
+function rememberDeletedParty(entry){
+  try {
+    const deleted = loadDeletedParties().filter(item=>item.id!==entry.id);
+    deleted.unshift(entry);
+    localStorage.setItem(DELETED_PARTIES_KEY,JSON.stringify(deleted.slice(0,3)));
+  } catch(e){}
+}
+function forgetDeletedParty(id){
+  try {
+    const deleted = loadDeletedParties().filter(entry=>entry.id!==id);
+    localStorage.setItem(DELETED_PARTIES_KEY,JSON.stringify(deleted));
   } catch(e){}
 }
 
@@ -636,11 +779,19 @@ function transferCompletionId(fromId, toId, cents){
 // underneath it: close, repaint the truth, and notify consistently.
 function abortSheet(msg){ closeSheet(); render(); toast(msg); }
 function requireAdmin(){
+  if(isReadOnlyParty()){
+    abortSheet('Este enlace es solo para mirar.');
+    return false;
+  }
   if(isAdmin()) return true;
   abortSheet('La llave ya no es tuya: eso no te toca.');
   return false;
 }
 function requireActivePerson(){
+  if(isReadOnlyParty()){
+    toast('Este enlace es solo para mirar.');
+    return false;
+  }
   const person = personById(S && S.me);
   if(!person){ identitySheet(true); return false; }
   if(!person.active){ toast('Ya no sales en gastos nuevos. La llave puede volverte a meter.'); return false; }
@@ -670,6 +821,16 @@ function timeAgo(t){
   return `hace ${Math.round(s/86400)} día${Math.round(s/86400)===1?'':'s'}`;
 }
 
+function timeUntil(t){
+  if(!t) return 'dentro de poco';
+  const s = Math.max(0, Math.round((t - now()) / 1000));
+  if(s < 45) return 'en un momento';
+  if(s < 3600) return `dentro de ${Math.round(s/60)} min`;
+  if(s < 86400) return `dentro de ${Math.round(s/3600)} h`;
+  const days = Math.round(s/86400);
+  return `dentro de ${days} día${days===1?'':'s'}`;
+}
+
 const avatarHtml = (id, mini) => {
   const p = personById(id); if(!p) return '';
   return `<span class="avatar ${mini?'mini':''}">${escapeHtml(initial(p.name))}</span>`;
@@ -695,9 +856,10 @@ async function copyToClipboard(txt){
 }
 
 /* ================= links ================= */
-// Live link: #F:<id>:<key>. It intentionally lives in the hash so neither nginx
-// nor Cloudflare sees the write key. AP2 full-state links are local backups.
-const LIVE_LINK_RE = /F:([a-z0-9]{6,}):([a-z0-9]{6,})/i;
+// Edit links keep the write key in the hash; read-only links carry only the
+// unguessable party ID. AP2 full-state links remain local recovery copies.
+const EDIT_LINK_RE = /(?:^|[#\s])F:([abcdefghjkmnpqrstuvwxyz23456789]{10}):([abcdefghjkmnpqrstuvwxyz23456789]{14})(?=$|[\s)>,])/i;
+const READ_LINK_RE = /(?:^|[#\s])R:([abcdefghjkmnpqrstuvwxyz23456789]{10})(?=$|[\s)>,])/i;
 
 function partyCode(){
   // Whitelist through sharedFrom, which defines shared state. A new local
@@ -708,9 +870,16 @@ function partyCode(){
     .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   return 'AP2:' + b64;
 }
-function partyLink(){
-  if(S.remote) return location.origin + location.pathname + '#F:' + S.remote.id + ':' + S.remote.key;
+function writePartyLink(){
+  if(S.remote && WRITE_KEY_RE.test(S.remote.key || '')){
+    return location.origin + location.pathname + '#F:' + S.remote.id + ':' + S.remote.key;
+  }
   return location.origin + location.pathname + '#' + partyCode();
+}
+function readOnlyPartyLink(){
+  if(S.remote) return location.origin + location.pathname + '#R:' + S.remote.id;
+  if(S.localReadOnly) return '';
+  return writePartyLink();
 }
 function decodeSnapshot(text){
   const m = String(text).match(/AP2:([A-Za-z0-9_-]+)/);
@@ -728,7 +897,7 @@ function decodeSnapshot(text){
 // Live parties still live on the server anyway.
 function backupCurrentParty(){
   if(S && !S.party.demo && (S.items.length || S.people.length > 1)){
-    try{ localStorage.setItem(STORAGE_KEY + '-previous', JSON.stringify(S)); }catch(e){}
+    try{ localStorage.setItem(PREVIOUS_PARTY_KEY, JSON.stringify({savedAt:now(),state:S})); }catch(e){}
   }
 }
 function applyImported(obj){
@@ -737,10 +906,16 @@ function applyImported(obj){
   S = obj; saveLocal(); render(); identitySheet(true);
 }
 function importParty(text){
-  const mv = String(text).match(LIVE_LINK_RE);
-  if(mv){
+  const edit = String(text).match(EDIT_LINK_RE);
+  if(edit){
     closeSheet();
-    openLiveLink(mv[1].toLowerCase(), mv[2].toLowerCase());
+    openLiveLink(edit[1].toLowerCase(), edit[2].toLowerCase());
+    return true;
+  }
+  const read = String(text).match(READ_LINK_RE);
+  if(read){
+    closeSheet();
+    openLiveLink(read[1].toLowerCase(), null);
     return true;
   }
   const obj = decodeSnapshot(text);
@@ -770,6 +945,59 @@ const sync = {
   rejected: false,   // Server rejected state (400/413): do not retry blindly.
 };
 
+function clientRouteName(method, route){
+  if(route === '/parties') return 'parties.create';
+  if(route.endsWith('/restore')) return 'parties.restore';
+  if(route.startsWith('/parties/')){
+    if(method === 'GET') return 'parties.read';
+    if(method === 'DELETE') return 'parties.delete';
+    return 'parties.update';
+  }
+  return 'client';
+}
+
+const clientEventQueue = [];
+let sendingClientEvents = false;
+
+async function flushClientEvents(){
+  if(sendingClientEvents || !clientEventQueue.length) return;
+  sendingClientEvents = true;
+  const batch = clientEventQueue.slice(0,10);
+  try {
+    const response = await fetch(API + '/events', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({events:batch}), cache:'no-store', keepalive:true,
+    });
+    if(response.ok) clientEventQueue.splice(0,batch.length);
+  } catch(e){}
+  finally { sendingClientEvents = false; }
+}
+
+function reportClientEvent(code, details){
+  details = details || {};
+  const event = {
+    code,
+    route:details.route || 'client',
+    deviceId:currentDeviceId(),
+    ...(S && S.remote ? {partyId:S.remote.id} : {}),
+    ...(Number.isInteger(details.status) ? {status:details.status} : {}),
+    ...(details.requestId ? {requestId:details.requestId} : {}),
+    ...(details.errorType ? {errorType:String(details.errorType).replace(/[^A-Za-z]/g,'').slice(0,40)} : {}),
+  };
+  clientEventQueue.push(event);
+  if(clientEventQueue.length > 20) clientEventQueue.splice(0,clientEventQueue.length-20);
+  flushClientEvents();
+}
+
+const reportedUsageEvents = new Set();
+function reportUsageEvent(code){
+  const partyId = S && S.remote ? S.remote.id : 'local';
+  const key = `${code}:${partyId}`;
+  if(reportedUsageEvents.has(key)) return;
+  reportedUsageEvents.add(key);
+  reportClientEvent(code,{route:'client'});
+}
+
 async function apiRequest(method, route, body){
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), 8000);
@@ -783,7 +1011,13 @@ async function apiRequest(method, route, body){
     });
     let data = null;
     try { data = await r.json(); } catch(e){}
-    return {status: r.status, body: data};
+    flushClientEvents();
+    return {status: r.status, body: data, requestId:r.headers.get('X-Request-ID')};
+  } catch(e){
+    reportClientEvent(e && e.name === 'AbortError' ? 'sync.timeout' : 'sync.network_error', {
+      route:clientRouteName(method,route), errorType:e && e.name,
+    });
+    throw e;
   } finally { clearTimeout(t); }
 }
 
@@ -798,10 +1032,15 @@ const stateJson = () => JSON.stringify(sharedState());
 // A real (non-demo) party with a server-backed remote. Does not imply sync is
 // currently succeeding; see isLiveSyncing for that.
 function isRemoteParty(){ return !!(S && S.remote && !S.party.demo); }
+function canEditParty(){
+  return !!S && !S.localReadOnly &&
+    (!isRemoteParty() || WRITE_KEY_RE.test(S.remote.key || ''));
+}
+function isReadOnlyParty(){ return !!S && !canEditParty(); }
 // Genuinely live right now: remote, not a demo, and not currently offline or rejected.
 function isLiveSyncing(){ return isRemoteParty() && !sync.markOffline && !sync.rejected; }
 // Local-only party that could still be switched on.
-function canGoLive(){ return !S.remote && !S.party.demo; }
+function canGoLive(){ return !S.remote && !S.party.demo && !isReadOnlyParty(); }
 
 // Entity merge: latest edit wins by `mod`, and the tombstone list prevents
 // deleted entities from coming back. A tombstone only buries an entity if it is
@@ -917,13 +1156,20 @@ function markOffline(){
   sync.markOffline = true;
   if(!sync.offlineNotified && S && S.remote){
     sync.offlineNotified = true;
-    toast('Sin red. Conéctate para cambiar la fiesta.');
+    toast(isReadOnlyParty()
+      ? 'Sin red. Ves la última copia guardada en este móvil.'
+      : 'Sin red. Conéctate para cambiar la fiesta.');
   }
   refreshSync();
 }
 function syncText(){
   if(!S) return '';
   if(S.party.demo) return 'Fiesta de ejemplo · solo en este móvil';
+  if(isReadOnlyParty()){
+    if(!S.remote || sync.markOffline) return 'Solo lectura · última copia de este móvil';
+    if(!sync.lastSeenAt) return 'Solo lectura · abriendo la fiesta…';
+    return 'Solo lectura · al día ' + timeAgo(sync.lastSeenAt);
+  }
   if(!S.remote) return 'Solo en este móvil';
   if(sync.rejected) return 'En vivo · no se pueden guardar cambios ahora';
   if(sync.markOffline) return 'Sin red · conecta para cambiar la fiesta';
@@ -958,7 +1204,7 @@ function scheduleUpload(){
 }
 
 async function upload(){
-  if(!S || !S.remote || S.party.demo || sync.rejected) return;
+  if(!S || !S.remote || S.party.demo || isReadOnlyParty() || sync.rejected) return;
   // Without a server baseline and without truly pending changes, a PUT would be
   // blind churn. Let the first poll seed sync.uploadedJson first.
   if(sync.uploadedJson === null && !S.pendingUpload) return;
@@ -976,11 +1222,13 @@ async function upload(){
         break;
       }
       const r = await apiRequest('PUT', '/parties/' + requestedPartyId,
-        {key: S.remote.key, rev: S.remote.rev, state});
+        {key: S.remote.key, rev: S.remote.rev, state,
+          actorId:S.me || null, deviceId:currentDeviceId()});
       // If the party changed during the request, this response is irrelevant.
       if(!S || !S.remote || S.remote.id !== requestedPartyId) break;
       if(r.status === 200){
         S.remote.rev = r.body.rev; sync.uploadedJson = json;
+        S.audit = normalizeAudit(r.body.audit);
         const current = stateJson();
         if(json === current) S.pendingUpload = false;
         saveLocal(); markOnline();
@@ -989,14 +1237,24 @@ async function upload(){
         // Merge against the CURRENT shared state, not the pre-PUT snapshot. Edits
         // made while the request was in flight must not be lost.
         adoptSharedState(mergeStates(migrateState(r.body.state), sharedState()));
+        S.audit = normalizeAudit(r.body.audit);
         S.remote.rev = r.body.rev;
         saveLocal();
         renderNowOrLater();
         // The next loop uploads the merged state.
+        if(attempt === 3) reportClientEvent('sync.conflict_exhausted', {
+          route:'parties.update', status:409, requestId:r.requestId,
+        });
       } else if(r.status === 404){
+        reportClientEvent('sync.party_missing', {
+          route:'parties.update', status:404, requestId:r.requestId,
+        });
         disconnectRemote('Esa fiesta ya no está en vivo. Sigues con la copia de tu móvil.');
         break;
       } else if(r.status === 403){
+        reportClientEvent('sync.access_lost', {
+          route:'parties.update', status:403, requestId:r.requestId,
+        });
         disconnectRemote('Este enlace ya no puede editar la fiesta. Sigues con la copia de tu móvil.');
         break;
       } else if(r.status === 429){
@@ -1005,6 +1263,9 @@ async function upload(){
         // The server rejects this state, likely shape or size. This is not a
         // network issue, and blind retries will not fix it.
         sync.rejected = true;
+        reportClientEvent('sync.rejected', {
+          route:'parties.update', status:r.status, requestId:r.requestId,
+        });
         toast('No se ha podido guardar ese cambio.');
         refreshSync();
         break;
@@ -1038,10 +1299,12 @@ async function download(){
       if(!(r.body.rev > S.remote.rev)){ markOnline(); return; }
       const beforeJson = stateJson();
       const remoteState = migrateState(r.body.state);
-      adoptSharedState(mergeStates(remoteState, sharedState()));
+      const readOnly = isReadOnlyParty();
+      adoptSharedState(readOnly ? remoteState : mergeStates(remoteState, sharedState()));
+      S.audit = normalizeAudit(r.body.audit);
       S.remote.rev = r.body.rev;
       const afterJson = stateJson();
-      if(afterJson === JSON.stringify(sharedFrom(remoteState))){
+      if(readOnly || afterJson === JSON.stringify(sharedFrom(remoteState))){
         sync.uploadedJson = afterJson;
         S.pendingUpload = false;
       } else {
@@ -1051,8 +1314,14 @@ async function download(){
       markOnline();
       saveLocal();
       if(afterJson !== beforeJson) renderNowOrLater();
-    } else if(r.status === 404){
-      disconnectRemote('Esa fiesta ya no está en vivo. Sigues con la copia de tu móvil.');
+    } else if(r.status === 404 || r.status === 410){
+      reportClientEvent('sync.party_missing', {
+        route:'parties.read', status:r.status, requestId:r.requestId,
+      });
+      forgetRecentParty(requestedPartyId);
+      disconnectRemote(r.status === 410
+        ? 'Esa fiesta está borrada. Quien la creó todavía puede recuperarla.'
+        : 'Esa fiesta ya no está en vivo. Sigues con la copia de tu móvil.');
     } else if(r.status === 429 || r.status >= 500){
       markOffline(); // Saturation or outage: same honest treatment as no coverage.
     }
@@ -1072,11 +1341,13 @@ async function createRemote(){
   const state = sharedState();
   const json = JSON.stringify(state); // Snapshot of what we actually send.
   try {
-    const r = await apiRequest('POST', '/parties', {state});
+    const r = await apiRequest('POST', '/parties', {state,
+      actorId:S.me || null, deviceId:currentDeviceId()});
     if(S !== localParty) return false;
     if(r.status === 201 && r.body && r.body.id){
       resetSync();
-      S.remote = {id: r.body.id, key: r.body.key, rev: r.body.rev};
+      S.remote = {id:r.body.id, key:r.body.key, ownerKey:r.body.ownerKey, rev:r.body.rev};
+      S.audit = normalizeAudit(r.body.audit);
       sync.uploadedJson = json;
       // Upload edits made while the POST was in flight.
       const current = stateJson();
@@ -1085,13 +1356,19 @@ async function createRemote(){
       saveLocal(); markOnline();
       return true;
     }
+    if(r.status === 400 || r.status === 413) reportClientEvent('sync.rejected', {
+      route:'parties.create', status:r.status, requestId:r.requestId,
+    });
   } catch(e){}
   finally { creatingRemote = false; }
   return false;
 }
 
 function disconnectRemote(msg){
+  const wasReadOnly = isReadOnlyParty();
+  S.disconnectedRemoteId = S.remote && S.remote.id;
   S.remote = null;
+  if(wasReadOnly) S.localReadOnly = true;
   resetSync();
   saveLocal(); toast(msg);
   renderNowOrLater();
@@ -1114,7 +1391,7 @@ function toastCommitMessage(message){
 }
 
 async function syncBeforeSharedChange(){
-  if(!S || !S.remote) return false;
+  if(!S || !S.remote || isReadOnlyParty()) return false;
   const partyId = S.remote.id;
   clearTimeout(sync.timer);
   await download();
@@ -1136,6 +1413,10 @@ async function commitSharedChange(mutator, options){
 
 async function commitSharedChangeNow(mutator, options){
   options = options || {};
+  if(isReadOnlyParty()){
+    toast('Este enlace es solo para mirar.');
+    return false;
+  }
   if(S.party.demo){
     mutator();
     saveLocal();
@@ -1189,6 +1470,7 @@ async function commitSharedChangeNow(mutator, options){
 }
 
 async function enableLive(){
+  if(isReadOnlyParty()) return toast('Este enlace es solo para mirar.');
   if(S.remote) return shareSheet('invite');
   if(creatingRemote) return; // Already in progress, likely a double tap.
   const btn = $('#enableLiveButton');
@@ -1208,28 +1490,34 @@ async function openLiveLink(id, key){
   if(S !== openParty) return false;
   if(r.status !== 200 || !r.body || !r.body.state){
     openingParty = false;
-    if(r.status === 404) forgetRecentParty(id);
-    toast(r.status === 404
-      ? 'Ese enlace ya no lleva a ninguna fiesta.'
+    if(r.status === 404 || r.status === 410) forgetRecentParty(id);
+    toast(r.status === 404 ? 'Ese enlace ya no lleva a ninguna fiesta.'
+      : r.status === 410 ? 'Esa fiesta está borrada. Quien la creó todavía puede recuperarla.'
       : 'No se ha podido abrir la fiesta del enlace. ¿Hay red?');
     render();
     return false;
   }
   const remoteState = migrateState(r.body.state);
   const isSameParty = S && S.remote && S.remote.id === id;
-  if(!isSameParty) backupCurrentParty();
+  const readOnly = !WRITE_KEY_RE.test(key || '');
+  if(!isSameParty || readOnly) backupCurrentParty();
   const me = isSameParty ? S.me : null;
-  // If this is already the open party, merge pending local state instead of
-  // overwriting it.
-  const base = isSameParty ? mergeStates(remoteState, sharedState()) : remoteState;
+  const recent = loadRecentParties().find(party=>party.id===id);
+  const ownerKey = isSameParty && OWNER_KEY_RE.test(S.remote.ownerKey || '')
+    ? S.remote.ownerKey : (recent && recent.ownerKey);
+  // Explicit read-only links always show the server truth. Edit links may merge
+  // pending changes when reopening the same party.
+  const base = isSameParty && !readOnly ? mergeStates(remoteState, sharedState()) : remoteState;
   resetSync();
   openingParty = false;
-  S = {...base, me, tab:'party', remote:{id, key, rev:r.body.rev}};
+  S = {...base, me, tab:'party', remote:{id, key:readOnly?null:key,
+      ...(ownerKey ? {ownerKey} : {}), rev:r.body.rev},
+    audit:normalizeAudit(r.body.audit)};
   // The opener may have been removed from the group; do not let them act as a
   // ghost participant.
   if(S.me && !personById(S.me)) S.me = null;
   const json = stateJson();
-  if(json === JSON.stringify(sharedFrom(remoteState))){
+  if(readOnly || json === JSON.stringify(sharedFrom(remoteState))){
     sync.uploadedJson = json;
     S.pendingUpload = false;
   } else {
@@ -1238,6 +1526,7 @@ async function openLiveLink(id, key){
     scheduleUpload();
   }
   saveLocal(); markOnline(); render();
+  reportUsageEvent(readOnly ? 'usage.party_opened_read' : 'usage.party_opened_write');
   if(!S.me) identitySheet(true);
   return true;
 }
@@ -1369,21 +1658,26 @@ function duplicateIdentitySheet(existing, typedName){
   $('#differentPersonButton').onclick = () => identitySheet(true, typedName);
 }
 function identitySheet(forced, suggestedName){
+  const readOnly = isReadOnlyParty();
   const people = [...S.people].sort((a,b)=>Number(b.active)-Number(a.active));
   const pills = people.map(p =>
     personPill(p, 'who', 'pill-primary ' + (p.id===S.me?'on':''))).join('');
   openSheet(`
     <h2 class="sheet-title">¿Quién eres?</h2>
-    <p class="sheet-sub">Estás en «${escapeHtml(S.party.name)}». Di quién eres o apúntate.</p>
+    <p class="sheet-sub">Estás en «${escapeHtml(S.party.name)}». ${readOnly
+      ? 'Elige tu nombre si quieres ver tu cuenta.' : 'Di quién eres o apúntate.'}</p>
+    <div class="access-note"><strong>${readOnly ? 'Has entrado para mirar.' : 'Este enlace permite cambiar la fiesta.'}</strong><br>${readOnly
+      ? 'Puedes consultar las cuentas, pero no guardar cambios.'
+      : 'Cada móvil elige un nombre y A Pachas no comprueba la identidad. Mándalo solo a la peña.'}</div>
     <div class="pills">${pills}</div>
-    <label class="label" for="newNameInput">O apúntate</label>
-    <div class="add-row">
-      <input type="text" id="newNameInput" placeholder="Tu nombre" maxlength="20" autocomplete="off">
-      <button class="btn btn-primary" id="joinButton" type="button">Entrar</button>
-    </div>
+    ${readOnly ? '' : `<label class="label" for="newNameInput">O apúntate</label>
+      <div class="add-row">
+        <input type="text" id="newNameInput" placeholder="Tu nombre" maxlength="20" autocomplete="off">
+        <button class="btn btn-primary" id="joinButton" type="button">Entrar</button>
+      </div>`}
     ${forced && !S.me ? '<button class="quiet-link centered" id="lookOnlyButton" type="button">Solo quiero mirar</button>' : ''}
   `);
-  if(suggestedName){ $('#newNameInput').value = suggestedName; $('#newNameInput').select(); }
+  if(suggestedName && $('#newNameInput')){ $('#newNameInput').value = suggestedName; $('#newNameInput').select(); }
   document.querySelectorAll('[data-who]').forEach(b => b.onclick = () => {
     const p = personById(b.dataset.who);
     if(!p) return; // Removed while the sheet was open.
@@ -1392,14 +1686,14 @@ function identitySheet(forced, suggestedName){
   });
   const lookOnly = $('#lookOnlyButton');
   if(lookOnly) lookOnly.onclick = closeSheet;
-  $('#joinButton').onclick = async () => {
+  const joinButton = $('#joinButton');
+  if(joinButton) joinButton.onclick = async () => {
     const n = $('#newNameInput').value.trim();
     if(!n) return toast('Escribe tu nombre, que la lista no adivina.');
     const existing = personByName(n);
     if(existing) return duplicateIdentitySheet(existing,n);
     if(S.people.length >= 100) return toast('La peña no da pa más (100). Menuda fiesta.');
-    const button = $('#joinButton');
-    await withBusyButton(button,'Entrando…',() => commitSharedChange(() => {
+    await withBusyButton(joinButton,'Entrando…',() => commitSharedChange(() => {
       if(personByName(n)) throw new Error('duplicate_name');
       const p = touch({id:newId('p'), name:n, admin:false, active:true});
       S.people.push(p); S.me = p.id;
@@ -1412,6 +1706,7 @@ function identitySheet(forced, suggestedName){
 
 /* --- expense: direct, mark bought, or edit in one sheet --- */
 function expenseSheet(itemId){
+  if(isReadOnlyParty()) return toast('Este enlace es solo para mirar.');
   const it = itemId ? itemById(itemId) : null;
   if(itemId && !it){ render(); return toast('Esa ya no está en la lista.'); }
   const direct = !it;
@@ -1633,6 +1928,7 @@ function expenseSheet(itemId){
 
 /* --- assign, admins only --- */
 function assignSheet(itemId){
+  if(!requireAdmin()) return;
   const it = S.items.find(x=>x.id===itemId); if(!it) return;
   const pills = activePeople().map(p =>
     personPill(p, 'assign-person', 'pill-primary ' + (it.claimerId===p.id?'on':''))).join('');
@@ -1672,6 +1968,7 @@ function assignSheet(itemId){
 
 /* --- person detail --- */
 function renamePersonSheet(pid){
+  if(isReadOnlyParty()) return toast('Este enlace es solo para mirar.');
   const p = personById(pid); if(!p) return abortSheet('Esa persona ya no está en la peña.');
   if(pid !== S.me && !requireAdmin()) return;
   openSheet(`
@@ -1725,8 +2022,8 @@ function personSheet(pid){
   const assignedItems = S.items.filter(i=>i.status==='claimed' && i.claimerId===pid);
   const purchases = S.items.filter(i=>i.status==='bought' && i.payerId===pid);
   const isMe = pid === S.me;
-  const canManage = isAdmin() && !isMe;
-  const canRename = isMe || isAdmin();
+  const canManage = !isReadOnlyParty() && isAdmin() && !isMe;
+  const canRename = !isReadOnlyParty() && (isMe || isAdmin());
 
   const assignedList = assignedItems.length
     ? assignedItems.map(i=>`<li>${escapeHtml(i.name)}</li>`).join('')
@@ -1741,7 +2038,7 @@ function personSheet(pid){
       le tocaba ${eur(c.owes[pid]||0)} · ${balanceText}.</p>
     <span class="label">Le toca traer</span>
     <ul style="margin:0 0 6px;padding-left:20px;font-size:14px;line-height:1.7">${assignedList}</ul>
-    ${!isMe ? `<button class="btn btn-outline btn-mini" id="remindButton" type="button" style="margin-top:6px">Mandarle un recordatorio</button>` : ''}
+    ${!S.localReadOnly && !isMe ? `<button class="btn btn-outline btn-mini" id="remindButton" type="button" style="margin-top:6px">Mandarle un recordatorio</button>` : ''}
     ${canRename ? `
       <span class="label">Nombre</span>
       <button class="menu-option" id="renamePersonButton" type="button">
@@ -1857,12 +2154,17 @@ function personSheet(pid){
 }
 
 /* --- share with the group: moment-specific messages --- */
+function shareUsesReadOnlyLink(shareType){
+  return shareType === 'accounts' || isReadOnlyParty();
+}
+
 function shareMessage(shareType, pid){
-  const link = partyLink();
+  const link = shareUsesReadOnlyLink(shareType) ? readOnlyPartyLink() : writePartyLink();
   const n = S.party.name;
   if(shareType === 'invite'){
     return `A pachas con los gastos de «${n}».\n` +
-      `Entra, di quién eres y apunta lo que pilles:\n${link}`;
+      `Entra, di quién eres y apunta lo que pilles:\n${link}\n\n` +
+      'Quien tenga este enlace puede ver y cambiar la fiesta. Mándalo solo a la peña.';
   }
   if(shareType === 'list'){
     const pendingItems = S.items.filter(isUnownedItem);
@@ -1886,7 +2188,7 @@ function shareMessage(shareType, pid){
       c.bizums.forEach(b => lines.push(
         '· ' + personById(b.fromId).name + ' → ' + personById(b.toId).name + ': ' + eur(b.cents)));
       lines.push('');
-      lines.push('Marca el tuyo cuando lo hagas:');
+      lines.push('Consulta aquí cómo van las cuentas:');
     }
     lines.push(link);
     return lines.join('\n');
@@ -1922,6 +2224,13 @@ function shareMessage(shareType, pid){
 }
 
 async function shareSheet(shareType, pid){
+  if(isReadOnlyParty() && !['accounts','person'].includes(shareType)) shareType = 'accounts';
+  if(S.localReadOnly && !S.remote){
+    return toast('Esta es una copia guardada para mirar. Ya no se puede compartir en vivo.');
+  }
+  const readOnlyShare = shareUsesReadOnlyLink(shareType);
+  const reportShareIntent = () => reportUsageEvent(readOnlyShare
+    ? 'usage.accounts_share_intent' : 'usage.invite_share_intent');
   // The demoState is not shareable: its demoState flag would leave the receiver with a
   // party that can never go live.
   if(S.party.demo) return toast('La fiesta de ejemplo no se comparte: monta la tuya, que es un momento.');
@@ -1978,6 +2287,9 @@ async function shareSheet(shareType, pid){
     <h2 class="sheet-title">Mandar al grupo</h2>
     <p class="sheet-sub">Así queda el mensaje:</p>
     <div class="preview">${escapeHtml(txt)}</div>
+    ${readOnlyShare
+      ? '<div class="access-note"><strong>Enlace solo para mirar.</strong><br>Sirve para consultar estas cuentas sin cambiar la fiesta.</div>'
+      : '<div class="access-note"><strong>Enlace para editar.</strong><br>Quien lo tenga puede elegir cualquier nombre y cambiar la fiesta.</div>'}
     <div class="sheet-actions">
       <button class="btn btn-outline" id="copyMessageButton" type="button">Copiar</button>
       <button class="btn btn-green" id="whatsappMessageButton" type="button">WhatsApp</button>
@@ -1987,15 +2299,23 @@ async function shareSheet(shareType, pid){
   $('#copyMessageButton').onclick = async () => {
     const ok = await copyToClipboard(txt);
     toast(ok ? 'Copiado. Pégalo en el grupo.' : 'No se ha podido copiar');
-    if(ok) closeSheet();
+    if(ok){
+      reportShareIntent();
+      closeSheet();
+    }
   };
   $('#whatsappMessageButton').onclick = () => {
+    reportShareIntent();
     window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank', 'noopener');
     closeSheet();
   };
   const alternateApp = $('#alternateAppButton');
   if(alternateApp) alternateApp.onclick = async () => {
-    try { await navigator.share({text: txt}); closeSheet(); } catch(e){}
+    try {
+      await navigator.share({text: txt});
+      reportShareIntent();
+      closeSheet();
+    } catch(e){}
   };
 }
 
@@ -2077,6 +2397,7 @@ function createPartySheet(templateItems){
 }
 
 function renameSheet(){
+  if(!requireAdmin()) return;
   openSheet(`
     <h2 class="sheet-title">Nombre y fecha</h2>
     <div class="field" style="margin-top:14px">
@@ -2132,12 +2453,235 @@ function confirmSheet(title, message, action){
   };
 }
 
+function auditChange(event, field){
+  return (event.changes || []).find(change=>change.field===field);
+}
+function auditPersonName(id){
+  const current = personById(id);
+  if(current) return current.name;
+  const historical = [...(S.audit || [])].reverse().find(event=>event.entityId===id && event.label);
+  return historical ? historical.label : 'Alguien';
+}
+function auditValueFor(event, field){
+  const change = auditChange(event,field);
+  return change ? (change.after ?? change.before) : null;
+}
+function auditDescription(event){
+  const actor = event.actorId ? auditPersonName(event.actorId) : 'Alguien';
+  const label = event.label || 'la fiesta';
+  if(event.action === 'party.created') return `${actor} creó la fiesta`;
+  if(event.action === 'party.updated') return `${actor} cambió el nombre o la fecha`;
+  if(event.action === 'person.created') return `${actor} añadió a ${label}`;
+  if(event.action === 'person.deleted') return `${actor} borró a ${label}`;
+  if(event.action === 'person.updated'){
+    const name = auditChange(event,'name');
+    const admin = auditChange(event,'admin');
+    const active = auditChange(event,'active');
+    if(active) return active.after ? `${actor} volvió a meter a ${label}` : `${actor} sacó a ${label} de futuros gastos`;
+    if(admin) return admin.after ? `${actor} dio la llave a ${label}` : `${actor} quitó la llave a ${label}`;
+    if(name) return `${actor} cambió el nombre de ${name.before || 'alguien'} a ${name.after || label}`;
+    return `${actor} cambió a ${label}`;
+  }
+  if(event.action === 'item.created'){
+    return auditValueFor(event,'status') === 'bought'
+      ? `${actor} apuntó el gasto «${label}»` : `${actor} añadió «${label}» a la lista`;
+  }
+  if(event.action === 'item.deleted') return `${actor} borró «${label}»`;
+  if(event.action === 'item.updated'){
+    const status = auditChange(event,'status');
+    if(status && status.after === 'bought') return `${actor} marcó «${label}» como comprado`;
+    if(status && status.after === 'claimed') return `${actor} se pidió «${label}»`;
+    if(status && status.after === 'pending') return `${actor} dejó «${label}» sin dueño`;
+    return `${actor} corrigió «${label}»`;
+  }
+  if(event.action.startsWith('transfer.')){
+    const fromId = auditValueFor(event,'fromId');
+    const toId = auditValueFor(event,'toId');
+    const cents = auditValueFor(event,'cents');
+    const transfer = `${fromId ? auditPersonName(fromId) : '—'} → ${toId ? auditPersonName(toId) : '—'}${Number.isInteger(cents) ? ' · ' + eur(cents) : ''}`;
+    if(event.action === 'transfer.created') return `${actor} marcó el Bizum ${transfer}`;
+    if(event.action === 'transfer.deleted') return `${actor} deshizo el Bizum ${transfer}`;
+    return `${actor} corrigió el Bizum ${transfer}`;
+  }
+  return `${actor} hizo un cambio`;
+}
+
+function activitySheet(){
+  const events = [...(S.audit || [])].reverse();
+  const rows = events.length ? events.map(event => {
+    const at = Date.parse(event.at);
+    const device = event.deviceRef ? ` · móvil ${escapeHtml(event.deviceRef.slice(-4))}` : '';
+    return `<div class="activity-row">
+      <div class="activity-title">${escapeHtml(auditDescription(event))}</div>
+      <div class="activity-meta">${Number.isFinite(at) ? timeAgo(at) : 'sin hora'}${device}</div>
+    </div>`;
+  }).join('') : '<div class="empty-state">Todavía no hay cambios guardados.</div>';
+  openSheet(`
+    <h2 class="sheet-title">Actividad reciente</h2>
+    <p class="sheet-sub">Lo que se ha guardado en la fiesta, de más nuevo a más antiguo.</p>
+    <div class="activity-list">${rows}</div>
+    <div class="footnote">El nombre es el que se eligió en cada móvil. No hay cuentas ni identidad verificada.</div>
+  `);
+}
+
+function clearCurrentPartyFromPhone(){
+  const partyId = S && ((S.remote && S.remote.id) || S.disconnectedRemoteId);
+  if(partyId) forgetRecentParty(partyId);
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(PREVIOUS_PARTY_KEY);
+  } catch(e){}
+  resetSync();
+  S = null;
+}
+
+function clearAllLocalData(){
+  try {
+    [STORAGE_KEY,PREVIOUS_PARTY_KEY,RECENT_PARTIES_KEY,DELETED_PARTIES_KEY,DEVICE_KEY]
+      .forEach(key=>localStorage.removeItem(key));
+  } catch(e){}
+  deviceId = null;
+  resetSync();
+  S = null;
+}
+
+function deletePartySheet(){
+  if(isReadOnlyParty()) return toast('Este enlace es solo para mirar.');
+  if(!S.remote || !OWNER_KEY_RE.test(S.remote.ownerKey || '')){
+    return toast('Solo el móvil que creó la fiesta puede borrarla para todos.');
+  }
+  const expectedName = S.party.name;
+  openSheet(`
+    <h2 class="sheet-title">Borrar la fiesta para todos</h2>
+    <p class="sheet-sub">La fiesta dejará de abrirse para la peña. Este móvil podrá recuperarla durante 7 días.</p>
+    <div class="access-note"><strong>Permiso del móvil creador.</strong><br>La llave organiza la peña, pero no identifica a quien la usa.</div>
+    <label class="label" for="deletePartyNameInput">Escribe ${escapeHtml(expectedName)} para confirmar</label>
+    <input type="text" id="deletePartyNameInput" autocomplete="off">
+    <div class="sheet-actions">
+      <button class="btn btn-outline" id="cancelDeletePartyButton" type="button">Cancelar</button>
+      <button class="btn btn-danger" id="confirmDeletePartyButton" type="button">Borrar para todos</button>
+    </div>
+  `);
+  $('#cancelDeletePartyButton').onclick = closeSheet;
+  $('#confirmDeletePartyButton').onclick = async () => {
+    if($('#deletePartyNameInput').value !== expectedName) return toast('Escribe el nombre tal cual.');
+    const button = $('#confirmDeletePartyButton');
+    await withBusyButton(button,'Borrando…',async () => {
+      const remote = S && S.remote;
+      if(!remote || !OWNER_KEY_RE.test(remote.ownerKey || '')){
+        return abortSheet('Este móvil ya no guarda el permiso para borrarla.');
+      }
+      let response;
+      try {
+        response = await apiRequest('DELETE','/parties/' + remote.id, {
+          ownerKey:remote.ownerKey, rev:remote.rev,
+          deviceId:currentDeviceId(), confirmName:expectedName,
+        });
+      } catch(e){ return internetNeeded(); }
+      if(response.status === 202 && response.body && response.body.purgeAt){
+        const purgeAt = Date.parse(response.body.purgeAt);
+        if(Number.isFinite(purgeAt)) rememberDeletedParty({
+          id:remote.id, key:remote.key, ownerKey:remote.ownerKey,
+          name:expectedName, purgeAt,
+        });
+        closeSheet(); clearCurrentPartyFromPhone(); render();
+        return toast('Fiesta borrada. Puedes recuperarla durante 7 días.');
+      }
+      if(response.status === 409){ closeSheet(); await download(); return toast('La fiesta había cambiado. Revísala antes de borrarla.'); }
+      if(response.status === 403) return abortSheet('Este móvil no tiene permiso para borrar esa fiesta.');
+      toast('No se ha podido borrar ahora.');
+    });
+  };
+}
+
+async function restoreDeletedParty(entry, button){
+  await withBusyButton(button,'Recuperando…',async () => {
+    openingParty = true;
+    render();
+    let response;
+    try {
+      response = await apiRequest('POST','/parties/' + entry.id + '/restore', {
+        ownerKey:entry.ownerKey, deviceId:currentDeviceId(),
+      });
+    } catch(e){
+      openingParty = false;
+      render();
+      return internetNeeded();
+    }
+    openingParty = false;
+    if(response.status === 200 && response.body && response.body.state){
+      resetSync();
+      const restored = migrateState(response.body.state);
+      S = {...restored, me:null, tab:'party', remote:{
+        id:entry.id, key:response.body.key, ownerKey:response.body.ownerKey,
+        rev:response.body.rev,
+      }, audit:normalizeAudit(response.body.audit)};
+      sync.uploadedJson = stateJson();
+      S.pendingUpload = false;
+      forgetDeletedParty(entry.id);
+      saveLocal(); markOnline(); render(); identitySheet(true);
+      return toast('Fiesta recuperada. Aquí no ha pasado nada.');
+    }
+    if(response.status === 404 || response.status === 410){
+      forgetDeletedParty(entry.id); render();
+      return toast('Esa fiesta ya no se puede recuperar.');
+    }
+    render();
+    if(response.status === 403) return toast('Este móvil ya no puede recuperar esa fiesta.');
+    toast('No se ha podido recuperar ahora.');
+  });
+}
+
+function privacySheet(){
+  openSheet(`
+    <h2 class="sheet-title">Privacidad y ayuda</h2>
+    <p class="sheet-sub">A Pachas es una beta privada de Alejandro de Pablos para cuadrar gastos de grupos conocidos.</p>
+    <div class="note"><strong>Qué se guarda.</strong><br>Nombres elegidos, fiesta, lista, gastos, repartos, Bizums y actividad necesaria para que todos vean las mismas cuentas.</div>
+    <div class="note"><strong>Cómo funciona el acceso.</strong><br>El enlace de edición permite ver y cambiar la fiesta, incluso eligiendo el nombre de otra persona. El enlace de cuentas es solo para mirar. No hay identidad verificada.</div>
+    <div class="note"><strong>Privacidad por defecto.</strong><br>No hay publicidad ni analítica de terceros. Los avisos técnicos y métricas de uso son códigos cerrados sin nombres, importes, contenido, direcciones IP ni enlaces completos.</div>
+    <div class="note"><strong>Cuánto dura.</strong><br>Las fiestas sin uso caducan a los 8 meses. Los datos de este móvil, a los 90 días; las copias de recuperación y los borrados reversibles, a los 7. Las copias operativas, cuando están activadas, van cifradas y caducan a los 30 días.</div>
+    <div class="note"><strong>Infraestructura.</strong><br>La app usa Hetzner para alojarse, Cloudflare para la conexión y Google Fonts para la tipografía.</div>
+    <p class="footnote">Para ayuda, borrado o cualquier cuestión sobre tus datos: <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a>.</p>
+    <button class="btn btn-primary btn-block" id="privacySupportButton" type="button">Escribir a Alex</button>
+  `);
+  $('#privacySupportButton').onclick = openSupport;
+}
+
+function openSupport(){
+  reportUsageEvent('usage.support_opened');
+  location.href = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('A Pachas beta')}`;
+}
+
+function footerHtml(){
+  return `<div class="app-footer">
+    <button id="privacyButton" type="button">Privacidad</button>
+    <span aria-hidden="true">·</span>
+    <button id="supportButton" type="button">Ayuda</button>
+  </div>`;
+}
+
+function bindFooter(container){
+  const privacy = container.querySelector('#privacyButton');
+  const support = container.querySelector('#supportButton');
+  if(privacy) privacy.onclick = privacySheet;
+  if(support) support.onclick = openSupport;
+}
+
 /* ================= views ================= */
 function heroHtml(){
   return `<div class="hero">
+    <span class="beta-badge">Beta privada · sin cuenta</span>
     <div class="logo" aria-hidden="true">${LOGO}</div>
     <h1>A Pachas</h1>
-    <p class="tagline">Los gastos de la peña, a partes iguales.<br>Ni pa ti ni pa mí.</p>
+    <p class="tagline">Crea la fiesta, pásala por WhatsApp y que cada cual apunte lo suyo. Al final salen los Bizums.</p>
+  </div>`;
+}
+
+function howItWorksHtml(){
+  return `<div class="how-it-works" aria-label="Cómo funciona">
+    <div class="how-step"><strong>1. Crea</strong>la fiesta</div>
+    <div class="how-step"><strong>2. Manda</strong>el enlace</div>
+    <div class="how-step"><strong>3. Cuadra</strong>los Bizums</div>
   </div>`;
 }
 
@@ -2148,17 +2692,29 @@ function entryView(){
       Un momento, que estamos poniendo todo al día.
     </div>`;
   const recent = loadRecentParties();
+  const deleted = loadDeletedParties();
+  let hasStoredLocalData = recent.length > 0 || deleted.length > 0;
+  try { hasStoredLocalData ||= !!(localStorage.getItem(PREVIOUS_PARTY_KEY) || localStorage.getItem(DEVICE_KEY)); } catch(e){}
   const recentHtml = recent.length ? `
     <span class="label" style="margin-top:26px">Tus fiestas</span>
     <div class="recent-list">${recent.map((party,index) => `
       <button class="recent-party" type="button" data-recent-index="${index}">
         <span class="recent-copy">
           <span class="recent-name">${escapeHtml(party.name)}</span>
-          <span class="recent-meta">${party.date ? escapeHtml(prettyDate(party.date) || party.date) : 'En vivo con la peña'}</span>
+          <span class="recent-meta">${party.readOnly ? 'Solo lectura' :
+            (party.date ? escapeHtml(prettyDate(party.date) || party.date) : 'En vivo con la peña')}</span>
         </span>
         <span aria-hidden="true">→</span>
       </button>`).join('')}</div>` : '';
-  return `${heroHtml()}
+  const deletedHtml = deleted.length ? `
+    <span class="label" style="margin-top:26px">Todavía se puede recuperar</span>
+    <div class="recent-list">${deleted.map((party,index) => `
+      <div class="card recovery-card">
+        <div class="title">${escapeHtml(party.name)}</div>
+        <div class="recent-meta">Se borrará del todo ${timeUntil(party.purgeAt)}</div>
+        <button class="btn btn-outline btn-block" type="button" data-deleted-index="${index}" style="margin-top:10px">Deshacer borrado</button>
+      </div>`).join('')}</div>` : '';
+  return `${heroHtml()}${howItWorksHtml()}
     <div class="add-row">
       <input type="text" id="linkInput" placeholder="Pega el enlace del grupo" autocomplete="off">
       <button class="btn btn-primary" id="joinLinkButton" type="button">Unirme</button>
@@ -2166,7 +2722,8 @@ function entryView(){
     <button class="create-dashed" id="createButton" type="button">+ Crear fiesta nueva</button>
     <div style="text-align:center;margin-top:22px">
       <button class="quiet-link" id="demoButton" type="button">Ver una fiesta de ejemplo</button>
-    </div>${recentHtml}`;
+      ${hasStoredLocalData ? '<br><button class="quiet-link" id="clearLocalDataButton" type="button">Borrar datos guardados en este móvil</button>' : ''}
+    </div>${deletedHtml}${recentHtml}${footerHtml()}`;
 }
 
 function heroMiniHtml(){
@@ -2175,6 +2732,7 @@ function heroMiniHtml(){
 
 function partyView(c){
   const me = personById(S.me);
+  const readOnly = isReadOnlyParty();
   const participants = activePeople();
   const f = prettyDate(S.party.date);
   const unownedCount = S.items.filter(isUnownedItem).length;
@@ -2186,7 +2744,10 @@ function partyView(c){
 
   // Current next step: exactly one action based on party state.
   let action;
-  if(!me){
+  if(readOnly){
+    action = {txt:'Estás mirando la fiesta tal como está ahora. Aquí no se guarda ningún cambio.',
+      btn:'Ver las cuentas',target:'accounts'};
+  } else if(!me){
     action = {txt:'Di quién eres y te digo qué te toca.',btn:'Decir quién soy',target:'identity'};
   } else if(!me.active){
     action = {txt:'Ya no sales en gastos nuevos, pero tus cuentas siguen aquí.',btn:'Ver mi cuenta',target:'accounts'};
@@ -2236,7 +2797,8 @@ function partyView(c){
       <span class="label">Tu fiesta</span>
       <div class="title">${escapeHtml(S.party.name)}</div>
       <div class="meta">${f ? escapeHtml(f) + ' · ' : ''}${participants.length} en la peña · ${S.items.length} cosa${S.items.length===1?'':'s'} en la lista · ${eur(c.total)}</div>
-      <button class="btn btn-white btn-block" id="inviteButton" type="button">Mandar al grupo</button>
+      ${readOnly ? '<span class="read-only-badge">Solo lectura</span>' : ''}
+      ${S.localReadOnly ? '<div class="access-note"><strong>Copia guardada.</strong><br>Ya no está conectada a una fiesta que se pueda compartir.</div>' : `<button class="btn btn-white btn-block" id="inviteButton" type="button">${readOnly ? 'Mandar las cuentas' : 'Mandar al grupo'}</button>`}
       ${canGoLive() ? `
         <button class="btn btn-live btn-block" id="enableLiveButton" type="button" style="margin-top:8px">
           Ponerla en vivo pa que todos apunten</button>` : ''}
@@ -2255,21 +2817,25 @@ function partyView(c){
       <button class="btn-text" id="whoAmIButton" type="button">${me ? 'Cambiar' : '¿Quién eres?'}</button>
     </div>
     <div style="display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:22px">
-      ${isAdmin() ? '<button class="quiet-link" id="renameButton" type="button">Cambiar nombre o fecha</button>' : ''}
-      ${isAdmin() && openItems ? '<button class="quiet-link" id="repeatPartyButton" type="button">Repetir esta lista en otra fiesta</button>' : ''}
+      ${S.remote ? '<button class="quiet-link" id="activityButton" type="button">Ver actividad reciente</button>' : ''}
+      ${!readOnly && isAdmin() ? '<button class="quiet-link" id="renameButton" type="button">Cambiar nombre o fecha</button>' : ''}
+      ${!readOnly && isAdmin() && openItems ? '<button class="quiet-link" id="repeatPartyButton" type="button">Repetir esta lista en otra fiesta</button>' : ''}
       <button class="quiet-link" id="newPartyButton" type="button">Empezar otra fiesta</button>
+      <button class="quiet-link" id="forgetPartyButton" type="button">Olvidar esta fiesta en este móvil</button>
+      ${!readOnly && S.remote && OWNER_KEY_RE.test(S.remote.ownerKey || '') ? '<button class="delete-link" id="deletePartyButton" type="button">Borrar la fiesta para todos</button>' : ''}
       <button class="quiet-link" id="demoButton" type="button">Ver la fiesta de ejemplo</button>
     </div>`;
 }
 
 function listView(){
+  const readOnly = isReadOnlyParty();
   const total = S.items.length;
   const openItems = S.items.filter(i=>i.status!=='bought').length;
-  const sub = !total ? 'Apunta lo que haga falta'
+  const sub = !total ? (readOnly ? 'Lista vacía' : 'Apunta lo que haga falta')
     : openItems === 0 ? 'Todo comprado. Vaya máquinas.'
     : openItems === 1 ? `1 cosa por resolver de ${total}`
     : `${openItems} cosas por resolver de ${total}`;
-  const admin = isAdmin();
+  const admin = !readOnly && isAdmin();
 
   const cardItem = it => {
     const isBought = it.status === 'bought';
@@ -2279,8 +2845,10 @@ function listView(){
       const n = consumerIds(it).length;
       const activeIds = new Set(activePeople().map(p=>p.id));
       const allActive = n === activeIds.size && consumerIds(it).every(id=>activeIds.has(id));
-      return `<button class="card item-card bought-card" data-edit="${escapeHtml(it.id)}" type="button"
-        aria-label="Comprada: ${escapeHtml(it.name)}, ${eur(it.priceCents||0)}. Tocar para corregirla.">
+      const tag = readOnly ? 'div' : 'button';
+      const editAttributes = readOnly ? '' : ` data-edit="${escapeHtml(it.id)}" type="button"
+        aria-label="Comprada: ${escapeHtml(it.name)}, ${eur(it.priceCents||0)}. Tocar para corregirla."`;
+      return `<${tag} class="card item-card bought-card${readOnly ? ' read-only' : ''}"${editAttributes}>
         <div class="item-row" style="align-items:center">
           <span class="bought-checkIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4.5 12.5l5 5 10-11"/></svg></span>
           <div style="flex:1;min-width:0">
@@ -2288,7 +2856,7 @@ function listView(){
             <div class="meta" style="margin-top:1px">${eur(it.priceCents||0)} · pagó ${escapeHtml(personById(it.payerId)?.name || '—')} · entre ${allActive?'todos':n}</div>
           </div>
         </div>
-      </button>`;
+      </${tag}>`;
     }
 
     const p = it.claimerId ? personById(it.claimerId) : null;
@@ -2301,7 +2869,9 @@ function listView(){
 
     const id = escapeHtml(it.id);
     let actions = '';
-    if(isMine){
+    if(readOnly){
+      actions = '';
+    } else if(isMine){
       actions = `<button class="btn btn-green btn-mini" data-buy="${id}" type="button">Ya está comprada</button>
         <button class="quiet-link" data-release="${id}" type="button">soltar</button>`;
     } else if(!p){
@@ -2313,7 +2883,7 @@ function listView(){
         <button class="quiet-link" data-buy="${id}" type="button">apuntar precio</button>`;
     }
 
-    const canRemove = admin || !p;
+    const canRemove = !readOnly && (admin || !p);
     return `<div class="card item-card">
       <div class="item-row">
         <div style="flex:1;min-width:0">
@@ -2334,15 +2904,15 @@ function listView(){
 
   return `
     <div class="screen-header"><h1>La lista</h1><div class="sub">${sub}</div></div>
-    <form class="add-row" id="addItemForm">
+    ${readOnly ? '<div class="access-note"><strong>Solo lectura.</strong><br>Puedes ver la lista, pero este enlace no guarda cambios.</div>' : `<form class="add-row" id="addItemForm">
       <input type="text" id="itemInput" placeholder="¿Qué falta? (garrafón no)" maxlength="40" autocomplete="off">
       <button class="btn btn-primary" type="submit">Apuntar</button>
     </form>
     <button class="create-dashed" id="directExpenseButton" type="button" style="margin-bottom:14px">
-      + Apuntar un gasto ya pagado</button>
-    ${!total ? '<div class="empty-state">La lista está vacía.<br>Apunta lo primero que haga falta.</div>'
+      + Apuntar un gasto ya pagado</button>`}
+    ${!total ? `<div class="empty-state">La lista está vacía.<br>${readOnly ? 'Todavía no hay nada apuntado.' : 'Apunta lo primero que haga falta.'}</div>`
       : toBuy.map(cardItem).join('')
-        + (unownedCount ? `<div style="text-align:center;margin:2px 0 10px">
+        + (!readOnly && unownedCount ? `<div style="text-align:center;margin:2px 0 10px">
             <button class="quiet-link" id="shareListButton" type="button">Mandar lo que falta al grupo</button>
           </div>` : '')
         + (boughtItems.length && toBuy.length ? '<span class="label">Ya compradas</span>' : '')
@@ -2351,6 +2921,7 @@ function listView(){
 }
 
 function groupView(c){
+  const readOnly = isReadOnlyParty();
   const participants = activePeople();
   const orderedPeople = [...S.people].sort((a,b)=>Number(b.active)-Number(a.active));
   const rows = orderedPeople.map(p => {
@@ -2379,20 +2950,21 @@ function groupView(c){
   return `
     <div class="screen-header"><h1>La peña</h1><div class="sub">${participants.length} en la cuadrilla${inactiveCount?` · ${inactiveCount} fuera de gastos nuevos`:''}</div></div>
     <div class="card" style="padding:4px 14px">${rows}</div>
-    <button class="btn btn-primary btn-block" id="inviteButton" type="button" style="margin-top:6px">Mandar al grupo</button>
-    <form class="add-row" id="addPersonForm" style="margin-top:14px">
+    ${S.localReadOnly ? '' : `<button class="btn btn-primary btn-block" id="inviteButton" type="button" style="margin-top:6px">${readOnly ? 'Mandar las cuentas' : 'Mandar al grupo'}</button>`}
+    ${readOnly ? '<div class="access-note"><strong>Solo lectura.</strong><br>Puedes consultar la peña y sus cuentas, pero no cambiarla.</div>' : `<form class="add-row" id="addPersonForm" style="margin-top:14px">
       <input type="text" id="personInput" placeholder="Añadir a alguien a mano" maxlength="20" autocomplete="off">
       <button class="btn btn-outline" type="submit">Añadir</button>
-    </form>
+    </form>`}
   `;
 }
 
 function accountsView(c){
+  const readOnly = isReadOnlyParty();
   if(c.total === 0 && !S.transfers.length){
     return `
       <div class="screen-header"><h1>Las cuentas</h1><div class="sub">Bizums mínimos pa quedar en paz</div></div>
       <div class="empty-state">Aún no hay gastos apuntados.<br>En cuanto la peña compre cosas, aquí salen las cuentas.</div>
-      <div style="text-align:center"><button class="btn btn-green" id="directExpenseButton" type="button">Apuntar un gasto</button></div>`;
+      ${readOnly ? '<div class="access-note"><strong>Solo lectura.</strong><br>Este enlace no permite apuntar gastos.</div>' : '<div style="text-align:center"><button class="btn btn-green" id="directExpenseButton" type="button">Apuntar un gasto</button></div>'}`;
   }
 
   const arrow = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M14 6l6 6-6 6"/></svg>';
@@ -2446,16 +3018,16 @@ function accountsView(c){
     <div class="card bizum-row">
       <div class="who">${escapeHtml(personById(b.fromId).name)}${arrow}${escapeHtml(personById(b.toId).name)}</div>
       <span class="transfer-amount">${eur(b.cents)}</span>
-      <button class="checkIcon" data-bizum-from="${escapeHtml(b.fromId)}" data-bizum-to="${escapeHtml(b.toId)}"
+      ${readOnly ? '' : `<button class="checkIcon" data-bizum-from="${escapeHtml(b.fromId)}" data-bizum-to="${escapeHtml(b.toId)}"
         data-cents="${b.cents}" type="button"
-        aria-label="Marcar Bizum de ${escapeHtml(personById(b.fromId).name)} a ${escapeHtml(personById(b.toId).name)} como hecho">${checkIcon}</button>
+        aria-label="Marcar Bizum de ${escapeHtml(personById(b.fromId).name)} a ${escapeHtml(personById(b.toId).name)} como hecho">${checkIcon}</button>`}
     </div>`).join('');
   const transfersHtml = [...S.transfers].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(transfer => `
     <div class="card bizum-row done">
       <div class="who">${escapeHtml(personById(transfer.fromId)?.name || '—')}${arrow}${escapeHtml(personById(transfer.toId)?.name || '—')}</div>
       <span class="transfer-amount">${eur(transfer.cents)}</span>
-      <button class="checkIcon on" data-transfer="${escapeHtml(transfer.id)}" type="button"
-        aria-label="Deshacer Bizum de ${escapeHtml(personById(transfer.fromId)?.name || '—')} a ${escapeHtml(personById(transfer.toId)?.name || '—')}">${checkIcon}</button>
+      ${readOnly ? `<span class="checkIcon on" aria-label="Bizum hecho">${checkIcon}</span>` : `<button class="checkIcon on" data-transfer="${escapeHtml(transfer.id)}" type="button"
+        aria-label="Deshacer Bizum de ${escapeHtml(personById(transfer.fromId)?.name || '—')} a ${escapeHtml(personById(transfer.toId)?.name || '—')}">${checkIcon}</button>`}
     </div>`).join('');
 
   return `
@@ -2467,12 +3039,12 @@ function accountsView(c){
     </div>
     ${c.bizums.length ? '<span class="label">Bizums pendientes</span>' : ''}
     ${bizumsHtml}
-    ${c.bizums.length ? '<div class="footnote">Marca el círculo cuando el Bizum esté hecho.</div>'
+    ${c.bizums.length ? `<div class="footnote">${readOnly ? 'Este enlace no puede marcar Bizums como hechos.' : 'Marca el círculo cuando el Bizum esté hecho.'}</div>`
       : '<div class="settled-message">Cuentas en paz. Ni pa ti ni pa mí.</div>'}
     ${S.transfers.length ? '<span class="label">Bizums hechos</span>' : ''}
     ${transfersHtml}
-    <button class="btn btn-primary btn-block" id="shareAccountsButton" type="button" style="margin-top:14px;padding:14px">
-      Mandar las cuentas al grupo</button>
+    ${S.localReadOnly ? '' : `<button class="btn btn-primary btn-block" id="shareAccountsButton" type="button" style="margin-top:14px;padding:14px">
+      Mandar las cuentas al grupo</button>`}
   `;
 }
 
@@ -2498,15 +3070,19 @@ function render(){
   badge.hidden = pendingItems===0;
   badge.textContent = pendingItems;
 
-  v.innerHTML = S.tab==='party' ? partyView(c)
+  v.innerHTML = (S.tab==='party' ? partyView(c)
     : S.tab==='list' ? listView()
     : S.tab==='group' ? groupView(c)
-    : accountsView(c);
+    : accountsView(c)) + footerHtml();
   bindView(v);
 }
 
 function bindEntry(v){
-  v.querySelector('#joinLinkButton').onclick = () => {
+  bindFooter(v);
+  const joinLink = v.querySelector('#joinLinkButton');
+  // The transient "opening party" view has no entry controls yet.
+  if(!joinLink) return;
+  joinLink.onclick = () => {
     const txt = v.querySelector('#linkInput').value.trim();
     if(!txt) return joinSheet();
     if(!importParty(txt)) toast('Ahí no hay ninguna fiesta que valga');
@@ -2516,19 +3092,32 @@ function bindEntry(v){
     resetSync();
     S = demoState(); saveLocal(); render(); identitySheet(true);
   };
+  const clearLocal = v.querySelector('#clearLocalDataButton');
+  if(clearLocal) clearLocal.onclick = () => confirmSheet('¿Borrar los datos de este móvil?',
+    'Se borran fiestas recientes, copias de recuperación, claves e identificador del dispositivo. Las fiestas en vivo siguen para la peña.', () => {
+      clearAllLocalData(); render(); toast('Datos de este móvil borrados.');
+    });
   const recent = loadRecentParties();
   v.querySelectorAll('[data-recent-index]').forEach(button => button.onclick = async () => {
     const party = recent[Number(button.dataset.recentIndex)];
     if(!party) return render();
     await withBusyButton(button,'Abriendo…',() => openLiveLink(party.id,party.key));
   });
+  const deleted = loadDeletedParties();
+  v.querySelectorAll('[data-deleted-index]').forEach(button => button.onclick = async () => {
+    const party = deleted[Number(button.dataset.deletedIndex)];
+    if(!party) return render();
+    await restoreDeletedParty(party,button);
+  });
 }
 
 function bindView(v){
+  bindFooter(v);
   const on = (sel, fn) => { const el = v.querySelector(sel); if(el) el.onclick = fn; };
 
   /* party / home */
-  on('#inviteButton', () => shareSheet('invite'));
+  on('#inviteButton', () => shareSheet(isReadOnlyParty() ? 'accounts' : 'invite'));
+  on('#activityButton', activitySheet);
   on('#enableLiveButton', enableLive);
   on('#whoAmIButton', () => identitySheet(false));
   on('#myAccountButton', () => { S.tab='accounts'; saveLocal(); render(); });
@@ -2553,6 +3142,13 @@ function bindView(v){
       resetSync();
       S = null; localStorage.removeItem(STORAGE_KEY); render();
     }));
+  on('#forgetPartyButton', () => confirmSheet('¿Olvidar esta fiesta en este móvil?',
+    S.remote
+      ? 'Se borran de este móvil la copia y la clave. La fiesta sigue en vivo para la peña.'
+      : 'Se borra la copia de este móvil. Esta acción no se puede deshacer.', () => {
+      clearCurrentPartyFromPhone(); render(); toast('Fiesta olvidada en este móvil.');
+    }));
+  on('#deletePartyButton', deletePartySheet);
   on('#demoButton', () => confirmSheet('¿Cargar la fiesta de ejemplo?',
     S.remote
       ? 'La tuya sigue en vivo pa la peña; el ejemplo va solo en este móvil.'
@@ -2746,7 +3342,7 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
   S.tab = t.dataset.tab; saveLocal(); render();
 }));
 
-/* startup: live link (#F:id:key), snapshot (#AP2:), or saved state */
+/* startup: edit link (#F:id:key), read link (#R:id), snapshot (#AP2:), or saved state */
 (function(){
   let hash = location.hash || '';
   try { hash = decodeURIComponent(hash); } catch(e){ /* A stray % must not crash the app. */ }
@@ -2754,12 +3350,22 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
     try { history.replaceState(null,'',location.pathname + location.search); } catch(e){}
   };
 
-  const live = hash.match(LIVE_LINK_RE);
+  if(/^#privacidad$/i.test(hash)){
+    clearHash();
+    render();
+    privacySheet();
+    if(S && S.remote) download();
+    return;
+  }
+
+  const editLink = hash.match(EDIT_LINK_RE);
+  const readLink = hash.match(READ_LINK_RE);
+  const live = editLink || readLink;
   if(live){
     render();
     if(!S) toast('Abriendo la fiesta del grupo…');
     // Clear the hash only if the party opens. Without network, reload retries.
-    openLiveLink(live[1].toLowerCase(), live[2].toLowerCase())
+    openLiveLink(live[1].toLowerCase(), editLink ? editLink[2].toLowerCase() : null)
       .then(ok => { if(ok) clearHash(); });
     return;
   }
@@ -2801,7 +3407,15 @@ document.addEventListener('visibilitychange', () => {
   if(document.visibilityState === 'visible') download();
 });
 // When connectivity returns, poll first to seed the baseline, then upload.
-window.addEventListener('online', async () => { await download(); upload(); });
+window.addEventListener('online', async () => { flushClientEvents(); await download(); upload(); });
+window.addEventListener('error', event => {
+  reportClientEvent('client.error', {route:'client',
+    errorType:event && event.error && event.error.name || 'Error'});
+});
+window.addEventListener('unhandledrejection', event => {
+  reportClientEvent('client.unhandled_rejection', {route:'client',
+    errorType:event && event.reason && event.reason.name || 'Error'});
+});
 </script>
 </body>
 </html>

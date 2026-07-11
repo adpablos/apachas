@@ -2,10 +2,18 @@
 // Minimal shared-party API for A Pachas. One JSON document per party,
 // optimistic revision control, and zero dependencies beyond Node stdlib.
 //
-//   POST /api/parties            {state}              -> 201 {id, key, rev}
+//   POST /api/parties            {state, actorId?, deviceId?}
+//                                  -> 201 {id, key, ownerKey, rev, audit}
 //   GET  /api/parties/:id[?rev=] -> 200 {rev, state, updatedAt} | 204
-//   PUT  /api/parties/:id        {key, rev, state}    -> 200 {rev, updatedAt}
+//   PUT  /api/parties/:id        {key, rev, state, actorId?, deviceId?}
+//                                                       -> 200 {rev, updatedAt, audit}
 //                                  | 409 {rev, state} | 403 | 404 | 413
+//   DELETE /api/parties/:id      {ownerKey, rev, deviceId?, confirmName}
+//                                  -> 202 {purgeAt}
+//   POST /api/parties/:id/restore {ownerKey, deviceId?}
+//                                  -> 200 {id, key, ownerKey, rev, state, audit}
+//   POST /api/events             {events}             -> 202
+//   GET  /api/live               -> 200
 //   GET  /api/health             -> 200
 //
 // In local development (`node server/api.js`) this also serves public/ so the
@@ -18,22 +26,44 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 
+function integerEnv(name, fallback, minimum = 1) {
+  const value = Number(process.env[name]);
+  return Number.isInteger(value) && value >= minimum ? value : fallback;
+}
+
 const PORT = Number(process.env.PORT || 8010);
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+const TRASH_DIR = path.join(DATA_DIR, '.trash');
 const STATIC_DIR = process.env.STATIC_DIR || path.join(__dirname, '..', 'public');
+const APP_RELEASE = /^[A-Za-z0-9._-]{1,64}$/.test(process.env.APP_RELEASE || '')
+  ? process.env.APP_RELEASE : 'dev';
 
 const MAX_BODY = 256 * 1024;          // A large party is ~30 KB; this is plenty.
 const EXPIRY_MS = 240 * 24 * 3600 * 1000; // Untouched parties expire after 8 months.
+const DELETION_RETENTION_MS = integerEnv('DELETION_RETENTION_MS', 7 * 24 * 3600 * 1000);
+const MAX_AUDIT_EVENTS = 200;
+const MAX_AUDIT_BYTES = 256 * 1024;
+const METRICS_INTERVAL_MS = 5 * 60 * 1000;
 // Point budget per IP per minute: reads cost 1, writes cost 5. The whole group
 // often shares the village Wi-Fi IP, so this must support ~30 phones polling
 // every 12 seconds (~150 points/min) with headroom.
-const RATE_MAX = 600;
+const RATE_MAX = integerEnv('RATE_MAX', 600);
+const RATE_WINDOW_MS = integerEnv('RATE_WINDOW_MS', 60 * 1000);
+const CREATE_RATE_MAX = integerEnv('CREATE_RATE_MAX', 10);
+const CREATE_RATE_WINDOW_MS = integerEnv('CREATE_RATE_WINDOW_MS', 60 * 60 * 1000);
+const EVENT_RATE_MAX = integerEnv('EVENT_RATE_MAX', 60);
+const EVENT_RATE_WINDOW_MS = integerEnv('EVENT_RATE_WINDOW_MS', 60 * 1000);
 const MAX_PARTIES = 5000;             // Guardrail against bots filling disk.
 const ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'; // No i/l/o/0/1.
 const PARTY_ID_RE = new RegExp(`^[${ALPHABET}]{10}$`);
+const WRITE_KEY_RE = new RegExp(`^[${ALPHABET}]{14}$`);
+const OWNER_KEY_RE = new RegExp(`^[${ALPHABET}]{24}$`);
+const SENSITIVE_TOKEN_RE = new RegExp(`[${ALPHABET}]{10,24}`, 'g');
+const PARTY_PATH_RE = /^\/api\/parties\/([^/]+)(?:\/(restore))?$/;
 const STATE_VERSION = 6;
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
+fs.mkdirSync(TRASH_DIR, { recursive: true });
 
 /* ---------- utilities ---------- */
 
@@ -44,47 +74,189 @@ function randomToken(length) {
   return value;
 }
 
+function loadObservabilityKey() {
+  const keyFile = path.join(DATA_DIR, '.observability-key');
+  try {
+    const existing = fs.readFileSync(keyFile);
+    if (existing.length >= 32) return existing;
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  const key = crypto.randomBytes(32);
+  const tmp = `${keyFile}.tmp-${crypto.randomBytes(6).toString('hex')}`;
+  fs.writeFileSync(tmp, key, { mode: 0o600 });
+  try {
+    fs.renameSync(tmp, keyFile);
+  } catch (error) {
+    try { fs.unlinkSync(tmp); } catch (cleanupError) { /* Best effort. */ }
+    const existing = fs.readFileSync(keyFile);
+    if (existing.length < 32) throw error;
+    return existing;
+  }
+  return key;
+}
+
+const OBSERVABILITY_KEY = loadObservabilityKey();
+
+function privateRef(namespace, value) {
+  if (!value) return undefined;
+  return crypto.createHmac('sha256', OBSERVABILITY_KEY)
+    .update(`${namespace}:${value}`).digest('hex').slice(0, 16);
+}
+
+function sanitizeDiagnostic(value) {
+  return String(value || '').replace(SENSITIVE_TOKEN_RE, '***').slice(0, 4000);
+}
+
+function logEvent(level, event, fields = {}) {
+  const entry = { timestamp: new Date().toISOString(), level, event, release: APP_RELEASE, ...fields };
+  console.log(JSON.stringify(entry));
+}
+
+function safeError(error) {
+  return {
+    errorName: error && error.name ? sanitizeDiagnostic(error.name) : 'Error',
+    errorCode: error && error.code ? sanitizeDiagnostic(error.code) : undefined,
+    stack: error && error.stack ? sanitizeDiagnostic(error.stack) : undefined,
+  };
+}
+
+const REQUEST_ID_RE = /^[A-Za-z0-9._-]{8,80}$/;
+function requestContext(req, url) {
+  const incoming = req.headers['x-request-id'];
+  const requestId = typeof incoming === 'string' && REQUEST_ID_RE.test(incoming)
+    ? incoming : crypto.randomUUID();
+  const partyMatch = url.pathname.match(PARTY_PATH_RE);
+  const partyId = partyMatch && PARTY_ID_RE.test(partyMatch[1]) ? partyMatch[1] : null;
+  let route = 'unknown';
+  if (url.pathname === '/api/health') route = 'health.ready';
+  else if (url.pathname === '/api/live') route = 'health.live';
+  else if (url.pathname === '/api/events') route = 'client.events';
+  else if (url.pathname === '/api/parties') route = 'parties.create';
+  else if (partyMatch && partyMatch[2] === 'restore') route = 'parties.restore';
+  else if (partyMatch && req.method === 'GET') route = 'parties.read';
+  else if (partyMatch && req.method === 'PUT') route = 'parties.update';
+  else if (partyMatch && req.method === 'DELETE') route = 'parties.delete';
+  else if (partyMatch) route = 'parties.document';
+  else if (!url.pathname.startsWith('/api')) route = 'static';
+  return {
+    requestId,
+    route,
+    partyRef: privateRef('party', partyId),
+    deviceRef: undefined,
+    auditEvents: 0,
+  };
+}
+
+let metrics = newMetrics();
+function newMetrics() {
+  return {
+    startedAt: Date.now(), requests: 0, durationMs: 0, maxDurationMs: 0,
+    routes: Object.create(null), statuses: Object.create(null), errors: Object.create(null),
+    auditActions: Object.create(null), clientEvents: Object.create(null),
+    activePartyRefs: new Set(), activeDeviceRefs: new Set(),
+  };
+}
+
+function recordRequest(context, status, durationMs) {
+  metrics.requests++;
+  metrics.durationMs += durationMs;
+  metrics.maxDurationMs = Math.max(metrics.maxDurationMs, durationMs);
+  metrics.routes[context.route] = (metrics.routes[context.route] || 0) + 1;
+  metrics.statuses[status] = (metrics.statuses[status] || 0) + 1;
+  if (status >= 400) metrics.errors[status] = (metrics.errors[status] || 0) + 1;
+  if (context.partyRef) metrics.activePartyRefs.add(context.partyRef);
+  if (context.deviceRef) metrics.activeDeviceRefs.add(context.deviceRef);
+}
+
+function recordAuditActions(events) {
+  for (const event of events) {
+    metrics.auditActions[event.action] = (metrics.auditActions[event.action] || 0) + 1;
+  }
+}
+
 function partyFile(id) {
   return path.join(DATA_DIR, id + '.json');
 }
 
-// This process is the only writer, so party rev/key metadata can be cached.
+function trashFile(id, deletedAt) {
+  return path.join(TRASH_DIR, `${id}.${deletedAt}.json`);
+}
+
+function findTrashedParty(id) {
+  const prefix = `${id}.`;
+  try {
+    const names = fs.readdirSync(TRASH_DIR)
+      .filter((name) => name.startsWith(prefix) && name.endsWith('.json'))
+      .sort()
+      .reverse();
+    for (const name of names) {
+      const deletedAt = Number(name.slice(prefix.length, -5));
+      if (!Number.isFinite(deletedAt)) continue;
+      const file = path.join(TRASH_DIR, name);
+      const doc = normalizeDocument(JSON.parse(fs.readFileSync(file, 'utf8')));
+      if (doc) return { file, doc, purgeAt: deletedAt + DELETION_RETENTION_MS };
+    }
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  return null;
+}
+
+// This process is the only writer, so party revisions can be cached.
 // Polling is the most frequent request and usually unchanged, so this lets us
 // return 204 without touching disk or parsing the full document.
-const metadata = new Map(); // id -> { rev, key }
+const metadata = new Map(); // id -> rev
 
 function normalizeDocument(doc) {
   if (!doc || typeof doc !== 'object') return null;
   const key = doc.key;
+  const ownerKey = OWNER_KEY_RE.test(doc.ownerKey || '') ? doc.ownerKey : null;
   // Stored v5 parties are upgraded on read. Network writes must use the current
   // contract so an old browser cannot silently discard transfers or frozen
   // consumer lists introduced in v6.
   const state = validState(doc.state, { allowLegacy: true });
-  if (!key || !state || !Number.isInteger(doc.rev)) return null;
+  if (!WRITE_KEY_RE.test(key || '') || !state || !Number.isInteger(doc.rev)) return null;
   return {
     key,
+    ownerKey,
     rev: doc.rev,
     updatedAt: doc.updatedAt || new Date().toISOString(),
     state,
+    audit: normalizeAudit(doc.audit),
   };
 }
 
-function readParty(id) {
+function readParty(id, context) {
   try {
     const doc = normalizeDocument(JSON.parse(fs.readFileSync(partyFile(id), 'utf8')));
-    if (doc) metadata.set(id, { rev: doc.rev, key: doc.key });
+    if (doc) metadata.set(id, doc.rev);
     return doc;
-  } catch (e) {
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      logEvent('error', 'party_read_failed', {
+        requestId: context && context.requestId,
+        partyRef: privateRef('party', id),
+        ...safeError(error),
+      });
+    }
     return null;
   }
 }
 
 function writeParty(id, doc) {
-  const stored = { key: doc.key, rev: doc.rev, updatedAt: doc.updatedAt, state: doc.state };
+  const stored = {
+    key: doc.key,
+    ...(doc.ownerKey ? { ownerKey: doc.ownerKey } : {}),
+    rev: doc.rev,
+    updatedAt: doc.updatedAt,
+    state: doc.state,
+    audit: normalizeAudit(doc.audit),
+  };
   const tmp = partyFile(id) + '.tmp-' + randomToken(6);
-  fs.writeFileSync(tmp, JSON.stringify(stored));
+  fs.writeFileSync(tmp, JSON.stringify(stored), { mode: 0o600 });
   fs.renameSync(tmp, partyFile(id));
-  metadata.set(id, { rev: doc.rev, key: doc.key });
+  metadata.set(id, doc.rev);
 }
 
 function json(res, status, body) {
@@ -125,6 +297,7 @@ function stateResponse(doc) {
     rev: doc.rev,
     state: doc.state,
     updatedAt: doc.updatedAt,
+    audit: normalizeAudit(doc.audit),
   };
 }
 
@@ -136,6 +309,131 @@ const validId = (x) => typeof x === 'string' && ENTITY_ID_RE.test(x);
 const optionalNumber = (x) => x == null || (typeof x === 'number' && isFinite(x));
 const optionalId = (x) => x == null || validId(x);
 const ITEM_STATUSES = ['pending', 'claimed', 'bought'];
+const DEVICE_ID_RE = /^[A-Za-z0-9_-]{16,64}$/;
+const AUDIT_ACTIONS = new Set([
+  'party.created', 'party.updated',
+  'person.created', 'person.updated', 'person.deleted',
+  'item.created', 'item.updated', 'item.deleted',
+  'transfer.created', 'transfer.updated', 'transfer.deleted',
+]);
+const AUDIT_FIELDS = {
+  party: ['name', 'date'],
+  person: ['name', 'admin', 'active'],
+  item: ['name', 'status', 'claimerId', 'priceCents', 'payerId', 'consumers'],
+  transfer: ['fromId', 'toId', 'cents'],
+};
+
+function auditValue(value) {
+  if (value == null || typeof value === 'boolean') return value ?? null;
+  if (typeof value === 'number' && isFinite(value)) return value;
+  if (typeof value === 'string') return value.slice(0, 80);
+  if (Array.isArray(value)) return value.filter(validId).slice(0, 100);
+  return null;
+}
+
+function normalizeAudit(input) {
+  if (!Array.isArray(input)) return [];
+  const normalized = input.slice(-MAX_AUDIT_EVENTS).flatMap((event) => {
+    if (!event || typeof event !== 'object' || !validId(event.id) ||
+        !AUDIT_ACTIONS.has(event.action) || !Number.isInteger(event.rev) || event.rev < 1 ||
+        typeof event.at !== 'string' || !/^\d{4}-\d{2}-\d{2}T/.test(event.at)) return [];
+    const changes = Array.isArray(event.changes) ? event.changes.slice(0, 12).flatMap((change) => {
+      if (!change || typeof change.field !== 'string' || change.field.length > 30) return [];
+      return [{ field: change.field, before: auditValue(change.before), after: auditValue(change.after) }];
+    }) : [];
+    return [{
+      id: event.id,
+      rev: event.rev,
+      at: event.at,
+      action: event.action,
+      ...(optionalId(event.entityId) && event.entityId ? { entityId: event.entityId } : {}),
+      ...(optionalId(event.actorId) && event.actorId ? { actorId: event.actorId } : {}),
+      ...(typeof event.deviceRef === 'string' && /^[a-f0-9]{16}$/.test(event.deviceRef)
+        ? { deviceRef: event.deviceRef } : {}),
+      ...(typeof event.requestId === 'string' && REQUEST_ID_RE.test(event.requestId)
+        ? { requestId: event.requestId } : {}),
+      ...(typeof event.label === 'string' && event.label ? { label: event.label.slice(0, 80) } : {}),
+      changes,
+    }];
+  });
+  const bounded = [];
+  let bytes = 2;
+  for (let index = normalized.length - 1; index >= 0; index--) {
+    const eventBytes = Buffer.byteLength(JSON.stringify(normalized[index])) + (bounded.length ? 1 : 0);
+    if (bytes + eventBytes > MAX_AUDIT_BYTES) break;
+    bounded.unshift(normalized[index]);
+    bytes += eventBytes;
+  }
+  return bounded;
+}
+
+function sameAuditValue(left, right) {
+  return JSON.stringify(left === undefined ? null : left) ===
+    JSON.stringify(right === undefined ? null : right);
+}
+
+function auditChanges(type, before, after) {
+  return AUDIT_FIELDS[type].flatMap((field) => {
+    const previous = before && before[field];
+    const next = after && after[field];
+    if (sameAuditValue(previous, next)) return [];
+    return [{ field, before: auditValue(previous), after: auditValue(next) }];
+  });
+}
+
+function auditMeta(body, oldState, newState, context) {
+  const peopleIds = new Set([
+    ...((oldState && oldState.people) || []).map((person) => person.id),
+    ...((newState && newState.people) || []).map((person) => person.id),
+  ]);
+  const actorId = body && validId(body.actorId) && peopleIds.has(body.actorId)
+    ? body.actorId : null;
+  const deviceRef = body && DEVICE_ID_RE.test(body.deviceId || '')
+    ? privateRef('device', body.deviceId) : undefined;
+  context.deviceRef = deviceRef;
+  return { actorId, deviceRef, requestId: context.requestId };
+}
+
+function makeAuditEvent(action, entityId, label, changes, meta, rev, at) {
+  return {
+    id: randomToken(12), rev, at, action,
+    ...(entityId ? { entityId } : {}),
+    ...(meta.actorId ? { actorId: meta.actorId } : {}),
+    ...(meta.deviceRef ? { deviceRef: meta.deviceRef } : {}),
+    requestId: meta.requestId,
+    ...(label ? { label: String(label).slice(0, 80) } : {}),
+    changes,
+  };
+}
+
+function auditEventsForChange(before, after, meta, rev, at) {
+  const events = [];
+  const partyChanges = auditChanges('party', before.party, after.party);
+  if (partyChanges.length) {
+    events.push(makeAuditEvent('party.updated', null, after.party.name, partyChanges, meta, rev, at));
+  }
+  for (const [type, collection] of [['person', 'people'], ['item', 'items'], ['transfer', 'transfers']]) {
+    const previous = new Map((before[collection] || []).map((entity) => [entity.id, entity]));
+    const next = new Map((after[collection] || []).map((entity) => [entity.id, entity]));
+    for (const [id, entity] of next) {
+      const oldEntity = previous.get(id);
+      const changes = auditChanges(type, oldEntity, entity);
+      if (!oldEntity) {
+        events.push(makeAuditEvent(`${type}.created`, id, entity.name, changes, meta, rev, at));
+      } else if (changes.length) {
+        events.push(makeAuditEvent(`${type}.updated`, id, entity.name || oldEntity.name,
+          changes, meta, rev, at));
+      }
+    }
+    for (const [id, entity] of previous) {
+      if (!next.has(id)) {
+        events.push(makeAuditEvent(`${type}.deleted`, id, entity.name,
+          auditChanges(type, entity, null), meta, rev, at));
+      }
+    }
+  }
+  return events;
+}
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -391,37 +689,94 @@ function validState(payload, options = {}) {
 
 /* ---------- best-effort IP rate limit ---------- */
 
-const buckets = new Map();
-function withinRateLimit(req) {
-  const ip = req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] ||
+const requestBuckets = new Map();
+const createBuckets = new Map();
+const eventBuckets = new Map();
+
+function clientAddress(req) {
+  return req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] ||
     req.socket.remoteAddress || '?';
+}
+
+function consumeRateLimit(req, buckets, maximum, windowMs, cost = 1) {
+  const address = clientAddress(req);
   const now = Date.now();
-  let bucket = buckets.get(ip);
+  let bucket = buckets.get(address);
   if (!bucket || now > bucket.until) {
-    bucket = { count: 0, until: now + 60000 };
-    buckets.set(ip, bucket);
+    bucket = { count: 0, until: now + windowMs };
+    buckets.set(address, bucket);
   }
-  bucket.count += (req.method === 'GET' || req.method === 'HEAD') ? 1 : 5;
+  bucket.count += cost;
   if (buckets.size > 5000) {
-    // Drop expired buckets first; clear everything only if still overflowing.
     for (const [key, value] of buckets) if (now > value.until) buckets.delete(key);
     if (buckets.size > 5000) buckets.clear();
   }
-  return bucket.count <= RATE_MAX;
+  return {
+    ok: bucket.count <= maximum,
+    retryAfter: Math.max(1, Math.ceil((bucket.until - now) / 1000)),
+  };
+}
+
+function enforceRateLimit(req, res, buckets, maximum, windowMs, cost = 1) {
+  const result = consumeRateLimit(req, buckets, maximum, windowMs, cost);
+  if (result.ok) return true;
+  res.setHeader('Retry-After', String(result.retryAfter));
+  json(res, 429, { error: 'Frena un poco, máquina.' });
+  return false;
 }
 
 /* ---------- abandoned-party cleanup ---------- */
 
-// Count parties on disk on each POST. This endpoint is rate-limited and capped
-// at <=5000 dirents, so it is cheap and avoids counters that drift.
-function partyCount() {
+// Count documents on disk on each POST. This endpoint is rate-limited and the
+// total is capped, so directory scans stay cheap and cannot drift.
+function documentCount(directory) {
   try {
-    return fs.readdirSync(DATA_DIR).filter((file) => file.endsWith('.json')).length;
+    return fs.readdirSync(directory).filter((file) => file.endsWith('.json')).length;
   } catch (e) { return 0; }
 }
+const partyCount = () => documentCount(DATA_DIR);
+const deletedPartyCount = () => documentCount(TRASH_DIR);
+
+function storageStatus() {
+  try {
+    fs.accessSync(DATA_DIR, fs.constants.R_OK | fs.constants.W_OK);
+    const stats = fs.statfsSync(DATA_DIR);
+    const freeBytes = Number(stats.bavail) * Number(stats.bsize);
+    return { ok: freeBytes > MAX_BODY * 2, freeBytes };
+  } catch (error) {
+    return { ok: false, freeBytes: 0 };
+  }
+}
+
+function flushMetrics() {
+  const snapshot = metrics;
+  metrics = newMetrics();
+  const storage = storageStatus();
+  logEvent('info', 'metrics_snapshot', {
+    windowMs: Date.now() - snapshot.startedAt,
+    requests: snapshot.requests,
+    routes: snapshot.routes,
+    statuses: snapshot.statuses,
+    errors: snapshot.errors,
+    auditActions: snapshot.auditActions,
+    clientEvents: snapshot.clientEvents,
+    activeParties: snapshot.activePartyRefs.size,
+    activeDevices: snapshot.activeDeviceRefs.size,
+    averageDurationMs: snapshot.requests
+      ? Number((snapshot.durationMs / snapshot.requests).toFixed(2)) : 0,
+    maxDurationMs: snapshot.maxDurationMs,
+    parties: partyCount(),
+    deletedParties: deletedPartyCount(),
+    storageReady: storage.ok,
+    storageFreeBytes: storage.freeBytes,
+  });
+}
+
+setInterval(flushMetrics, METRICS_INTERVAL_MS).unref();
 
 function purgeExpiredParties() {
   let deleted = 0;
+  let purgedTrash = 0;
   try {
     const cutoff = Date.now() - EXPIRY_MS;
     for (const file of fs.readdirSync(DATA_DIR)) {
@@ -439,7 +794,17 @@ function purgeExpiredParties() {
       } catch (e) { /* Race with another cleanup pass; harmless. */ }
     }
   } catch (e) { /* Data dir may not exist yet. */ }
-  if (deleted) console.log(`cleanup: ${deleted} expired party file(s)`);
+  try {
+    const cutoff = Date.now() - DELETION_RETENTION_MS;
+    for (const file of fs.readdirSync(TRASH_DIR)) {
+      const match = file.match(/^[a-z0-9]+\.(\d+)\.json$/);
+      if (!match || Number(match[1]) >= cutoff) continue;
+      fs.unlinkSync(path.join(TRASH_DIR, file));
+      purgedTrash++;
+    }
+  } catch (e) { /* Trash dir may not exist yet. */ }
+  if (deleted) logEvent('info', 'expired_parties_deleted', { deleted });
+  if (purgedTrash) logEvent('info', 'deleted_parties_purged', { deleted: purgedTrash });
 }
 // Delay the first cleanup until the server is listening. With many files, a
 // synchronous scan before listen() would slow startup.
@@ -467,15 +832,83 @@ async function parseJsonBody(req, res) {
   return value;
 }
 
-async function api(req, res, url) {
-  if (!withinRateLimit(req)) return json(res, 429, { error: 'Frena un poco, máquina.' });
+const CLIENT_ERROR_CODES = new Set([
+  'sync.timeout', 'sync.network_error', 'sync.rejected',
+  'sync.conflict_exhausted', 'sync.access_lost', 'sync.party_missing',
+  'client.error', 'client.unhandled_rejection',
+]);
+const USAGE_EVENT_CODES = new Set([
+  'usage.party_opened_write', 'usage.party_opened_read',
+  'usage.invite_share_intent', 'usage.accounts_share_intent',
+  'usage.support_opened',
+]);
+const CLIENT_EVENT_CODES = new Set([...CLIENT_ERROR_CODES, ...USAGE_EVENT_CODES]);
+const CLIENT_ROUTES = new Set([
+  'parties.create', 'parties.read', 'parties.update', 'parties.delete', 'parties.restore', 'client',
+]);
+
+function recordClientEvents(body, context) {
+  if (!body || !Array.isArray(body.events) || !body.events.length || body.events.length > 10) return false;
+  const events = [];
+  for (const item of body.events) {
+    if (!item || typeof item !== 'object' || !CLIENT_EVENT_CODES.has(item.code) ||
+        !CLIENT_ROUTES.has(item.route)) return false;
+    const partyId = typeof item.partyId === 'string' && PARTY_ID_RE.test(item.partyId)
+      ? item.partyId : null;
+    const deviceRef = DEVICE_ID_RE.test(item.deviceId || '')
+      ? privateRef('device', item.deviceId) : undefined;
+    if (deviceRef) context.deviceRef = deviceRef;
+    events.push({
+      requestId: context.requestId,
+      code: item.code,
+      route: item.route,
+      status: Number.isInteger(item.status) && item.status >= 0 && item.status <= 599
+        ? item.status : undefined,
+      relatedRequestId: typeof item.requestId === 'string' && REQUEST_ID_RE.test(item.requestId)
+        ? item.requestId : undefined,
+      partyRef: privateRef('party', partyId),
+      deviceRef,
+      errorType: typeof item.errorType === 'string' && /^[A-Za-z]{1,40}$/.test(item.errorType)
+        ? item.errorType : undefined,
+    });
+  }
+  for (const event of events) {
+    metrics.clientEvents[event.code] = (metrics.clientEvents[event.code] || 0) + 1;
+    if (event.partyRef) metrics.activePartyRefs.add(event.partyRef);
+    if (event.deviceRef) metrics.activeDeviceRefs.add(event.deviceRef);
+    logEvent(USAGE_EVENT_CODES.has(event.code) ? 'info' : 'warn',
+      USAGE_EVENT_CODES.has(event.code) ? 'usage_event' : 'client_event', event);
+  }
+  return true;
+}
+
+async function api(req, res, url, context) {
+  const generalCost = (req.method === 'GET' || req.method === 'HEAD') ? 1 : 5;
+  if (!enforceRateLimit(req, res, requestBuckets, RATE_MAX, RATE_WINDOW_MS, generalCost)) return;
+
+  if (req.method === 'GET' && url.pathname === '/api/live') {
+    return json(res, 200, { ok: true, release: APP_RELEASE });
+  }
 
   if (req.method === 'GET' && url.pathname === '/api/health') {
-    return json(res, 200, { ok: true });
+    const storage = storageStatus();
+    if (!storage.ok) return json(res, 503, { ok: false, release: APP_RELEASE });
+    return json(res, 200, { ok: true, release: APP_RELEASE });
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/events') {
+    if (!enforceRateLimit(req, res, eventBuckets, EVENT_RATE_MAX, EVENT_RATE_WINDOW_MS)) return;
+    const body = await parseJsonBody(req, res);
+    if (!body) return;
+    if (!recordClientEvents(body, context)) {
+      return json(res, 400, { error: 'Evento inválido' });
+    }
+    return json(res, 202, { ok: true });
   }
 
   if (req.method === 'POST' && url.pathname === '/api/parties') {
-    if (partyCount() >= MAX_PARTIES) {
+    if (!enforceRateLimit(req, res, createBuckets, CREATE_RATE_MAX, CREATE_RATE_WINDOW_MS)) return;
+    if (partyCount() + deletedPartyCount() >= MAX_PARTIES) {
       return json(res, 503, { error: 'El servidor está hasta arriba de fiestas' });
     }
     const body = await parseJsonBody(req, res);
@@ -484,24 +917,76 @@ async function api(req, res, url) {
     if (!state) return json(res, 400, { error: 'Eso no es una fiesta' });
     const id = randomToken(10);
     const key = randomToken(14);
-    const doc = { key, rev: 1, updatedAt: new Date().toISOString(), state };
+    const ownerKey = randomToken(24);
+    context.partyRef = privateRef('party', id);
+    const updatedAt = new Date().toISOString();
+    const meta = auditMeta(body, null, state, context);
+    const audit = [makeAuditEvent('party.created', null, state.party.name,
+      auditChanges('party', null, state.party), meta, 1, updatedAt)];
+    const doc = { key, ownerKey, rev: 1, updatedAt, state, audit };
     writeParty(id, doc);
-    return json(res, 201, { id, key, rev: 1 });
+    context.auditEvents = audit.length;
+    recordAuditActions(audit);
+    return json(res, 201, { id, key, ownerKey, rev: 1, updatedAt, audit });
   }
 
-  const match = url.pathname.match(/^\/api\/parties\/([^/]+)$/);
+  const match = url.pathname.match(PARTY_PATH_RE);
   if (match) {
     const id = match[1];
+    const action = match[2];
     if (!PARTY_ID_RE.test(id)) return json(res, 404, { error: 'No hay tal fiesta' });
+
+    if (action === 'restore') {
+      if (req.method !== 'POST') return json(res, 405, { error: 'Eso no se hace así' });
+      const body = await parseJsonBody(req, res);
+      if (!body) return;
+      const deleted = findTrashedParty(id);
+      if (!deleted) return json(res, 404, { error: 'No hay tal fiesta' });
+      if (Date.now() >= deleted.purgeAt) {
+        fs.unlinkSync(deleted.file);
+        return json(res, 410, { error: 'Ya no se puede recuperar esa fiesta' });
+      }
+      if (!deleted.doc.ownerKey || body.ownerKey !== deleted.doc.ownerKey) {
+        return json(res, 403, { error: 'Este móvil no puede recuperar esa fiesta' });
+      }
+      if (fs.existsSync(partyFile(id))) {
+        return json(res, 409, { error: 'Esa fiesta ya está en vivo' });
+      }
+      if (DEVICE_ID_RE.test(body.deviceId || '')) {
+        context.deviceRef = privateRef('device', body.deviceId);
+      }
+      fs.renameSync(deleted.file, partyFile(id));
+      metadata.set(id, deleted.doc.rev);
+      logEvent('warn', 'party_restored', {
+        requestId: context.requestId,
+        partyRef: context.partyRef,
+        deviceRef: context.deviceRef,
+      });
+      return json(res, 200, {
+        id,
+        key: deleted.doc.key,
+        ownerKey: deleted.doc.ownerKey,
+        ...stateResponse(deleted.doc),
+      });
+    }
 
     if (req.method === 'GET') {
       // 204 instead of 304: fetch handles an explicit unchanged response more
       // cleanly. Fast path: if the rev cache already says nothing changed,
       // skip disk and parsing.
       const cached = metadata.get(id);
-      if (cached && url.searchParams.get('rev') === String(cached.rev)) return json(res, 204);
-      const doc = readParty(id);
-      if (!doc) return json(res, 404, { error: 'No hay tal fiesta' });
+      if (cached !== undefined && url.searchParams.get('rev') === String(cached)) return json(res, 204);
+      const doc = readParty(id, context);
+      if (!doc) {
+        const deleted = findTrashedParty(id);
+        if (deleted && Date.now() < deleted.purgeAt) {
+          return json(res, 410, {
+            error: 'Esta fiesta está borrada',
+            purgeAt: new Date(deleted.purgeAt).toISOString(),
+          });
+        }
+        return json(res, 404, { error: 'No hay tal fiesta' });
+      }
       if (url.searchParams.get('rev') === String(doc.rev)) return json(res, 204);
       return json(res, 200, stateResponse(doc));
     }
@@ -509,7 +994,7 @@ async function api(req, res, url) {
     if (req.method === 'PUT') {
       const body = await parseJsonBody(req, res);
       if (!body) return;
-      const doc = readParty(id);
+      const doc = readParty(id, context);
       if (!doc) return json(res, 404, { error: 'No hay tal fiesta' });
       if (!body || body.key !== doc.key) {
         return json(res, 403, { error: 'Ese enlace no puede editar' });
@@ -519,11 +1004,46 @@ async function api(req, res, url) {
       if (Number(body.rev) !== doc.rev) {
         return json(res, 409, stateResponse(doc));
       }
-      doc.rev++;
-      doc.updatedAt = new Date().toISOString();
+      const nextRev = doc.rev + 1;
+      const updatedAt = new Date().toISOString();
+      const events = auditEventsForChange(doc.state, state,
+        auditMeta(body, doc.state, state, context), nextRev, updatedAt);
+      doc.rev = nextRev;
+      doc.updatedAt = updatedAt;
       doc.state = state;
+      doc.audit = normalizeAudit([...(doc.audit || []), ...events]);
       writeParty(id, doc);
-      return json(res, 200, { rev: doc.rev, updatedAt: doc.updatedAt });
+      context.auditEvents = events.length;
+      recordAuditActions(events);
+      return json(res, 200, { rev: doc.rev, updatedAt: doc.updatedAt, audit: doc.audit });
+    }
+
+    if (req.method === 'DELETE') {
+      const body = await parseJsonBody(req, res);
+      if (!body) return;
+      const doc = readParty(id, context);
+      if (!doc) return json(res, 404, { error: 'No hay tal fiesta' });
+      if (!doc.ownerKey || body.ownerKey !== doc.ownerKey) {
+        return json(res, 403, { error: 'Este móvil no puede borrar la fiesta' });
+      }
+      if (Number(body.rev) !== doc.rev) return json(res, 409, stateResponse(doc));
+      if (body.confirmName !== doc.state.party.name) {
+        return json(res, 400, { error: 'El nombre no coincide' });
+      }
+      if (DEVICE_ID_RE.test(body.deviceId || '')) {
+        context.deviceRef = privateRef('device', body.deviceId);
+      }
+      const deletedAt = Date.now();
+      const purgeAt = deletedAt + DELETION_RETENTION_MS;
+      fs.renameSync(partyFile(id), trashFile(id, deletedAt));
+      metadata.delete(id);
+      logEvent('warn', 'party_deleted', {
+        requestId: context.requestId,
+        partyRef: context.partyRef,
+        deviceRef: context.deviceRef,
+        purgeAt: new Date(purgeAt).toISOString(),
+      });
+      return json(res, 202, { purgeAt: new Date(purgeAt).toISOString() });
     }
   }
 
@@ -572,24 +1092,52 @@ const hasStatic = fs.existsSync(path.join(STATIC_DIR, 'index.html'));
 const server = http.createServer(async (req, res) => {
   const startedAt = Date.now();
   const url = new URL(req.url, 'http://local');
+  const context = requestContext(req, url);
+  res.setHeader('X-Request-ID', context.requestId);
   res.on('finish', () => {
-    // Do not log party IDs; the ID alone is enough to read the party.
-    const route = url.pathname.replace(/^(\/api\/parties\/)[^/]+/, '$1***');
-    console.log(`${req.method} ${route} ${res.statusCode} ${Date.now() - startedAt}ms`);
+    const durationMs = Date.now() - startedAt;
+    recordRequest(context, res.statusCode, durationMs);
+    // Successful polling, health checks, and static reads stay in the periodic
+    // metrics snapshot. Writes, failures, and slow requests remain individually
+    // traceable without logging party IDs, names, content, keys, IPs, or URLs.
+    const shouldLog = !['GET', 'HEAD'].includes(req.method) || res.statusCode >= 400 || durationMs >= 1000;
+    if (shouldLog) {
+      logEvent(res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info', 'request', {
+        requestId: context.requestId,
+        method: req.method,
+        route: context.route,
+        status: res.statusCode,
+        durationMs,
+        partyRef: context.partyRef,
+        auditEvents: context.auditEvents || undefined,
+      });
+    }
   });
   try {
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
-      await api(req, res, url);
+      await api(req, res, url, context);
     } else if (hasStatic) {
       staticFile(req, res, url);
     } else {
       json(res, 404, { error: 'No hay nada por aquí' });
     }
   } catch (e) {
+    logEvent('error', 'request_exception', {
+      requestId: context.requestId,
+      method: req.method,
+      route: context.route,
+      partyRef: context.partyRef,
+      ...safeError(e),
+    });
     if (!res.headersSent) json(res, e.message === 'too_large' ? 413 : 500, { error: 'Se ha torcido algo' });
   }
 });
 
 server.listen(PORT, () => {
-  console.log(`A Pachas API at http://localhost:${PORT} (data in ${DATA_DIR}${hasStatic ? `, static files from ${STATIC_DIR}` : ''})`);
+  logEvent('info', 'api_started', {
+    port: PORT,
+    node: process.version,
+    staticServing: hasStatic,
+    storageReady: storageStatus().ok,
+  });
 });

@@ -81,11 +81,18 @@ it. No accounts, no users, no database: one JSON document per party.
 - **Single-file API**: `server/api.js`, Node >=18, no dependencies, matching the
   one-file frontend. Endpoints: `POST /api/parties` to create,
   `GET /api/parties/:id` to read with `?rev=` for cheap polling, and
-  `PUT /api/parties/:id` to save with optimistic revision control.
-- **Link**: `https://apachas.alexdepablos.es/#F:<id>:<key>`. The key lives in
-  the hash, so nginx and Cloudflare never see it in logs. Anyone with the link
-  can edit, matching the current trust model; sensitive actions remain guarded
-  by "la llave" inside the app.
+  `PUT /api/parties/:id` to save with optimistic revision control. Each party
+  document also carries a server-owned, bounded audit trail that clients can
+  read but cannot submit or rewrite.
+- **Two link capabilities**: `#F:<id>:<key>` can edit and `#R:<id>` can only
+  read. The write key lives in the hash, so nginx and Cloudflare never see it
+  in logs. The read link contains no write capability. Anyone with the edit
+  link can still choose an existing identity; "la llave" coordinates the group
+  but is not authentication.
+- **Creator recovery capability**: creation also returns an independent
+  `ownerKey`. It stays only on the creator's phone, never enters shared state,
+  normal links, audit events, telemetry, or logs, and is required for global
+  deletion and restoration.
 - **Live edits require the API**: localStorage keeps only the opened party,
   identity, tab, and recovery backup. A shared party change is shown as saved
   only after the server accepts it. If the network or server is down, the user
@@ -139,8 +146,8 @@ send, WhatsApp button, native share, and copy:
 
 1. **Invite**: enter, say who you are, record what you buy.
 2. **Missing items**: list unowned items and link.
-3. **Accounts**: total, Bizums with check/dot state, "marca el tuyo cuando lo
-   hagas", and link. If settled, closing message.
+3. **Accounts**: total, Bizums with check/dot state, neutral consultation copy,
+   and a read-only link. If settled, closing message.
 4. **Individual reminder**: what the person should bring and/or their Bizum.
 
 ### D6. Fiesta Becomes Actionable Home
@@ -150,11 +157,13 @@ sync status and "Mandar al grupo"; "¿Qué toca?" card with exactly one action
 based on state; the current user's balance; identity; and existing links. The
 full hero remains only for the entry state without a party.
 
-### D7. Minimal History, Not Accounting
+### D7. Minimal Server-Derived History, Not Accounting
 
 Each item stores who created it and when, plus who last touched it. The edit
-sheet shows that in one line. Deleting a priced purchase asks for explicit
-confirmation. No activity feed in P0.
+sheet shows that in one line. The API derives a bounded activity trail from
+accepted before/after states; clients cannot submit or rewrite it. The actor is
+the identity selected on that phone, not verified identity, and the UI says so.
+Deleting a priced purchase asks for explicit confirmation.
 
 ### D8. Completed Bizums Are Transfers, Not Checkboxes
 
@@ -184,8 +193,29 @@ changing the real payer automatically.
 ### D11. Continuity Without Accounts
 
 Each phone remembers up to five live party links and can reopen them from the
-entry screen. Key holders can start a new party from the current pending list;
-prices, assignments, transfers, and balances never carry over.
+entry screen without weakening a write capability already stored on that
+phone. Opening an explicit `#R:` link remains read-only for that session. Key
+holders can start a new party from the current pending list; prices,
+assignments, transfers, and balances never carry over.
+
+### D12. Family-and-Friends Beta Boundaries
+
+- The entry screen states the private-beta status, the product promise, and the
+  three-step create/share/settle flow before asking for anything.
+- Every screen links to concise privacy and help copy with a direct support
+  address. It explains stored data, link capabilities, unverified identity,
+  retention, infrastructure, and privacy-minimized operational signals.
+- Global deletion belongs only to the creator-phone capability, not to a
+  self-declared admin. It is a seven-day soft delete; only that phone can
+  restore it. Legacy parties without an owner capability remain usable but
+  cannot be globally deleted through the app.
+- The beta collects only allowlisted technical errors and five coarse product
+  signals: write/read opens, edit/read share intent, and support intent. There
+  are no third-party analytics, advertising identifiers, names, amounts,
+  concepts, request bodies, or full URLs in telemetry.
+- Availability is covered by external uptime checks, structured privacy-safe
+  logs, bounded rate limits, encrypted daily backups, a tested restore checker,
+  CSP generation, and dependency-free CI.
 
 ## P0 Specification
 
@@ -194,7 +224,7 @@ Everything in this section is implemented by this branch.
 ### Data Model, v6
 
 ```js
-// Shared: sent to the server and encoded in links.
+// Shared: sent to the server and encoded only in AP2 recovery snapshots.
 {
   v: 6,
   party: { name, date, updatedAt },
@@ -209,27 +239,45 @@ Everything in this section is implemented by this branch.
   transfers: [{ id, fromId, toId, cents, createdAt, createdBy?, updatedAt, updatedBy? }],
   tombstones: [{ id, at, seenAt }],
 }
-// Local only, never uploaded: me, tab, remote: { id, key, rev }, pendingUpload
+// Server-owned, returned beside state and never accepted from clients:
+audit: [{ id, rev, at, action, entityId?, actorId?, deviceRef?, label?, changes }]
+
+// Local only, never uploaded as shared state:
+// me, tab, remote: { id, key?, ownerKey?, rev }, pendingUpload,
+// localReadOnly, localSavedAt
 ```
 
 The localStorage key remains `a-pachas-v2`. `AP2:` links are generated as
 local-mode backups. Stored v5 parties migrate to v6 on read: null consumer lists
 freeze to the people present at migration and completed settlement marks become
 transfers. The API rejects new v5 writes so a stale browser cannot erase v6
-history. The app does not accept Spanish payload aliases.
+history. The app does not accept Spanish payload aliases. Current and recent
+phone data expire locally after 90 days without use; the one-step recovery copy
+expires after seven days. Users can forget one party or clear all A Pachas data
+and write capabilities stored on that phone.
 
 ### API
 
-- `POST /api/parties` body `{state}` -> `201 {id, key, rev:1}`.
-- `GET /api/parties/:id[?rev=n]` -> `200 {rev, state, updatedAt}` or `204`.
+- `POST /api/parties` body `{state, actorId?, deviceId?}` ->
+  `201 {id, key, ownerKey, rev:1, audit}`.
+- `GET /api/parties/:id[?rev=n]` -> `200 {rev, state, updatedAt, audit}` or `204`.
   Use 204, not 304, because `fetch` handles it more cleanly here.
-- `PUT /api/parties/:id` body `{key, rev, state}` -> `200 {rev}`,
+- `PUT /api/parties/:id` body `{key, rev, state, actorId?, deviceId?}` ->
+  `200 {rev, audit}`,
   `409 {rev, state}`, `403`, `404`, `413`, or `400`.
-- `GET /api/health` -> `200`.
+- `DELETE /api/parties/:id` requires `ownerKey`, the current revision, and exact
+  party-name confirmation. It atomically moves the complete document to a
+  seven-day trash area and returns `202 {purgeAt}`.
+- `POST /api/parties/:id/restore` requires the same `ownerKey` and restores the
+  document before `purgeAt`.
+- `POST /api/events` accepts only fixed, content-free technical and usage codes.
+- `GET /api/live` checks the process. `GET /api/health` checks storage readiness
+  and returns the deployed release SHA.
 - Guardrails: JSON <= 256 KB, strict shape validation, crypto IDs, atomic
   tmp+rename writes, best-effort rate limit by IP, global party cap on disk, and
   no party content or IDs in logs. The party ID alone grants read access.
-  Untouched parties are purged after eight months.
+  Untouched parties are purged after eight months. General, creation, and
+  client-event rate limits return `Retry-After` with `429`.
 - Deployment: `api` container with `node:22-alpine`, no npm install, in the
   existing Compose project. nginx proxies `/api/` and continues serving static
   files. Locally, `node server/api.js` serves both API and `public/`.
@@ -268,18 +316,29 @@ history. The app does not accept Spanish payload aliases.
     Escape, focus trapping, focus return, and hidden closed state.
 11. **Continuity**: the entry screen can reopen up to five recent live parties,
     and repeating a pending list creates a clean party with no old money state.
+12. **Capabilities**: `#F:` can edit; `#R:` adopts server truth and exposes no
+    shared mutation controls. Accounts sharing always uses `#R:`. Explicitly
+    opening `#R:` never silently upgrades the current session to edit access.
+13. **Deletion and recovery**: only the creator phone can soft-delete globally,
+    exact name and current revision are required, reads return `410`, and the
+    creator can restore for seven days. "La llave" alone cannot delete.
+14. **Beta trust**: entry onboarding, privacy/help copy, edit-link warning, and
+    read-only labels accurately describe the no-account trust model.
+15. **Operational readiness**: CI covers API and core browser behavior; CSP is
+    generated from the actual inline blocks; uptime checks web, CSP, liveness,
+    and readiness; encrypted backups pass a non-destructive restore check.
 
 ## P1, Next Batch
 
 1. **Receipt photo without OCR**: client-compressed thumbnail on the expense.
    Raises trust and reduces arguments. Requires choosing backend upload shape.
-2. **Read-only link**: no write key in the hash, for sending accounts to people
-   who should not edit.
-3. **Exact per-consumer amounts**: useful for bar tabs; hidden behind "more
+2. **Exact per-consumer amounts**: useful for bar tabs; hidden behind "more
    options", never in the default flow.
-4. **Recent-party management**: manually forget a recent party, name a favorite,
-   or archive a fully settled party. The current five-item automatic list is
-   intentionally the simple first version.
+3. **Beta feedback prompt**: a lightweight, dismissible invitation to send
+   feedback after a party is settled; no in-product survey SDK.
+4. **Recent-party management**: name a favorite or archive a fully settled
+   party. Manual phone forgetting and complete local-data clearing already
+   exist.
 
 ## P2 Bets
 
@@ -302,11 +361,12 @@ history. The app does not accept Spanish payload aliases.
 - **Backend breaks the "no infra" magic**: one file, one JSON per party, zero
   dependencies; confirmed data stays readable without the API; `AP2:` links
   remain manual backup.
-- **Anyone with the link can edit**: acceptable for village groups and matches
-  the current trust model. Identity and "la llave" coordinate the group but are
-  not authentication: anyone with the link can choose an existing identity.
-  Confirmations and visible transfer history limit accidental damage;
-  read-only links are P1; IDs are not guessable and the key stays in the hash.
+- **Anyone with the edit link can edit**: acceptable for known groups and
+  explicit in the UI. Identity and "la llave" coordinate the group but are not
+  authentication. Accounts use a separate read-only link, destructive actions
+  confirm, and global deletion requires a creator capability that edit links do
+  not carry. IDs and keys are cryptographically random; write keys stay in the
+  fragment.
 - **Edit conflicts**: entity merge with last-write-wins and tombstones. The
   realistic worst case, two people editing the same price, resolves by arrival
   order and can be corrected in one tap.
@@ -314,11 +374,25 @@ history. The app does not accept Spanish payload aliases.
   isolated; the API only adds one container to that project. Guardrails in
   `docs/deployment.md` remain active.
 
-## Metrics Without Invasive Analytics
+## Observability and Audit Without Invasive Analytics
 
-For now, use what API logs provide for free while redacting party IDs: parties
-created (201), write volume (PUT 200), 409s, and cheap polls (204). No names,
-content, or IDs. If more is needed later, use anonymous events with opt-out.
+- API logs are structured JSON. Successful writes, slow requests, failures,
+  sanitized exceptions, cleanup, startup, client errors, and five-minute metric
+  snapshots are recorded. Successful polls and healthchecks are aggregated
+  rather than written as one log line each.
+- Logs contain route templates, status, latency, release, request IDs, and
+  HMAC-based party/device references. They never contain party IDs, write keys,
+  names, item content, amounts, IPs, user agents, request bodies, full URLs, or
+  URL fragments.
+- nginx uses a separate URI-free JSON access log for upstream status and latency
+  so 502/504 failures remain visible without exposing read-capability IDs.
+- The browser reports only fixed error/usage codes, safe route names, status
+  codes, request IDs, and pseudonymous party/device references. It never sends
+  DOM, localStorage, URLs, state, names, concepts, amounts, or HTTP bodies.
+- The server derives audit events from the accepted before/after states. The
+  actor remains a declared identity, not authenticated identity; the UI states
+  that boundary explicitly. Events are capped at 200 and 256 KB, and expire or
+  delete with the party.
 
 ## Appendix: Corrections to the Original Analysis
 

@@ -8,6 +8,8 @@ services:
   web:
     image: nginx:1.28-alpine
     restart: unless-stopped
+    environment:
+      APP_RELEASE: ${APP_RELEASE:-dev}
     ports:
       # Loopback only: public access enters through the tunnel, not this port.
       - "127.0.0.1:3200:80"
@@ -27,6 +29,11 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   api:
     image: node:22-alpine
@@ -34,6 +41,7 @@ services:
     command: ["node", "/srv/api.js"]
     environment:
       DATA_DIR: /data
+      APP_RELEASE: ${APP_RELEASE:-dev}
     volumes:
       - ./server/api.js:/srv/api.js:ro
       - api-data:/data
@@ -43,6 +51,11 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   cloudflared:
     image: cloudflare/cloudflared:2025.11.1
@@ -54,6 +67,11 @@ services:
     depends_on:
       web:
         condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
 volumes:
   # Shared parties, one JSON document each. Survives redeployments and is only

@@ -18,6 +18,27 @@ The product is intentionally small:
 - `server/api.js` contains the whole API, using only the Node standard library.
 - There is no build step and no dependency install.
 
+Live parties keep a bounded, server-derived activity trail. Operational logs
+are structured and privacy-minimized: request/release correlation uses one-way
+party and device references, never names, party contents, write keys, IPs, or
+full URLs. Browser telemetry is limited to a fixed technical/usage taxonomy. See the
+operations and privacy contract in [docs/deployment.md](docs/deployment.md) and
+[docs/product.md](docs/product.md).
+
+The private beta has two explicit capabilities: `#F:` links can edit and
+`#R:` links can only read. Global deletion requires a separate creator-phone
+capability and remains reversible for seven days. That capability never appears
+in shared links or party state.
+
+Run the dependency-free quality gate before opening a pull request:
+
+```sh
+scripts/check.sh
+```
+
+If the inline frontend changes, refresh its generated CSP first with
+`node scripts/update_csp.js`.
+
 Brand and UI rules live in [docs/design.md](docs/design.md). Product decisions
 live in [docs/product.md](docs/product.md).
 

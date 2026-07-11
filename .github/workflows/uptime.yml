@@ -1,0 +1,49 @@
+name: Production uptime
+
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+    inputs:
+      simulate_failure:
+        description: "Use an invalid host to verify alert delivery"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-uptime
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      SIMULATE_FAILURE: ${{ inputs.simulate_failure || false }}
+    steps:
+      - name: Check complete public service
+        run: |
+          set -euo pipefail
+          base_url="https://apachas.alexdepablos.es"
+          if [[ "${SIMULATE_FAILURE}" == "true" ]]; then
+            base_url="https://apachas.invalid"
+          fi
+
+          curl --fail --silent --show-error --max-time 15 \
+            --dump-header /tmp/apachas-headers --output /tmp/apachas-body \
+            "${base_url}/"
+          grep -Fq '<title>A Pachas' /tmp/apachas-body
+          grep -Eiq '^content-security-policy:.*default-src' /tmp/apachas-headers
+
+          live="$(curl --fail --silent --show-error --max-time 15 "${base_url}/api/live")"
+          live_release="$(jq -er 'select(.ok == true) | .release | select(test("^[0-9a-f]{40}$"))' \
+            <<<"${live}")"
+
+          health="$(curl --fail --silent --show-error --max-time 15 "${base_url}/api/health")"
+          health_release="$(jq -er 'select(.ok == true) | .release | select(test("^[0-9a-f]{40}$"))' \
+            <<<"${health}")"
+          [[ "${live_release}" == "${health_release}" ]]

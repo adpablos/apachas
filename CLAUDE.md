@@ -8,8 +8,9 @@ the whole frontend lives in `public/index.html` and the whole backend lives in
 ## Repository Map
 
 - `public/index.html` — the entire frontend: HTML, CSS, and vanilla JS.
-- `server/api.js` — the shared-party API: create/read/save with optimistic
-  revisions; in local development it also serves `public/`.
+- `server/api.js` — the shared-party API: create/read/save, soft delete/restore,
+  optimistic revisions, audit, rate limits, and privacy-safe telemetry; in local
+  development it also serves `public/`.
 - `docs/product.md` — product specification: diagnosis, decisions, P0
   acceptance criteria, and backlog. Read it before changing functionality.
 - `docs/design.md` — identity and UI rules: logo, exact tokens, typography,
@@ -17,6 +18,10 @@ the whole frontend lives in `public/index.html` and the whole backend lives in
   product copy.
 - `compose.yaml` — server stack: nginx, API, and cloudflared.
 - `deployment/nginx/default.conf` — nginx static serving plus `/api/` proxy.
+- `deployment/nginx/security-headers.conf` — generated CSP plus shared headers.
+- `tests/` and `scripts/check.sh` — dependency-free API/browser-core checks.
+- `deployment/systemd/` and `scripts/*backup*` — encrypted backup and restore
+  verification tooling.
 - `scripts/deploy.sh` — one-command deployment from the Mac.
 - `docs/deployment.md` — infrastructure runbook. Read it before touching the
   server.
@@ -40,8 +45,9 @@ the whole frontend lives in `public/index.html` and the whole backend lives in
    explicitly asks for it. The only agreed exception is Google Fonts, with a
    system fallback.
 2. Use the current English-only data contract. The localStorage key is
-   `a-pachas-v2`; live links use `#F:id:key` and keep the key in the hash so it
-   does not reach logs. Local snapshot links use `AP2:`. Do not add legacy
+   `a-pachas-v2`; edit links use `#F:id:key`, read-only links use `#R:id`, and
+   write keys stay in the hash so they do not reach logs. Local snapshot links
+   use `AP2:`. Do not add legacy
    Spanish payload aliases unless explicitly requested. Shared state is v6:
    bought-item consumers are explicit IDs, people have an `active` flag, and
    completed Bizums are transfer entities that affect balances. Recent live
@@ -53,8 +59,9 @@ the whole frontend lives in `public/index.html` and the whole backend lives in
    not touch the `current` or `staging` stacks.
 5. Cloudflare tunnel credentials never enter the repo. Shared-party data lives
    in the `api-data` volume and must not be logged.
-6. Verify before declaring work done. Run the local app with `node
-   server/api.js` and test the full mobile flow: create, join by link from
+6. Verify before declaring work done. Run `scripts/check.sh`, then run the local
+   app with `node server/api.js` and test the full mobile flow: create, join by
+   edit and read-only links from
    another client, list, quick expense, bought item with price and consumers,
    Bizums, a later expense after a completed Bizum, inactive participants,
    recent-party reopening, and share messages. After deployment, confirm
@@ -69,6 +76,12 @@ Local live-party mode:
 node server/api.js
 ```
 
+Automated quality gate:
+
+```sh
+scripts/check.sh
+```
+
 Open `http://localhost:8010`; it serves both `public/` and the API. Data is
 stored under `server/data/`, which is ignored by git.
 
@@ -81,5 +94,5 @@ python3 -m http.server -d public
 Test on a mobile viewport around 390px wide. "Ver una fiesta de ejemplo" loads
 demo data and must never upload it to the server. A second client can be
 simulated with `curl` against `/api/parties/:id` or by opening the `#F:...`
-link in another tab/profile. There is no automated test suite; verification is
-browser-based.
+link in another tab/profile. Automated checks cover the API and core state
+behavior; the complete interaction and responsive flow remain browser-based.

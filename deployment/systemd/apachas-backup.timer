@@ -1,0 +1,12 @@
+[Unit]
+Description=Run the A Pachas encrypted data backup daily
+
+[Timer]
+OnCalendar=*-*-* 03:41:00
+RandomizedDelaySec=30m
+AccuracySec=5m
+Persistent=true
+Unit=apachas-backup.service
+
+[Install]
+WantedBy=timers.target

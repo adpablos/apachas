@@ -89,6 +89,9 @@ bit of humor, but not overdone.
   changes are saved locally for later upload.
 - Admin is "la llave" in the UI, with a discreet key icon. Do not show
   "administrador" to users.
+- Access language must describe capabilities, not identity: "enlace para
+  editar", "enlace solo para mirar", and "permiso del móvil creador". Never
+  imply that choosing a name proves who someone is.
 
 ## Screens
 
@@ -99,9 +102,13 @@ bit of humor, but not overdone.
    statement and exactly one personalized action (own assigned item first,
    missing group items second, own Bizum third); "TU SALDO" card with large colored number
    and "Mis cuentas"; identity row with avatar and violet "Cambiar"; access
-   links for rename/date when key holder, start another party, and demo. Without
-   a party: large centered hero plus join/create/demo and up to five recent live
-   parties stored on that phone.
+   links for recent activity, rename/date when key holder, start another party,
+   forget this phone's copy, server deletion on the creator phone, and demo. Without
+   a party: private-beta badge, large centered hero with the concrete
+   create/share/settle promise, three compact steps, join/create/demo, deleted
+   party recovery, and up to five recent live parties stored on that phone,
+   plus a phone-data clearing action when local party data or capabilities
+   remain.
 2. **Lista**: subtitle "{n} cosas por resolver de {total}"; add row with violet
    button; dashed "+ Apuntar un gasto ya pagado"; cards with state chips ("La
    trae X" primarysoft/primary, "Sin dueño" chip/muted) and actions ("Me lo
@@ -138,3 +145,21 @@ bit of humor, but not overdone.
    from the accessibility tree after closing. Clickable rows are native buttons;
    destructive actions ask for confirmation and important touch targets are at
    least 44px tall.
+8. **Activity sheet**: newest first, plain-language actor and action, relative
+   time, and a short pseudonymous phone suffix. It must state that people choose
+   their identity on each phone and that A Pachas does not verify identity.
+   Never expose request IDs, party IDs, write keys, revisions, or log jargon in
+   normal product copy.
+9. **Read-only mode**: show a visible "Solo lectura" badge and a calm access
+   note. List, group, person, and accounts views render the same truth without
+   add/edit/delete/assign/complete/undo controls. Identity selection may remain
+   local so "Tu cuenta" works. Accounts and reminders may be shared only with a
+   `#R:` link; a disconnected saved copy cannot be reshared as live state.
+10. **Privacy and help**: every rendered screen ends with small Privacy and Help
+    links. The privacy sheet explains data, access model, telemetry, retention,
+    infrastructure, and support in plain Spanish. It is also directly reachable
+    at `#privacidad`.
+11. **Global deletion**: only show it when this phone has the creator recovery
+    capability and the current session can edit. Copy must distinguish that
+    phone permission from "la llave", require the exact party name, and explain
+    the seven-day recovery window.

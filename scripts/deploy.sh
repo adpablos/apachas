@@ -11,14 +11,18 @@ APP_DIR="/opt/apachas"
 PUBLIC_URL="https://apachas.alexdepablos.es"
 
 echo "→ Deploying to ${DEPLOY_USER}@${DEPLOY_HOST}:${APP_DIR}"
-# Restart api and web because `up` does not detect changes in mounted files
-# such as server/api.js or deployment/nginx/*.conf. Both services are
-# stateless/config-only; api's data lives in the volume and both restarts
-# take about a second.
 ssh -i "${DEPLOY_SSH_KEY}" -o IdentitiesOnly=yes "${DEPLOY_USER}@${DEPLOY_HOST}" \
-  "cd '${APP_DIR}' && git pull --ff-only && sudo docker compose up -d --wait && sudo docker compose restart api web"
+  "cd '${APP_DIR}' && git pull --ff-only && release=\$(git rev-parse HEAD) && sudo APP_RELEASE=\"\$release\" docker compose up -d --wait"
+
+DEPLOYED_SHA="$(ssh -i "${DEPLOY_SSH_KEY}" -o IdentitiesOnly=yes "${DEPLOY_USER}@${DEPLOY_HOST}" \
+  "cd '${APP_DIR}' && git rev-parse HEAD")"
 
 echo "→ Checking ${PUBLIC_URL}"
 curl -fsS -o /dev/null --retry 3 --retry-delay 2 "${PUBLIC_URL}"
-curl -fsS -o /dev/null --retry 3 --retry-delay 2 "${PUBLIC_URL}/api/health"
-echo "✔ ${PUBLIC_URL} responds (web and api)"
+HEALTH="$(curl -fsS --retry 3 --retry-delay 2 "${PUBLIC_URL}/api/health")"
+HEALTH_RELEASE="$(printf '%s' "${HEALTH}" | sed -n 's/.*"release":"\([^"]*\)".*/\1/p')"
+if [[ "${HEALTH_RELEASE}" != "${DEPLOYED_SHA}" ]]; then
+  echo "Health reports release '${HEALTH_RELEASE}', expected '${DEPLOYED_SHA}'" >&2
+  exit 1
+fi
+echo "✔ ${PUBLIC_URL} responds on release ${DEPLOYED_SHA}"
