@@ -22,6 +22,7 @@ the whole frontend lives in `public/index.html` and the whole backend lives in
 - `tests/` and `scripts/check.sh` — dependency-free API/browser-core checks.
 - `deployment/systemd/` and `scripts/*backup*` — encrypted backup and restore
   verification tooling.
+- `CHANGELOG.md` — canonical user-visible and operational release notes.
 - `scripts/deploy.sh` — one-command deployment from the Mac.
 - `docs/deployment.md` — infrastructure runbook. Read it before touching the
   server.
@@ -59,7 +60,11 @@ the whole frontend lives in `public/index.html` and the whole backend lives in
    not touch the `current` or `staging` stacks.
 5. Cloudflare tunnel credentials never enter the repo. Shared-party data lives
    in the `api-data` volume and must not be logged.
-6. Verify before declaring work done. Run `scripts/check.sh`, then run the local
+6. Add one concise bullet under `Unreleased` in `CHANGELOG.md` for changes to
+   product behavior, persisted data, security, privacy, deployment, or
+   recovery. Pure refactors and test-only changes do not need an entry unless
+   they affect those contracts. Never rewrite a released section.
+7. Verify before declaring work done. Run `scripts/check.sh`, then run the local
    app with `node server/api.js` and test the full mobile flow: create, join by
    edit and read-only links from
    another client, list, quick expense, bought item with price and consumers,

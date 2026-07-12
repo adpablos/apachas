@@ -66,6 +66,70 @@ recreates `api` and `web`, which is required for mounted API/nginx changes. It
 then verifies the public web and checks that `/api/health` reports the exact
 deployed SHA.
 
+## Versioning and Release Recording
+
+A Pachas keeps three deliberately separate identifiers:
+
+| Identifier | Source | Changes when |
+| --- | --- | --- |
+| Product version | Annotated Git tag such as `v0.1.0-beta.1` | A release is recorded |
+| Deployed release | `APP_RELEASE`, always the full Git SHA | Production is deployed |
+| Data contract | `STATE_VERSION` in frontend and API | Persisted state changes |
+
+The first family-and-friends beta is `v0.1.0-beta.1`. While the product remains
+in beta, versions use `0.MINOR.0-beta.N`: small fixes and improvements increment
+`N`, while a substantial new capability increments `MINOR` and resets the
+suffix to `beta.1`. Do not add a second version file or replace `APP_RELEASE`
+with SemVer: the tag is the human version and the SHA remains the precise
+diagnostic and rollback identity.
+
+For every pull request, add one concise bullet under `Unreleased` in
+`CHANGELOG.md` when behavior, persisted data, security, privacy, deployment, or
+recovery changes. Pure refactors and test-only changes need no entry unless they
+alter one of those contracts.
+
+To record a release:
+
+1. Move the `Unreleased` bullets into a dated version section and restore an
+   empty `Unreleased` section.
+2. Merge only after review and CI are green, then deploy with `scripts/deploy.sh`.
+3. Read the exact deployed SHA from `/api/health` and tag that commit, never an
+   unverified local commit.
+4. Push the annotated tag and create a GitHub Release marked as a prerelease,
+   using the matching changelog section as its notes.
+
+```bash
+set -euo pipefail
+scripts/check.sh
+version="v0.1.0-beta.1"
+git fetch origin main --tags
+expected_sha="$(git rev-parse origin/main)"
+
+scripts/deploy.sh
+health="$(curl -fsS https://apachas.alexdepablos.es/api/health)"
+deployed_sha="$(printf '%s' "$health" | sed -n 's/.*"release":"\([^"]*\)".*/\1/p')"
+test "$deployed_sha" = "$expected_sha"
+git cat-file -e "${deployed_sha}^{commit}"
+
+notes="$(mktemp)"
+awk -v heading="## [${version#v}]" '
+  index($0, heading " - ") == 1 { copy = 1; next }
+  copy && /^## \[/ { exit }
+  copy { print }
+' CHANGELOG.md > "$notes"
+test -s "$notes"
+
+git tag -a "$version" "$deployed_sha" -m "A Pachas $version"
+git push origin "$version"
+gh release create "$version" --verify-tag --prerelease \
+  --title "A Pachas $version" --notes-file "$notes"
+rm -f "$notes"
+```
+
+A version section may be corrected until its tag and GitHub Release are
+published. From that point it is frozen: never move or reuse the tag, and
+correct the release with a new SemVer version and changelog entry.
+
 Equivalent manual flow on the server:
 
 ```bash

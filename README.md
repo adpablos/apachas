@@ -42,6 +42,16 @@ If the inline frontend changes, refresh its generated CSP first with
 Brand and UI rules live in [docs/design.md](docs/design.md). Product decisions
 live in [docs/product.md](docs/product.md).
 
+## Releases
+
+The family-and-friends beta starts at `v0.1.0-beta.1`. Annotated Git tags are
+the human product version, while `APP_RELEASE` remains the exact deployed Git
+SHA and `STATE_VERSION` remains only the persisted-data contract version.
+
+Every product, data, security, privacy, deployment, or recovery change is added
+under `Unreleased` in [CHANGELOG.md](CHANGELOG.md). The short release procedure
+is documented in [docs/deployment.md](docs/deployment.md#versioning-and-release-recording).
+
 ## Language Policy
 
 Source code, identifiers, implementation comments, commit messages, and
