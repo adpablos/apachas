@@ -209,9 +209,9 @@ assignments, transfers, and balances never carry over.
   self-declared admin. It is a seven-day soft delete; only that phone can
   restore it. Legacy parties without an owner capability remain usable but
   cannot be globally deleted through the app.
-- The beta collects only allowlisted technical errors, six coarse client
+- The beta collects only allowlisted technical errors, seven coarse client
   signals (write/read opens, edit/read share intent, accounts viewed, and
-  support intent), and four server-derived lifecycle events. Optional remote
+  support and feedback intent), and four server-derived lifecycle events. Optional remote
   processing uses Better Stack EU and PostHog EU from the server only. There are
   no browser analytics, advertising identifiers, profiles, cookies, names,
   amounts, concepts, request bodies, or URLs in telemetry.
@@ -329,6 +329,17 @@ and write capabilities stored on that phone.
 15. **Operational readiness**: CI covers API and core browser behavior; CSP is
     generated from the actual inline blocks; uptime checks web, CSP, liveness,
     and readiness; encrypted backups pass a non-destructive restore check.
+16. **Feedback boundary**: privacy/help and settled accounts link to an external
+    Featurebase board only after a plain-language warning. The link opens in a
+    new tab without referrer data, query parameters, URL fragments, party data,
+    embedded scripts, widgets, or cookies in A Pachas. The browser reports only
+    the allowlisted first-party `usage.feedback_opened` event.
+
+Featurebase board categories (`Problemas` and `Ideas`), moderation, and seed
+posts are provider-side configuration, not application state. Votes and
+comments are prioritization evidence, never an automatic delivery queue:
+security, data loss, incorrect balances, and the number of real parties
+affected take precedence over vote count.
 
 ## P1, Next Batch
 
@@ -336,9 +347,7 @@ and write capabilities stored on that phone.
    Raises trust and reduces arguments. Requires choosing backend upload shape.
 2. **Exact per-consumer amounts**: useful for bar tabs; hidden behind "more
    options", never in the default flow.
-3. **Beta feedback prompt**: a lightweight, dismissible invitation to send
-   feedback after a party is settled; no in-product survey SDK.
-4. **Recent-party management**: name a favorite or archive a fully settled
+3. **Recent-party management**: name a favorite or archive a fully settled
    party. Manual phone forgetting and complete local-data clearing already
    exist.
 
@@ -404,6 +413,11 @@ and write capabilities stored on that phone.
   boolean milestones in each party document prevent first-use lifecycle events
   from being emitted again after later corrections or process restarts; they do
   not enter shared state or API responses.
+- Feedback uses a normal external link to Featurebase after an explicit warning.
+  No provider SDK runs in A Pachas and the link contains no party or identity
+  context from A Pachas, query string, fragment, or referrer. Featurebase
+  receives the text a person submits plus the ordinary network, browser, cookie,
+  or account metadata of that separate visit, under its own privacy terms.
 - The server derives audit events from the accepted before/after states. The
   actor remains a declared identity, not authenticated identity; the UI states
   that boundary explicitly. Events are capped at 200 and 256 KB, and expire or

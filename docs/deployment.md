@@ -273,7 +273,7 @@ The API supports two independent server-side projections:
 | `first_transfer_completed` | Server | The party accepted its first completed transfer. |
 | `party_opened_write`, `party_opened_read` | Client allowlist | A live party opened in the corresponding capability mode. |
 | `invite_share_intent`, `accounts_share_intent` | Client allowlist | The native share/copy flow was opened. |
-| `support_opened`, `accounts_viewed` | Client allowlist | Support or the accounts screen was opened. |
+| `support_opened`, `accounts_viewed`, `feedback_opened` | Client allowlist | Support, accounts, or feedback was opened. |
 
 Every event is also recorded in local structured logs as `product_event` before
 remote delivery, so a provider gap can be audited or backfilled.
@@ -343,6 +343,29 @@ scripts/check.sh
 CI fails when the generated header is stale. `security-headers.conf` permits
 only the app origin plus Google Fonts, blocks framing and plugins, and keeps
 inline JavaScript restricted to the generated SHA-256 hash.
+
+## External Feedback Board
+
+`FEEDBACK_URL` in `public/index.html` is the single integration point for the
+target Featurebase board. A Pachas uses a normal external link only: there is no
+Featurebase SDK, widget, iframe, runtime credential, or cookie in the app. The
+link has no query string or fragment, sends no referrer, and receives no party
+or identity context from A Pachas. Featurebase still receives the ordinary
+network, browser, cookie, or account metadata of that separate visit. Before
+opening it, the UI names Featurebase and tells people not to enter names,
+amounts, or party links.
+
+The content-free `usage.feedback_opened` code is sent separately to A Pachas' own
+`POST /api/events` endpoint. Changing providers requires updating only
+`FEEDBACK_URL`, the visible provider name and this runbook, then refreshing the
+CSP hash and running `scripts/check.sh`.
+
+The Featurebase workspace is provisioned separately from deployment. Before
+enabling the CTA for a release, verify that `FEEDBACK_URL` resolves and configure
+the public categories `Problemas` and `Ideas`, guest posting/voting, moderation,
+and Spanish copy in Featurebase. Votes inform product prioritization; they do not
+automatically reorder work or override security, correctness, or data-loss
+issues.
 
 ## Encrypted Backups
 

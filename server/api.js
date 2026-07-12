@@ -267,6 +267,7 @@ const PRODUCT_EVENTS = new Set([
   'party_created', 'collaboration_started', 'first_expense_recorded',
   'first_transfer_completed', 'party_opened_write', 'party_opened_read',
   'invite_share_intent', 'accounts_share_intent', 'support_opened', 'accounts_viewed',
+  'feedback_opened',
 ]);
 
 function captureProductEvent(event, partyRef, source) {
@@ -1037,7 +1038,7 @@ const CLIENT_ERROR_CODES = new Set([
 const USAGE_EVENT_CODES = new Set([
   'usage.party_opened_write', 'usage.party_opened_read',
   'usage.invite_share_intent', 'usage.accounts_share_intent',
-  'usage.support_opened', 'usage.accounts_viewed',
+  'usage.support_opened', 'usage.accounts_viewed', 'usage.feedback_opened',
 ]);
 const USAGE_PRODUCT_EVENTS = new Map([...USAGE_EVENT_CODES]
   .map((code) => [code, code.slice('usage.'.length)]));

@@ -123,6 +123,7 @@
   .btn-block{width:100%}
   .quiet-link{background:none;border:none;color:var(--muted);font-size:13px;font-weight:500;
     cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:4px 2px}
+  .feedback-cta{min-height:44px;padding:10px 4px}
   input[type=text],input[type=tel],input[type=date],textarea{
     font-family:inherit;font-size:16px;background:var(--card);color:var(--ink);
     border:1px solid var(--line);border-radius:11px;padding:12px 13px;width:100%;
@@ -330,6 +331,7 @@
   .price-input .eur{font-size:19px;font-weight:600;color:var(--muted)}
   .sheet-actions{display:flex;gap:10px;margin-top:22px}
   .sheet-actions .btn{flex:1}
+  .sheet-actions a.btn{display:flex;align-items:center;justify-content:center;text-decoration:none}
   .delete-link{background:none;border:none;color:var(--coral);font-size:13.5px;
     font-weight:600;margin:16px auto 0;display:block;cursor:pointer}
   .menu-option{
@@ -394,6 +396,7 @@ const DELETED_PARTIES_KEY = 'a-pachas-deleted-v1';
 const DEVICE_KEY = 'a-pachas-device-v1';
 const THEME_KEY = 'a-pachas-theme';
 const SUPPORT_EMAIL = 'alex@alexdepablos.com';
+const FEEDBACK_URL = 'https://apachas.featurebase.app';
 const API = '/api';
 const STATE_VERSION = 6;
 const LOCAL_RETENTION_MS = 90 * 24 * 3600 * 1000;
@@ -1575,7 +1578,7 @@ function accounts(){
 let sheetReturnFocus = null;
 let sheetHideTimer = null;
 function sheetFocusableElements(){
-  return [...$('#sheet').querySelectorAll('button:not([disabled]),input:not([disabled]),textarea:not([disabled]),[tabindex="0"]')]
+  return [...$('#sheet').querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),[tabindex="0"]')]
     .filter(el => !el.hidden && el.getClientRects().length);
 }
 function openSheet(html, locked){
@@ -2640,16 +2643,37 @@ function privacySheet(){
     <div class="note"><strong>Cómo funciona el acceso.</strong><br>El enlace de edición permite ver y cambiar la fiesta, incluso eligiendo el nombre de otra persona. El enlace de cuentas es solo para mirar. No hay identidad verificada.</div>
     <div class="note"><strong>Privacidad por defecto.</strong><br>No hay publicidad, cookies de analítica, grabaciones de pantalla ni perfiles personales. Los avisos técnicos y métricas de uso se envían desde el servidor con códigos cerrados y referencias seudónimas, nunca con nombres, importes, contenido, direcciones IP ni enlaces.</div>
     <div class="note"><strong>Cuánto dura.</strong><br>Las fiestas sin uso caducan a los 8 meses. Los datos de este móvil, a los 90 días; las copias de recuperación y los borrados reversibles, a los 7. Las copias operativas cifradas y los registros remotos, como máximo 30 días; las métricas de recorridos sin contenido, como máximo 12 meses.</div>
-    <div class="note"><strong>Infraestructura.</strong><br>La app usa Hetzner para alojarse, Cloudflare para la conexión, Google Fonts para la tipografía y, cuando están activados, Better Stack y PostHog EU para detectar fallos y entender recorridos generales.</div>
+    <div class="note"><strong>Infraestructura.</strong><br>La app usa Hetzner para alojarse, Cloudflare para la conexión, Google Fonts para la tipografía y, cuando están activados, Better Stack y PostHog EU para detectar fallos y entender recorridos generales. El tablón externo de comentarios lo gestiona Featurebase.</div>
     <p class="footnote">Para ayuda, borrado o cualquier cuestión sobre tus datos: <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a>.</p>
-    <button class="btn btn-primary btn-block" id="privacySupportButton" type="button">Escribir a Alex</button>
+    <div class="sheet-actions">
+      <button class="btn btn-outline" id="privacySupportButton" type="button">Escribir a Alex</button>
+      <button class="btn btn-primary" id="privacyFeedbackButton" type="button">Comentarios e ideas</button>
+    </div>
   `);
   $('#privacySupportButton').onclick = openSupport;
+  $('#privacyFeedbackButton').onclick = feedbackSheet;
 }
 
 function openSupport(){
   reportUsageEvent('usage.support_opened');
   location.href = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('A Pachas beta')}`;
+}
+
+function feedbackSheet(){
+  openSheet(`
+    <h2 class="sheet-title">Comentarios e ideas</h2>
+    <p class="sheet-sub">El tablón lo gestiona Featurebase y se abrirá fuera de A Pachas, en una pestaña nueva.</p>
+    <div class="note"><strong>Antes de salir.</strong><br>No incluyas nombres, importes ni enlaces de la fiesta. A Pachas no envía ningún dato de la fiesta al tablón.</div>
+    <div class="sheet-actions">
+      <button class="btn btn-outline" id="cancelFeedbackButton" type="button">Ahora no</button>
+      <a class="btn btn-primary" id="openFeedbackButton" href="${FEEDBACK_URL}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Abrir el tablón</a>
+    </div>
+  `);
+  $('#cancelFeedbackButton').onclick = closeSheet;
+  $('#openFeedbackButton').onclick = () => {
+    reportUsageEvent('usage.feedback_opened');
+    closeSheet();
+  };
 }
 
 function footerHtml(){
@@ -3040,7 +3064,7 @@ function accountsView(c){
     ${c.bizums.length ? '<span class="label">Bizums pendientes</span>' : ''}
     ${bizumsHtml}
     ${c.bizums.length ? `<div class="footnote">${readOnly ? 'Este enlace no puede marcar Bizums como hechos.' : 'Marca el círculo cuando el Bizum esté hecho.'}</div>`
-      : '<div class="settled-message">Cuentas en paz. Ni pa ti ni pa mí.</div>'}
+      : '<div class="settled-message">Cuentas en paz. Ni pa ti ni pa mí.</div><div class="footnote">¿Algo que mejorar? <button class="quiet-link feedback-cta" id="accountsFeedbackButton" type="button">Comentarios e ideas</button></div>'}
     ${S.transfers.length ? '<span class="label">Bizums hechos</span>' : ''}
     ${transfersHtml}
     ${S.localReadOnly ? '' : `<button class="btn btn-primary btn-block" id="shareAccountsButton" type="button" style="margin-top:14px;padding:14px">
@@ -3337,6 +3361,7 @@ function bindView(v){
     toast(ok ? 'Copiado. Al Bizum y arreando.' : 'No se ha podido copiar');
   });
   on('#shareAccountsButton', () => shareSheet('accounts'));
+  on('#accountsFeedbackButton', feedbackSheet);
 }
 
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {

@@ -325,3 +325,15 @@ test('create and client-event endpoints return retry guidance at their limits', 
   assert.equal(eventLimited.status, 429);
   assert.match(eventLimited.headers.get('retry-after'), /^\d+$/);
 });
+
+test('the feedback-opened event is accepted without content fields', async () => {
+  const response = await request('POST', '/api/events', {
+    events: [{
+      code: 'usage.feedback_opened',
+      route: 'client',
+      deviceId: 'device-api-test-0003',
+    }],
+  }, '198.51.100.31');
+
+  assert.equal(response.status, 202);
+});

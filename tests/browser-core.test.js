@@ -121,6 +121,23 @@ test('usage events are reported once per code and party in a browser session', (
   ]);
 });
 
+test('feedback leaves through a context-free external link without embedded third-party code', () => {
+  assert.match(html, /const FEEDBACK_URL = 'https:\/\/apachas\.featurebase\.app';/);
+  assert.match(html, /href="\$\{FEEDBACK_URL\}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer"/);
+  assert.match(html, /reportUsageEvent\('usage\.feedback_opened'\)/);
+  assert.match(html, /El tablón lo gestiona Featurebase/);
+  assert.match(html, /No incluyas nombres, importes ni enlaces de la fiesta/);
+  assert.doesNotMatch(html, /<script[^>]+src=["'][^"']*featurebase/i);
+  assert.doesNotMatch(html, /<iframe[^>]+featurebase/i);
+  assert.doesNotMatch(html, /FEEDBACK_URL\s*\+/);
+  assert.doesNotMatch(html, /featurebase\.app\/[^'"\s<]/i);
+});
+
+test('feedback controls are keyboard and touch accessible', () => {
+  assert.match(html, /querySelectorAll\('a\[href\],button:not\(\[disabled\]\)/);
+  assert.match(html, /\.feedback-cta\{min-height:44px/);
+  assert.match(html, /class="quiet-link feedback-cta" id="accountsFeedbackButton"/);
+});
 test('v5 migration freezes consumers and turns completed settlements into transfers', () => {
   const { functions } = coreContext('', ['migrateState']);
   const migrated = functions.migrateState({

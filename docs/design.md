@@ -158,7 +158,10 @@ bit of humor, but not overdone.
 10. **Privacy and help**: every rendered screen ends with small Privacy and Help
     links. The privacy sheet explains data, access model, telemetry, retention,
     infrastructure, and support in plain Spanish. It is also directly reachable
-    at `#privacidad`.
+    at `#privacidad`. It offers "Comentarios e ideas" alongside support. Settled
+    accounts repeat the same quiet CTA without an automatic prompt. Both open a
+    warning sheet before the external Featurebase board; the warning names the
+    provider and tells people never to include names, amounts, or party links.
 11. **Global deletion**: only show it when this phone has the creator recovery
     capability and the current session can edit. Copy must distinguish that
     phone permission from "la llave", require the exact party name, and explain

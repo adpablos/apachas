@@ -156,10 +156,16 @@ test('remote observability is allowlisted, pseudonymous, and server-derived', as
   });
   assert.equal(transfer.status, 200);
 
-  const usage = await request('POST', '/api/events', { events: [{
-    code: 'usage.accounts_viewed', route: 'client',
-    partyId: created.body.id, deviceId: secondDevice,
-  }] });
+  const usage = await request('POST', '/api/events', { events: [
+    {
+      code: 'usage.accounts_viewed', route: 'client',
+      partyId: created.body.id, deviceId: secondDevice,
+    },
+    {
+      code: 'usage.feedback_opened', route: 'client',
+      partyId: created.body.id, deviceId: secondDevice,
+    },
+  ] });
   assert.equal(usage.status, 202);
 
   const validRelatedRequestId = '123e4567-e89b-42d3-a456-426614174000';
@@ -184,7 +190,7 @@ test('remote observability is allowlisted, pseudonymous, and server-derived', as
 
   const expectedEvents = new Set([
     'party_created', 'collaboration_started', 'first_expense_recorded',
-    'first_transfer_completed', 'accounts_viewed',
+    'first_transfer_completed', 'accounts_viewed', 'feedback_opened',
   ]);
   await waitUntil(() => {
     const received = new Set(records.filter((record) => record.path === '/capture/')

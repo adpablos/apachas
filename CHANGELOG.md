@@ -18,7 +18,8 @@ or recovery changes. Pure refactors and test-only changes need no entry. -->
 
 - Added optional privacy-safe remote logs and server-side product analytics,
   plus independent encrypted-backup freshness heartbeats.
-
+- Added a privacy-gated external feedback board for ideas, comments, and votes,
+  without embedded third-party code or party context.
 ### Security
 
 - Documented the stable 1Password locator and recovery procedure for the
