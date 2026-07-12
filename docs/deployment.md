@@ -35,9 +35,12 @@ There is no build step and no account/application credential required at
 startup. Party data lives in the `api-data` volume. It is lost only with
 `docker compose down -v`; untouched
 parties are automatically purged after eight months. The only externally
-provisioned sensitive material is the tunnel credential, which lives outside
-the repo. A randomly generated observability key lives inside the data volume and only produces
-one-way party/device references for correlation; it is never returned or logged.
+provisioned secret required by the running stack is the tunnel credential,
+which lives outside the repository. Backup decryption uses a private `age`
+identity held off-server on the operator Mac and in 1Password; the server
+receives only its public recipient. A randomly generated observability key lives
+inside the data volume and only produces one-way party/device references for
+correlation; it is never returned or logged.
 
 ## Server Paths
 
@@ -266,6 +269,22 @@ seven-day soft-delete area, and `.observability-key`; validates every captured
 JSON document; encrypts the archive with public `age` recipients; emits a
 content-free size/hash/count manifest; and keeps 30 days. The server must never
 hold the private age identity.
+
+### Recovery Identity
+
+The recovery identity has two managed copies. Repository documentation records
+only the 1Password locator, never the private identity itself:
+
+| Purpose | Location |
+| --- | --- |
+| Working copy on the operator Mac | `~/.config/age/apachas-backup-identity.txt` |
+| Canonical recovery copy | 1Password vault `Private`, Secure Note `A Pachas backup recovery identity`, item ID `yha7fpblpr3ostz34eggg2avza` |
+
+Locate the 1Password record by its exact title or item ID. If the Mac working
+copy is lost, restore the Secure Note contents to the path above and run
+`chmod 600 ~/.config/age/apachas-backup-identity.txt` before using the restore
+checker. Never place the identity in this repository, on the application
+server, in shell history, or in operational logs.
 
 One-time setup:
 
