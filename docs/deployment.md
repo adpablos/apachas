@@ -69,7 +69,8 @@ The script runs `git pull --ff-only`, injects the exact git SHA as
 `APP_RELEASE`, and runs `docker compose up -d --wait`. The release change
 recreates `api` and `web`, which is required for mounted API/nginx changes. It
 then verifies the public web and checks that `/api/health` reports the exact
-deployed SHA.
+deployed SHA. Docker Compose 2.24 or newer is required for the optional
+`env_file.required` syntax; production was verified on 2.40.3 on 2026-07-12.
 
 ## Versioning and Release Recording
 

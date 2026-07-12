@@ -97,6 +97,30 @@ test('the browser script parses as JavaScript', () => {
   assert.doesNotThrow(() => new vm.Script(scripts[0], { filename: HTML_FILE }));
 });
 
+test('usage events are reported once per code and party in a browser session', () => {
+  const context = vm.createContext({});
+  vm.runInContext(`
+    var S = { remote: { id: 'party-one' } };
+    const reportedUsageEvents = new Set();
+    const sent = [];
+    function reportClientEvent(code, details) { sent.push({ code, details }); }
+    ${extractFunction(scripts[0], 'reportUsageEvent')}
+    this.testExports = { reportUsageEvent, sent };
+  `, context, { filename: 'public/index.html#usage-events' });
+
+  context.testExports.reportUsageEvent('usage.accounts_viewed');
+  context.testExports.reportUsageEvent('usage.accounts_viewed');
+  context.S.remote.id = 'party-two';
+  context.testExports.reportUsageEvent('usage.accounts_viewed');
+  context.testExports.reportUsageEvent('usage.support_opened');
+
+  assert.deepEqual(plain(context.testExports.sent.map((event) => event.code)), [
+    'usage.accounts_viewed',
+    'usage.accounts_viewed',
+    'usage.support_opened',
+  ]);
+});
+
 test('v5 migration freezes consumers and turns completed settlements into transfers', () => {
   const { functions } = coreContext('', ['migrateState']);
   const migrated = functions.migrateState({
