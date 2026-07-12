@@ -3065,6 +3065,7 @@ function render(){
     else t.removeAttribute('aria-current');
   });
   const c = accounts();
+  // This catches every route into accounts; reportUsageEvent deduplicates it per party and session.
   if(S.tab === 'accounts' && S.remote) reportUsageEvent('usage.accounts_viewed');
   const pendingItems = c.bizums.length;
   const badge = $('#accountsBadge');

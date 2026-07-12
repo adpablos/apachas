@@ -251,7 +251,7 @@ function remoteLogPayload(entry) {
 function logEvent(level, event, fields = {}) {
   const entry = { timestamp: new Date().toISOString(), level, event, release: APP_RELEASE, ...fields };
   console.log(JSON.stringify(entry));
-  forwardRemoteLog(remoteLogPayload(entry));
+  if (BETTER_STACK_URL) forwardRemoteLog(remoteLogPayload(entry));
 }
 
 function safeError(error) {
@@ -288,7 +288,7 @@ function captureProductEvent(event, partyRef, source) {
   });
 }
 
-const REQUEST_ID_RE = /^[A-Za-z0-9._-]{8,80}$/;
+const REQUEST_ID_RE = /^(?:[a-f0-9]{32}|[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12})$/i;
 function requestContext(req, url) {
   const incoming = req.headers['x-request-id'];
   const requestId = typeof incoming === 'string' && REQUEST_ID_RE.test(incoming)
@@ -1047,7 +1047,6 @@ const CLIENT_ERROR_TYPES = new Set([
   'EvalError', 'AggregateError', 'DOMException', 'AbortError', 'NetworkError',
   'TimeoutError', 'NotAllowedError', 'SecurityError', 'QuotaExceededError',
 ]);
-const RELATED_REQUEST_ID_RE = /^(?:[a-f0-9]{32}|[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12})$/i;
 const CLIENT_ROUTES = new Set([
   'parties.create', 'parties.read', 'parties.update', 'parties.delete', 'parties.restore', 'client',
 ]);
@@ -1069,7 +1068,7 @@ function recordClientEvents(body, context) {
       route: item.route,
       status: Number.isInteger(item.status) && item.status >= 0 && item.status <= 599
         ? item.status : undefined,
-      relatedRequestId: typeof item.requestId === 'string' && RELATED_REQUEST_ID_RE.test(item.requestId)
+      relatedRequestId: typeof item.requestId === 'string' && REQUEST_ID_RE.test(item.requestId)
         ? item.requestId : undefined,
       partyRef: privateRef('party', partyId),
       deviceRef,

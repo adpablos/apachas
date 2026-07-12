@@ -23,6 +23,7 @@ hash_file() {
 
 [[ "$MAX_AGE_HOURS" =~ ^[0-9]+$ && "$MAX_AGE_HOURS" -gt 0 ]] \
   || fail "maximum age must be a positive number of hours" 78
+command -v jq >/dev/null 2>&1 || fail "jq is required" 69
 [[ -d "$BACKUP_DIR" && -r "$BACKUP_DIR" ]] \
   || fail "backup directory is not readable" 66
 

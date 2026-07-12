@@ -108,6 +108,18 @@ test('remote observability is allowlisted, pseudonymous, and server-derived', as
     try { return (await fetch(`${baseUrl}/api/live`)).ok; } catch (error) { return false; }
   }, 'API did not start');
 
+  const poisonedRequestId = 'AlejandroDePablos';
+  const poisonedResponse = await fetch(`${baseUrl}/api/events`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Request-ID': poisonedRequestId },
+    body: JSON.stringify({ events: [{
+      code: 'usage.support_opened', route: 'client', deviceId: 'private-device-00000003',
+    }] }),
+  });
+  assert.equal(poisonedResponse.status, 202);
+  assert.notEqual(poisonedResponse.headers.get('X-Request-ID'), poisonedRequestId);
+  assert.match(poisonedResponse.headers.get('X-Request-ID'), /^[a-f0-9-]{36}$/);
+
   async function request(method, route, body) {
     const response = await fetch(`${baseUrl}${route}`, {
       method,
@@ -228,7 +240,7 @@ test('remote observability is allowlisted, pseudonymous, and server-derived', as
     created.body.id, created.body.key, created.body.ownerKey, firstDevice, secondDevice,
     'Secret celebration name', 'Private person one', 'Private person two',
     'Private expense content', 'PrivateNameCanLeak', 'PrivatePerson',
-    validRelatedRequestId, 'TypeError', '987654', '12345', '/api/parties/',
+    poisonedRequestId, validRelatedRequestId, 'TypeError', '987654', '12345', '/api/parties/',
   ]) {
     assert.ok(!outbound.includes(forbidden), `Outbound telemetry contained ${forbidden}`);
   }

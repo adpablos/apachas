@@ -10,6 +10,7 @@ const { test } = require('node:test');
 
 const ROOT = path.resolve(__dirname, '..');
 const SCRIPT = path.join(ROOT, 'scripts', 'check_backup_freshness.sh');
+const JQ_SKIP = spawnSync('jq', ['--version']).status === 0 ? false : 'jq is not installed';
 
 function run(directory, extraEnv = {}) {
   return spawnSync(SCRIPT, [], {
@@ -19,7 +20,7 @@ function run(directory, extraEnv = {}) {
   });
 }
 
-test('backup freshness requires a recent complete encrypted pair', (t) => {
+test('backup freshness requires a recent complete encrypted pair', { skip: JQ_SKIP }, (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'apachas-backup-monitor-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
 
