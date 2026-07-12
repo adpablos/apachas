@@ -14,6 +14,11 @@ stable, publicly supported product contract.
 <!-- Add concise bullets here for product, data, security, privacy, deployment,
 or recovery changes. Pure refactors and test-only changes need no entry. -->
 
+### Security
+
+- Documented the stable 1Password locator and recovery procedure for the
+  private backup identity without storing the identity in the repository.
+
 ## [0.1.0-beta.1] - 2026-07-12
 
 First family-and-friends beta.
