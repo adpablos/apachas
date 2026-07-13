@@ -428,10 +428,10 @@
     <div class="tabbar-in">
       <button class="tab" data-tab="party" type="button">
         <svg viewBox="0 0 48 48" stroke-width="3.4"><circle cx="24" cy="24" r="19"/><g stroke-linecap="round"><line x1="24" y1="24" x2="24" y2="5"/><line x1="24" y1="24" x2="42.1" y2="18.1"/><line x1="24" y1="24" x2="35.2" y2="39.4"/><line x1="24" y1="24" x2="12.8" y2="39.4"/><line x1="24" y1="24" x2="5.9" y2="18.1"/></g></svg>
-        Fiesta</button>
+        Plan</button>
       <button class="tab" data-tab="list" type="button">
         <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>
-        Lista</button>
+        Gastos</button>
       <button class="tab" data-tab="group" type="button">
         <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3 2.8-4.8 5.5-4.8s4.9 1.8 5.5 4.8"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.4c2.3.2 4 1.7 4.5 4.1"/></svg>
         Peña</button>
@@ -662,7 +662,7 @@ function loadRecentParties(){
         ...(OWNER_KEY_RE.test(x.ownerKey || '') ? {ownerKey:x.ownerKey} : {}),
         ...(ID_RE.test(x.me || '') ? {me:x.me} : {}),
         tab:PARTY_TABS.includes(x.tab) ? x.tab : 'party',
-        name:typeof x.name === 'string' ? x.name.slice(0,80) : 'Fiesta',
+        name:typeof x.name === 'string' ? x.name.slice(0,80) : 'Plan',
         date:DATE_RE.test(x.date || '') ? x.date : null,
         lastOpenedAt:x.lastOpenedAt}];
     });
@@ -702,7 +702,7 @@ function loadDeletedParties(){
          !OWNER_KEY_RE.test(entry.ownerKey || '') || !Number.isFinite(entry.purgeAt) ||
          entry.purgeAt <= now()) return [];
       return [{id:entry.id, key:entry.key, ownerKey:entry.ownerKey,
-        name:typeof entry.name === 'string' ? entry.name.slice(0,80) : 'Fiesta borrada',
+        name:typeof entry.name === 'string' ? entry.name.slice(0,80) : 'Plan borrado',
         purgeAt:entry.purgeAt}];
     }).slice(0,3);
     if(deleted.length !== value.length) localStorage.setItem(DELETED_PARTIES_KEY,JSON.stringify(deleted));
@@ -991,8 +991,8 @@ function importParty(text){
   // A snapshot link must not silently disconnect a live party.
   if(isRemoteParty()){
     closeSheet();
-    confirmSheet('¿Abrir la fiesta del enlace?',
-      'Ese enlace lleva una copia congelada. Tu fiesta en vivo se queda a salvo: vuelves a ella con el enlace del grupo.',
+    confirmSheet('¿Abrir el plan del enlace?',
+      'Ese enlace lleva una copia congelada. Tu plan en vivo se queda a salvo: vuelves a él con el enlace del grupo.',
       () => applyImported(obj), {confirmLabel:'Abrir esta copia'});
     return true;
   }
@@ -1232,10 +1232,10 @@ function markOffline(){
 }
 function syncText(){
   if(!S) return '';
-  if(S.party.demo) return 'Fiesta de ejemplo · solo en este móvil';
+  if(S.party.demo) return 'Plan de ejemplo · solo en este móvil';
   if(isReadOnlyParty()){
     if(!S.remote || sync.markOffline) return 'Solo lectura · última copia de este móvil';
-    if(!sync.lastSeenAt) return 'Solo lectura · abriendo la fiesta…';
+    if(!sync.lastSeenAt) return 'Solo lectura · abriendo el plan…';
     return 'Solo lectura · al día ' + timeAgo(sync.lastSeenAt);
   }
   if(!S.remote) return 'Solo en este móvil';
@@ -1327,13 +1327,13 @@ async function upload(){
         reportClientEvent('sync.party_missing', {
           route:'parties.update', status:404, requestId:r.requestId,
         });
-        disconnectRemote('Esa fiesta ya no está en vivo. Sigues con la copia de tu móvil.');
+        disconnectRemote('Ese plan ya no está en vivo. Sigues con la copia de tu móvil.');
         break;
       } else if(r.status === 403){
         reportClientEvent('sync.access_lost', {
           route:'parties.update', status:403, requestId:r.requestId,
         });
-        disconnectRemote('Este enlace ya no puede editar la fiesta. Sigues con la copia de tu móvil.');
+        disconnectRemote('Este enlace ya no puede editar el plan. Sigues con la copia de tu móvil.');
         break;
       } else if(r.status === 429){
         break; // Server throttle; the interval will retry soon.
@@ -1398,8 +1398,8 @@ async function download(){
       });
       forgetRecentParty(requestedPartyId);
       disconnectRemote(r.status === 410
-        ? 'Esa fiesta está borrada. Quien la creó todavía puede recuperarla.'
-        : 'Esa fiesta ya no está en vivo. Sigues con la copia de tu móvil.');
+        ? 'Ese plan está borrado. Quien lo creó todavía puede recuperarlo.'
+        : 'Ese plan ya no está en vivo. Sigues con la copia de tu móvil.');
     } else if(r.status === 429 || r.status >= 500){
       markOffline(); // Saturation or outage: same honest treatment as no coverage.
     }
@@ -1569,9 +1569,9 @@ async function openLiveLink(id, key){
   if(r.status !== 200 || !r.body || !r.body.state){
     openingParty = false;
     if(r.status === 404 || r.status === 410) forgetRecentParty(id);
-    toast(r.status === 404 ? 'Ese enlace ya no lleva a ninguna fiesta.'
-      : r.status === 410 ? 'Esa fiesta está borrada. Quien la creó todavía puede recuperarla.'
-      : 'No se ha podido abrir la fiesta del enlace. ¿Hay red?');
+    toast(r.status === 404 ? 'Ese enlace ya no lleva a ningún plan.'
+      : r.status === 410 ? 'Ese plan está borrado. Quien lo creó todavía puede recuperarlo.'
+      : 'No se ha podido abrir el plan del enlace. ¿Hay red?');
     render();
     return false;
   }
@@ -1743,10 +1743,10 @@ function identitySheet(forced, suggestedName){
   const pills = people.map(p =>
     personPill(p, 'who', 'pill-primary ' + (p.id===S.me?'on':''))).join('');
   const accessNote = demo
-    ? '<strong>Esta es una fiesta de ejemplo.</strong><br>Lo que hagas aquí se queda en este móvil.'
+    ? '<strong>Este es un plan de ejemplo.</strong><br>Lo que hagas aquí se queda en este móvil.'
     : readOnly
       ? '<strong>Has entrado para mirar.</strong><br>Puedes consultar las cuentas, pero no guardar cambios.'
-      : '<strong>Puedes editar esta fiesta.</strong><br>Cada móvil elige un nombre y A Pachas no comprueba la identidad. Mándalo solo a la peña.';
+      : '<strong>Puedes editar este plan.</strong><br>Cada móvil elige un nombre y A Pachas no comprueba la identidad. Mándalo solo a la peña.';
   openSheet(`
     <h2 class="sheet-title">¿Quién eres?</h2>
     <p class="sheet-sub">Estás en «${escapeHtml(S.party.name)}». ${readOnly
@@ -1775,7 +1775,7 @@ function identitySheet(forced, suggestedName){
     if(!n) return toast('Escribe tu nombre.');
     const existing = personByName(n);
     if(existing) return duplicateIdentitySheet(existing,n);
-    if(S.people.length >= 100) return toast('La fiesta admite hasta 100 personas.');
+    if(S.people.length >= 100) return toast('El plan admite hasta 100 personas.');
     await withBusyButton(joinButton,'Entrando…',() => commitSharedChange(() => {
       if(personByName(n)) throw new Error('duplicate_name');
       const p = touch({id:newId('p'), name:n, admin:false, active:true});
@@ -1791,7 +1791,7 @@ function identitySheet(forced, suggestedName){
 function expenseSheet(itemId){
   if(isReadOnlyParty()) return toast('Este enlace es solo para mirar.');
   const it = itemId ? itemById(itemId) : null;
-  if(itemId && !it){ render(); return toast('Esa ya no está en la lista.'); }
+  if(itemId && !it){ render(); return toast('Ese apunte ya no está en el plan.'); }
   const direct = !it;
   const editing = !!(it && it.status === 'bought');
   const currentActivePeople = activePeople();
@@ -1824,7 +1824,7 @@ function expenseSheet(itemId){
     <h2 class="sheet-title">${title}</h2>
     <p class="sheet-sub">${sub}</p>
     <label class="label" for="expenseNameInput" style="margin-top:0">Qué</label>
-    <input type="text" id="expenseNameInput" placeholder="Hielo, pan, el bar…" maxlength="40"
+    <input type="text" id="expenseNameInput" placeholder="Cena, súper, gasolina…" maxlength="40"
       autocomplete="off" value="${it ? escapeHtml(it.name) : ''}">
     <label class="label" for="priceInput">Precio</label>
     <div class="price-input">
@@ -1856,7 +1856,7 @@ function expenseSheet(itemId){
       <button class="btn btn-green" id="saveExpenseButton" type="button">
         ${editing ? 'Guardar' : direct ? 'Apuntar el gasto' : 'Apuntar la compra'}</button>
     </div>
-    ${editing ? '<button class="delete-link" id="deleteItemButton" type="button">Borrar esta compra</button>' : ''}
+    ${editing ? '<button class="delete-link" id="deleteItemButton" type="button">Borrar este gasto</button>' : ''}
     ${history}
   `);
   const updatePayerSummary = () => {
@@ -1975,32 +1975,32 @@ function expenseSheet(itemId){
         }
       }
     }, {close:true, toast:() => successMessage})).catch(e => {
-      if(e.message === 'too_many_items') toast('La lista admite hasta 500 cosas. Quita una antes de añadir otra.');
-      else if(e.message === 'payer_changed') abortSheet('Ha cambiado quién pagó esta compra. Solo quien pagó o quien tenga la llave puede corregirla.');
-      else if(e.message === 'already_bought') abortSheet('Alguien la ha apuntado ya como comprada: revísala antes de corregirla.');
+      if(e.message === 'too_many_items') toast('El plan admite hasta 500 apuntes. Borra uno antes de añadir otro.');
+      else if(e.message === 'payer_changed') abortSheet('Ha cambiado quién pagó este gasto. Solo quien pagó o quien tenga la llave puede corregirlo.');
+      else if(e.message === 'already_bought') abortSheet('Alguien ya ha apuntado este gasto: revísalo antes de corregirlo.');
       else if(e.message === 'group_changed') abortSheet('La peña ha cambiado: revisa quién pagó y entre quiénes se reparte.');
       else throw e;
     });
   };
   const del = $('#deleteItemButton');
   if(del) del.onclick = () => {
-    confirmSheet('¿Borrar esta compra?',
-      `«${it.name}» (${eur(it.priceCents||0)}) se quita de la lista y de las cuentas.`, async () => {
+    confirmSheet('¿Borrar este gasto?',
+      `«${it.name}» (${eur(it.priceCents||0)}) se quita de los gastos y de las cuentas.`, async () => {
         // Revalidate against live state; the party may have changed underneath.
         const live = itemById(itemId);
         if(!live){ render(); return toast('Ya no está: alguien la ha quitado antes.'); }
         if(!isAdmin() && live.payerId !== S.me){
-          render(); return toast('Ha cambiado quién pagó esta compra. Solo quien pagó o quien tenga la llave puede borrarla.');
+          render(); return toast('Ha cambiado quién pagó este gasto. Solo quien pagó o quien tenga la llave puede borrarlo.');
         }
         await commitSharedChange(() => {
           const latest = itemById(itemId);
           if(!latest) throw new Error('missing_item');
           tombstoneEntity('items', latest);
-        }, {toast:'Fuera de la lista'}).catch(e => {
-          if(e.message === 'missing_item') abortSheet('Esa compra ya no está en la lista.');
+        }, {toast:'Gasto borrado'}).catch(e => {
+          if(e.message === 'missing_item') abortSheet('Ese gasto ya no está en el plan.');
           else throw e;
         });
-      }, {confirmLabel:'Borrar la compra', danger:true});
+      }, {confirmLabel:'Borrar el gasto', danger:true});
   };
   setTimeout(()=>$(direct ? '#expenseNameInput' : '#priceInput').focus(), 250);
 }
@@ -2027,7 +2027,7 @@ function assignSheet(itemId){
     if(b.dataset.assignPerson && (!who || !who.active)) return abortSheet('Esa persona ya no está en la peña.');
     let live = itemById(itemId);
     if(!live) return abortSheet('Esa cosa ya no está en la lista.');
-    if(live.status === 'bought') return abortSheet('Esa ya está comprada: no hay nada que asignar.');
+    if(live.status === 'bought') return abortSheet('Ya está apuntada como gasto: no hay nada que asignar.');
     await withBusyButton(b,'Guardando…',() => commitSharedChange(() => {
       if(!isAdmin()) throw new Error('not_admin');
       live = itemById(itemId);
@@ -2038,7 +2038,7 @@ function assignSheet(itemId){
       touch(live);
     }, {close:true, toast: who ? 'Se encarga ' + who.name + '.' : 'Ahora queda libre.'})).catch(e => {
       if(e.message === 'missing_item') abortSheet('Esa cosa ya no está en la lista.');
-      else if(e.message === 'already_bought') abortSheet('Esa ya está comprada: no hay nada que asignar.');
+      else if(e.message === 'already_bought') abortSheet('Ya está apuntada como gasto: no hay nada que asignar.');
       else if(e.message === 'not_admin') abortSheet('Necesitas tener la llave para hacer eso.');
       else throw e;
     });
@@ -2113,7 +2113,7 @@ function personSheet(pid){
 
   openSheet(`
     <h2 class="sheet-title">${escapeHtml(p.name)}${p.admin?' '+KEY_ICON:''}${isMe?' <span class="status-chip chip-primary">tú</span>':''}${p.active?'':' <span class="status-chip chip-neutral">ya no participa</span>'}</h2>
-    <p class="sheet-sub">Ha pagado <strong>${eur(c.payerTotals[pid]||0)}</strong> en ${purchases.length} compra${purchases.length===1?'':'s'} ·
+    <p class="sheet-sub">Ha pagado <strong>${eur(c.payerTotals[pid]||0)}</strong> en ${purchases.length} gasto${purchases.length===1?'':'s'} ·
       le tocaba ${eur(c.owes[pid]||0)} · ${balanceText}.</p>
     <span class="label">Le toca traer</span>
     <ul style="margin:0 0 6px;padding-left:20px;font-size:14px;line-height:1.7">${assignedList}</ul>
@@ -2133,8 +2133,8 @@ function personSheet(pid){
       <button class="menu-option" id="removePersonButton" type="button">
         ${p.active ? 'Sacar de futuros gastos' : 'Volver a meter en la peña'}
         <small>${p.active
-          ? 'Conserva sus compras, su saldo y sus Bizums. Solo deja de salir en gastos nuevos.'
-          : 'Volverá a salir en la lista y en los gastos nuevos.'}</small>
+          ? 'Conserva sus gastos, su saldo y sus Bizums. Solo deja de salir en gastos nuevos.'
+          : 'Volverá a salir en los gastos nuevos.'}</small>
       </button>
       ${!p.active && !personHasHistory(pid) ? `<button class="delete-link" id="deletePersonButton" type="button">Borrar del todo</button>` : ''}` : ''}
   `);
@@ -2193,7 +2193,7 @@ function personSheet(pid){
       return;
     }
     confirmSheet('¿Sacar a ' + q.name + '?',
-      'Dejará de salir en gastos nuevos, pero sus compras, su saldo y sus Bizums se quedan tal cual.', async () => {
+      'Dejará de salir en gastos nuevos, pero sus gastos, su saldo y sus Bizums se quedan tal cual.', async () => {
         await commitSharedChange(() => {
           const live = personById(pid);
           if(!live) throw new Error('missing_person');
@@ -2242,8 +2242,8 @@ function shareMessage(shareType, pid){
   const n = S.party.name;
   if(shareType === 'invite'){
     return `A pachas con los gastos de «${n}».\n` +
-      `Entra, di quién eres y apunta lo que compres:\n${link}\n\n` +
-      'Quien tenga este enlace puede ver y cambiar la fiesta. Mándalo solo a la peña.';
+      `Entra, di quién eres y apunta lo que pagues:\n${link}\n\n` +
+      'Quien tenga este enlace puede ver y cambiar el plan. Mándalo solo a la peña.';
   }
   if(shareType === 'list'){
     const pendingItems = S.items.filter(isUnownedItem);
@@ -2313,12 +2313,12 @@ async function shareSheet(shareType, pid){
     ? 'usage.accounts_share_intent' : 'usage.invite_share_intent');
   // The demoState is not shareable: its demoState flag would leave the receiver with a
   // party that can never go live.
-  if(S.party.demo) return toast('La fiesta de ejemplo no se puede compartir. Crea una fiesta para enviarla al grupo.');
+  if(S.party.demo) return toast('El plan de ejemplo no se puede compartir. Crea un plan para enviarlo al grupo.');
   if(canGoLive()){
     openSheet(`
-      <h2 class="sheet-title">Poniendo la fiesta en vivo</h2>
+      <h2 class="sheet-title">Poniendo el plan en vivo</h2>
       <p class="sheet-sub">Un momento: así todos entran al mismo sitio y lo que apunte la peña lo ves tú también.</p>
-      <div class="note">Si no hay red, paramos aquí: la fiesta compartida necesita internet para no partirse en copias.</div>
+      <div class="note">Si no hay red, paramos aquí: el plan compartido necesita internet para no partirse en copias.</div>
     `, true);
     if(await createRemote()){
       render();
@@ -2326,8 +2326,8 @@ async function shareSheet(shareType, pid){
     }
     openSheet(`
       <h2 class="sheet-title">Ahora mismo no hay manera</h2>
-      <p class="sheet-sub">Necesitas internet para poner la fiesta en vivo y mandarla al grupo.</p>
-      <div class="note">Así evitamos tener una fiesta distinta en cada teléfono. Cuando vuelva la conexión, inténtalo de nuevo.</div>
+      <p class="sheet-sub">Necesitas internet para poner el plan en vivo y mandarlo al grupo.</p>
+      <div class="note">Así evitamos tener un plan distinto en cada teléfono. Cuando vuelva la conexión, inténtalo de nuevo.</div>
       <div class="sheet-actions">
         <button class="btn btn-outline" id="closeShareBlockButton" type="button">Seguir aquí</button>
         <button class="btn btn-primary" id="retryLiveShareButton" type="button">Reintentar</button>
@@ -2350,7 +2350,7 @@ async function shareSheet(shareType, pid){
     if(S.pendingUpload){
       openSheet(`
         <h2 class="sheet-title">Poniendo todo al día</h2>
-        <p class="sheet-sub">La fiesta está en vivo, pero la app está terminando de cuadrar el estado con el grupo.</p>
+        <p class="sheet-sub">El plan está en vivo, pero la app está terminando de cuadrar el estado con el grupo.</p>
         <div class="note">No mandamos el enlace hasta que lo que ves aquí y lo que verá la peña sea lo mismo.</div>
         <div class="sheet-actions">
           <button class="btn btn-outline" id="closePendingShareButton" type="button">Seguir aquí</button>
@@ -2366,14 +2366,14 @@ async function shareSheet(shareType, pid){
   const shareTitle = shareType === 'accounts' ? 'Mandar las cuentas al grupo'
     : shareType === 'list' ? 'Mandar la lista al grupo'
     : shareType === 'person' ? `Mandar recordatorio a ${personById(pid)?.name || 'la peña'}`
-    : 'Mandar la fiesta al grupo';
+    : 'Mandar el plan al grupo';
   openSheet(`
     <h2 class="sheet-title">${escapeHtml(shareTitle)}</h2>
     <p class="sheet-sub">Así queda el mensaje:</p>
     <div class="preview">${escapeHtml(txt)}</div>
     ${readOnlyShare
-      ? '<div class="access-note"><strong>Enlace solo para mirar.</strong><br>Sirve para consultar estas cuentas sin cambiar la fiesta.</div>'
-      : '<div class="access-note"><strong>Enlace para editar.</strong><br>Quien lo tenga puede elegir cualquier nombre y cambiar la fiesta.</div>'}
+      ? '<div class="access-note"><strong>Enlace solo para mirar.</strong><br>Sirve para consultar estas cuentas sin cambiar el plan.</div>'
+      : '<div class="access-note"><strong>Enlace para editar.</strong><br>Quien lo tenga puede elegir cualquier nombre y cambiar el plan.</div>'}
     <div class="sheet-actions">
       <button class="btn btn-outline" id="copyMessageButton" type="button">Copiar</button>
       <button class="btn btn-green" id="whatsappMessageButton" type="button">WhatsApp</button>
@@ -2425,27 +2425,27 @@ function joinSheet(){
 function createPartySheet(templateItems){
   const templateNames = [...new Set((templateItems || []).map(item=>item.name.trim()).filter(Boolean))];
   openSheet(`
-    <h2 class="sheet-title">${templateNames.length ? 'Repetir la lista' : 'Fiesta nueva'}</h2>
+    <h2 class="sheet-title">${templateNames.length ? 'Repetir pendientes' : 'Plan nuevo'}</h2>
     <div class="field" style="margin-top:14px">
-      <label class="label" for="newPartyNameInput">Nombre de la fiesta</label>
-      <input type="text" id="newPartyNameInput" placeholder="Matanza en casa de Paco" maxlength="40" autocomplete="off">
+      <label class="label" for="newPartyNameInput">Nombre del plan</label>
+      <input type="text" id="newPartyNameInput" placeholder="Finde en Dénia" maxlength="40" autocomplete="off">
     </div>
     <div class="field">
       <label class="label" for="participantNameInput">Tu nombre</label>
       <input type="text" id="participantNameInput" placeholder="Paco" maxlength="20" autocomplete="off">
-      <p class="footnote" style="text-align:left;margin:6px 0 0">Al crearla tendrás la llave para organizar la peña.</p>
+      <p class="footnote" style="text-align:left;margin:6px 0 0">Al crearlo tendrás la llave para organizar la peña.</p>
     </div>
     <div class="field">
-      <label class="label" for="newPartyDateInput">Fecha (opcional)</label>
+      <label class="label" for="newPartyDateInput">Fecha de inicio (opcional)</label>
       <input type="date" id="newPartyDateInput">
     </div>
     ${templateNames.length ? `<div class="note">Copiaremos ${templateNames.length} cosa${templateNames.length===1?'':'s'} como pendientes. Los precios, responsables y cuentas empiezan de cero.</div>` : ''}
-    <button class="btn btn-primary btn-block" id="createPartyButton" type="button" style="padding:14px">Crear la fiesta</button>
+    <button class="btn btn-primary btn-block" id="createPartyButton" type="button" style="padding:14px">Crear el plan</button>
   `);
   $('#createPartyButton').onclick = async () => {
     const name = $('#newPartyNameInput').value.trim();
     const participantName = $('#participantNameInput').value.trim();
-    if(!name) return toast('Escribe un nombre para la fiesta.');
+    if(!name) return toast('Escribe un nombre para el plan.');
     if(!participantName) return toast('Escribe tu nombre.');
     const newDate = $('#newPartyDateInput').value;
     if(newDate && !DATE_RE.test(newDate))
@@ -2485,13 +2485,13 @@ function createPartySheet(templateItems){
 function renameSheet(){
   if(!requireAdmin()) return;
   openSheet(`
-    <h2 class="sheet-title">Nombre y fecha</h2>
+    <h2 class="sheet-title">Nombre y fecha de inicio</h2>
     <div class="field" style="margin-top:14px">
-      <label class="label" for="partyNameInput">Nombre de la fiesta</label>
+      <label class="label" for="partyNameInput">Nombre del plan</label>
       <input type="text" id="partyNameInput" maxlength="40" value="${escapeHtml(S.party.name)}">
     </div>
     <div class="field">
-      <label class="label" for="partyDateInput">Fecha (opcional)</label>
+      <label class="label" for="partyDateInput">Fecha de inicio (opcional)</label>
       <input type="date" id="partyDateInput" value="${escapeHtml(S.party.date || '')}">
     </div>
     <div class="sheet-actions">
@@ -2503,7 +2503,7 @@ function renameSheet(){
   $('#saveRenameButton').onclick = async () => {
     if(!requireAdmin()) return;
     const n = $('#partyNameInput').value.trim();
-    if(!n) return toast('Escribe un nombre para la fiesta.');
+    if(!n) return toast('Escribe un nombre para el plan.');
     const f = $('#partyDateInput').value;
     if(f && !DATE_RE.test(f)) return toast('Escribe una fecha válida o déjala en blanco.');
     const button = $('#saveRenameButton');
@@ -2557,9 +2557,9 @@ function auditValueFor(event, field){
 }
 function auditDescription(event){
   const actor = event.actorId ? auditPersonName(event.actorId) : 'Alguien';
-  const label = event.label || 'la fiesta';
-  if(event.action === 'party.created') return `${actor} creó la fiesta`;
-  if(event.action === 'party.updated') return `${actor} cambió el nombre o la fecha`;
+  const label = event.label || 'el plan';
+  if(event.action === 'party.created') return `${actor} creó el plan`;
+  if(event.action === 'party.updated') return `${actor} cambió el nombre o la fecha de inicio`;
   if(event.action === 'person.created') return `${actor} añadió a ${label}`;
   if(event.action === 'person.deleted') return `${actor} borró a ${label}`;
   if(event.action === 'person.updated'){
@@ -2607,7 +2607,7 @@ function activitySheet(){
   }).join('') : '<div class="empty-state">Todavía no hay cambios guardados.</div>';
   openSheet(`
     <h2 class="sheet-title">Actividad reciente</h2>
-    <p class="sheet-sub">Lo que se ha guardado en la fiesta, de más nuevo a más antiguo.</p>
+    <p class="sheet-sub">Lo que se ha guardado en el plan, de más nuevo a más antiguo.</p>
     <div class="activity-list">${rows}</div>
     <div class="footnote">El nombre es el que se eligió en cada móvil. No hay cuentas ni identidad verificada.</div>
   `);
@@ -2637,12 +2637,12 @@ function clearAllLocalData(){
 function deletePartySheet(){
   if(isReadOnlyParty()) return toast('Este enlace es solo para mirar.');
   if(!S.remote || !OWNER_KEY_RE.test(S.remote.ownerKey || '')){
-    return toast('Solo el móvil que creó la fiesta puede borrarla para todos.');
+    return toast('Solo el móvil que creó el plan puede borrarlo para todos.');
   }
   const expectedName = S.party.name;
   openSheet(`
-    <h2 class="sheet-title">Borrar la fiesta para todos</h2>
-    <p class="sheet-sub">La fiesta dejará de abrirse para la peña. Este móvil podrá recuperarla durante 7 días.</p>
+    <h2 class="sheet-title">Borrar el plan para todos</h2>
+    <p class="sheet-sub">El plan dejará de abrirse para la peña. Este móvil podrá recuperarlo durante 7 días.</p>
     <div class="access-note"><strong>Permiso del móvil creador.</strong><br>La llave organiza la peña, pero no identifica a quien la usa.</div>
     <label class="label" for="deletePartyNameInput">Escribe ${escapeHtml(expectedName)} para confirmar</label>
     <input type="text" id="deletePartyNameInput" autocomplete="off">
@@ -2658,7 +2658,7 @@ function deletePartySheet(){
     await withBusyButton(button,'Borrando…',async () => {
       const remote = S && S.remote;
       if(!remote || !OWNER_KEY_RE.test(remote.ownerKey || '')){
-        return abortSheet('Este móvil ya no guarda el permiso para borrarla.');
+        return abortSheet('Este móvil ya no guarda el permiso para borrarlo.');
       }
       let response;
       try {
@@ -2674,10 +2674,10 @@ function deletePartySheet(){
           name:expectedName, purgeAt,
         });
         closeSheet(); clearCurrentPartyFromPhone(); render();
-        return toast('Fiesta borrada. Puedes recuperarla durante 7 días.');
+        return toast('Plan borrado. Puedes recuperarlo durante 7 días.');
       }
-      if(response.status === 409){ closeSheet(); await download(); return toast('La fiesta había cambiado. Revísala antes de borrarla.'); }
-      if(response.status === 403) return abortSheet('Este móvil no tiene permiso para borrar esa fiesta.');
+      if(response.status === 409){ closeSheet(); await download(); return toast('El plan había cambiado. Revísalo antes de borrarlo.'); }
+      if(response.status === 403) return abortSheet('Este móvil no tiene permiso para borrar ese plan.');
       toast('No se ha podido borrar ahora.');
     });
   };
@@ -2709,14 +2709,14 @@ async function restoreDeletedParty(entry, button){
       S.pendingUpload = false;
       forgetDeletedParty(entry.id);
       saveLocal(); markOnline(); render(); identitySheet(true);
-      return toast('Fiesta recuperada.');
+      return toast('Plan recuperado.');
     }
     if(response.status === 404 || response.status === 410){
       forgetDeletedParty(entry.id); render();
-      return toast('Esa fiesta ya no se puede recuperar.');
+      return toast('Ese plan ya no se puede recuperar.');
     }
     render();
-    if(response.status === 403) return toast('Este móvil ya no puede recuperar esa fiesta.');
+    if(response.status === 403) return toast('Este móvil ya no puede recuperar ese plan.');
     toast('No se ha podido recuperar ahora.');
   });
 }
@@ -2724,13 +2724,13 @@ async function restoreDeletedParty(entry, button){
 function privacySheet(){
   openSheet(`
     <h2 class="sheet-title">Privacidad</h2>
-    <p class="sheet-sub">A Pachas guarda lo necesario para que la peña comparta la lista y cuadre las cuentas. No vende datos ni muestra publicidad.</p>
-    <div class="note"><strong>Lo importante.</strong><br>Quien tenga el enlace para editar puede ver y cambiar la fiesta. El enlace de cuentas es solo para mirar. No hay cuentas personales ni identidad verificada.</div>
+    <p class="sheet-sub">A Pachas guarda lo necesario para que la peña comparta gastos y cuadre las cuentas. No vende datos ni muestra publicidad.</p>
+    <div class="note"><strong>Lo importante.</strong><br>Quien tenga el enlace para editar puede ver y cambiar el plan. El enlace de cuentas es solo para mirar. No hay cuentas personales ni identidad verificada.</div>
     <details class="privacy-details">
       <summary>Ver todos los detalles</summary>
-      <div class="note"><strong>Qué se guarda.</strong><br>Nombres elegidos, fiesta, lista, gastos, repartos, Bizums y actividad necesaria para que todos vean las mismas cuentas.</div>
+      <div class="note"><strong>Qué se guarda.</strong><br>Nombres elegidos, plan, pendientes, gastos, repartos, Bizums y actividad necesaria para que todos vean las mismas cuentas.</div>
       <div class="note"><strong>Privacidad por defecto.</strong><br>No hay publicidad, cookies de analítica, grabaciones de pantalla ni perfiles personales. Los avisos técnicos y métricas de uso se envían desde el servidor con códigos cerrados y referencias seudónimas, nunca con nombres, importes, contenido, direcciones IP ni enlaces.</div>
-      <div class="note"><strong>Cuánto dura.</strong><br>Las fiestas sin uso caducan a los 8 meses. La copia completa de la fiesta activa se borra de este móvil tras 90 días sin uso. Los accesos de «Tus fiestas» se quedan hasta que los olvides, la fiesta deje de existir o borres los datos. Las copias de recuperación y los borrados reversibles duran 7 días. Las copias operativas cifradas y los registros remotos, como máximo 30 días; las métricas de recorridos sin contenido, como máximo 12 meses.</div>
+      <div class="note"><strong>Cuánto dura.</strong><br>Los planes sin uso caducan a los 8 meses. La copia completa del plan activo se borra de este móvil tras 90 días sin uso. Los accesos de «Tus planes» se quedan hasta que los olvides, el plan deje de existir o borres los datos. Las copias de recuperación y los borrados reversibles duran 7 días. Las copias operativas cifradas y los registros remotos, como máximo 30 días; las métricas de recorridos sin contenido, como máximo 12 meses.</div>
       <div class="note"><strong>Infraestructura.</strong><br>La app usa Hetzner para alojarse, Cloudflare para la conexión, Google Fonts para la tipografía y, cuando están activados, Better Stack y PostHog EU para detectar fallos y entender recorridos generales. El tablón externo de comentarios lo gestiona Featurebase.</div>
     </details>
     <p class="footnote">Para ayuda, borrado o cualquier cuestión sobre tus datos: <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a>.</p>
@@ -2745,8 +2745,8 @@ function helpSheet(){
   openSheet(`
     <h2 class="sheet-title">Ayuda</h2>
     <p class="sheet-sub">Lo esencial para no perderse.</p>
-    <div class="note"><strong>¿Cómo vuelvo a una fiesta?</strong><br>Pulsa el nombre de la fiesta en la parte superior. Las que hayas usado en este móvil se quedan en «Tus fiestas» hasta que las olvides.</div>
-    <div class="note"><strong>¿Por qué no puedo guardar?</strong><br>Las fiestas compartidas necesitan conexión. Sin ella puedes consultar la última copia, pero no hacer cambios.</div>
+    <div class="note"><strong>¿Cómo vuelvo a un plan?</strong><br>Pulsa el nombre del plan en la parte superior. Los que hayas usado en este móvil se quedan en «Tus planes» hasta que los olvides.</div>
+    <div class="note"><strong>¿Por qué no puedo guardar?</strong><br>Los planes compartidos necesitan conexión. Sin ella puedes consultar la última copia, pero no hacer cambios.</div>
     <div class="note"><strong>¿Qué enlace mando?</strong><br>«Mandar al grupo» permite editar. Desde «Las cuentas» se comparte un enlace solo para mirar.</div>
     <div class="sheet-actions">
       <button class="btn btn-primary" id="helpSupportButton" type="button">Escribir a Alex</button>
@@ -2764,7 +2764,7 @@ function feedbackSheet(){
   openSheet(`
     <h2 class="sheet-title">Comentarios e ideas</h2>
     <p class="sheet-sub">El tablón lo gestiona Featurebase y se abrirá fuera de A Pachas, en una pestaña nueva.</p>
-    <div class="note"><strong>Antes de salir.</strong><br>No incluyas nombres, importes ni enlaces de la fiesta. A Pachas no envía ningún dato de la fiesta al tablón.</div>
+    <div class="note"><strong>Antes de salir.</strong><br>No incluyas nombres, importes ni enlaces del plan. A Pachas no envía ningún dato del plan al tablón.</div>
     <div class="sheet-actions">
       <button class="btn btn-outline" id="cancelFeedbackButton" type="button">Ahora no</button>
       <a class="btn btn-primary" id="openFeedbackButton" href="${FEEDBACK_URL}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Abrir el tablón</a>
@@ -2777,7 +2777,7 @@ function feedbackSheet(){
 }
 
 function recentPartyMeta(party, active){
-  if(active) return `Activa ahora · ${isReadOnlyParty() ? 'Solo para mirar' : 'Puedes editar'}`;
+  if(active) return `Activo ahora · ${isReadOnlyParty() ? 'Solo para mirar' : 'Puedes editar'}`;
   const parts = [party.readOnly ? 'Solo para mirar' : 'Puedes editar'];
   if(party.date) parts.push(prettyDate(party.date) || party.date);
   parts.push('abierta ' + timeAgo(party.lastOpenedAt));
@@ -2807,10 +2807,10 @@ function recentPartiesHtml(recent, activeId){
 function forgetRecentPartySheet(party){
   if(!party) return;
   confirmSheet(`¿Olvidar «${party.name}» en este móvil?`,
-    'Se borrará el acceso guardado en este móvil. La fiesta seguirá existiendo para la peña.', () => {
+    'Se borrará el acceso guardado en este móvil. El plan seguirá existiendo para la peña.', () => {
       forgetRecentParty(party.id);
       render();
-      toast('Fiesta olvidada en este móvil.');
+      toast('Plan olvidado en este móvil.');
     }, {confirmLabel:'Olvidar en este móvil', danger:true});
 }
 
@@ -2846,31 +2846,31 @@ function partySwitcherSheet(){
   const localActiveHtml = S && !S.remote ? `<div class="recent-list"><div class="recent-party-row">
     <div class="recent-party" aria-current="true"><span class="recent-copy">
       <span class="recent-name">${escapeHtml(S.party.name)}</span>
-      <span class="recent-meta">Activa ahora · ${S.party.demo ? 'Fiesta de ejemplo' : 'Solo en este móvil'}</span>
+      <span class="recent-meta">Activo ahora · ${S.party.demo ? 'Plan de ejemplo' : 'Solo en este móvil'}</span>
     </span></div>
   </div></div>` : '';
-  let switcherSub = 'Elige una fiesta guardada o añade otra.';
-  let createNote = 'Empieza una fiesta desde cero.';
+  let switcherSub = 'Elige un plan guardado o añade otro.';
+  let createNote = 'Empieza un plan desde cero.';
   if(S){
     if(S.party.demo){
-      switcherSub = 'Esta fiesta es solo una prueba. Al cambiar, no se conservará.';
+      switcherSub = 'Este plan es solo una prueba. Al cambiar, no se conservará.';
       createNote = 'Empieza desde cero.';
     } else if(S.remote){
-      switcherSub = 'Solo una está activa. Cambiar no borra ninguna.';
-      createNote = 'La fiesta actual seguirá guardada aquí.';
+      switcherSub = 'Solo uno está activo. Cambiar no borra ninguno.';
+      createNote = 'El plan actual seguirá guardado aquí.';
     } else {
-      switcherSub = 'Esta fiesta solo está en este móvil. Ponla en vivo antes de cambiar si quieres conservarla.';
-      createNote = 'Empezarás una fiesta nueva.';
+      switcherSub = 'Este plan solo está en este móvil. Ponlo en vivo antes de cambiar si quieres conservarlo.';
+      createNote = 'Empezarás un plan nuevo.';
     }
   }
   openSheet(`
-    <h2 class="sheet-title">Tus fiestas</h2>
+    <h2 class="sheet-title">Tus planes</h2>
     <p class="sheet-sub">${switcherSub}</p>
     ${localActiveHtml}
-    ${recent.length ? recentPartiesHtml(recent,activeId) : (localActiveHtml ? '' : '<div class="empty-state" style="padding:20px 10px">Todavía no hay fiestas guardadas.</div>')}
-    <span class="label">Añadir una fiesta</span>
+    ${recent.length ? recentPartiesHtml(recent,activeId) : (localActiveHtml ? '' : '<div class="empty-state" style="padding:20px 10px">Todavía no hay planes guardados.</div>')}
+    <span class="label">Añadir un plan</span>
     <button class="menu-option" id="createAnotherPartyButton" type="button">
-      Crear una fiesta<small>${createNote}</small></button>
+      Crear un plan<small>${createNote}</small></button>
     <button class="menu-option" id="openAnotherLinkButton" type="button">
       Abrir con un enlace<small>Pega el enlace o el mensaje que te mandaron.</small></button>
   `);
@@ -2887,37 +2887,37 @@ function partyOptionsHtml(){
     S.remote ? `<button class="menu-option" id="activityButton" type="button">
       Ver actividad reciente<small>Mira los últimos cambios guardados.</small></button>` : '',
     canManage ? `<button class="menu-option" id="renameButton" type="button">
-      Cambiar nombre o fecha<small>Edita lo que ve toda la peña.</small></button>` : '',
+      Cambiar nombre o fecha de inicio<small>Edita lo que ve toda la peña.</small></button>` : '',
   ].filter(Boolean).join('');
   const repeatPartyOptionHtml = canManage && hasPendingItems ? `
-    <h3 class="label">Para otra fiesta</h3>
+    <h3 class="label">Para otro plan</h3>
     <button class="menu-option" id="repeatPartyButton" type="button">
-      Repetir la lista<small>Crea otra fiesta con las cosas que siguen pendientes.</small></button>` : '';
+      Repetir pendientes<small>Crea otro plan con las cosas que siguen pendientes.</small></button>` : '';
   const canDeleteForEveryone = !readOnly && S.remote && OWNER_KEY_RE.test(S.remote.ownerKey || '');
 
   return `
-    <h2 class="sheet-title">Gestionar esta fiesta</h2>
-    <p class="sheet-sub">Actividad, datos y acciones sobre la fiesta actual.</p>
+    <h2 class="sheet-title">Gestionar este plan</h2>
+    <p class="sheet-sub">Actividad, datos y acciones sobre el plan actual.</p>
     ${partyDataOptionsHtml ? `<h3 class="label">Actividad y datos</h3>${partyDataOptionsHtml}` : ''}
     ${repeatPartyOptionHtml}
     <h3 class="label">En este móvil</h3>
     <button class="menu-option" id="forgetPartyButton" type="button">
-      Olvidar esta fiesta<small>Quita de este móvil la copia y su acceso guardado.</small></button>
+      Olvidar este plan<small>Quita de este móvil la copia y su acceso guardado.</small></button>
     ${canDeleteForEveryone ? `<h3 class="label">Zona delicada</h3>
       <button class="menu-option danger" id="deletePartyButton" type="button">
-        Borrar la fiesta para todos<small>La peña dejará de poder abrirla.</small></button>` : ''}
+        Borrar el plan para todos<small>La peña dejará de poder abrirlo.</small></button>` : ''}
   `;
 }
 
 function forgetCurrentPartySheet(){
-  let message = 'Se borrará la única copia de esta fiesta. No podrás recuperarla.';
+  let message = 'Se borrará la única copia de este plan. No podrás recuperarla.';
   if(S.party.demo){
-    message = 'Se borrarán los cambios hechos en esta fiesta de ejemplo.';
+    message = 'Se borrarán los cambios hechos en este plan de ejemplo.';
   } else if(S.remote){
-    message = 'Se borrarán de este móvil la copia y el acceso guardado. La fiesta seguirá existiendo para la peña.';
+    message = 'Se borrarán de este móvil la copia y el acceso guardado. El plan seguirá existiendo para la peña.';
   }
-  confirmSheet('¿Olvidar esta fiesta en este móvil?', message, () => {
-    clearCurrentPartyFromPhone(); render(); toast('Fiesta olvidada en este móvil.');
+  confirmSheet('¿Olvidar este plan en este móvil?', message, () => {
+    clearCurrentPartyFromPhone(); render(); toast('Plan olvidado en este móvil.');
   }, {confirmLabel:'Olvidar en este móvil', danger:true});
 }
 
@@ -2971,13 +2971,13 @@ function heroHtml(){
     <span class="beta-badge">Beta privada · sin cuenta</span>
     <div class="logo" aria-hidden="true">${LOGO}</div>
     <h1>A Pachas</h1>
-    <p class="tagline">Crea la fiesta, pásala por WhatsApp y que cada cual apunte lo suyo. Al final salen los Bizums.</p>
+    <p class="tagline">Una fiesta, un viaje o lo que se tercie. Crea el plan, pásalo por WhatsApp y que cada cual apunte lo suyo. Al final salen los Bizums.</p>
   </div>`;
 }
 
 function howItWorksHtml(){
   return `<div class="how-it-works" aria-label="Cómo funciona">
-    <div class="how-step"><strong>1. Crea</strong>la fiesta</div>
+    <div class="how-step"><strong>1. Crea</strong>el plan</div>
     <div class="how-step"><strong>2. Manda</strong>el enlace</div>
     <div class="how-step"><strong>3. Cuadra</strong>los Bizums</div>
   </div>`;
@@ -2986,7 +2986,7 @@ function howItWorksHtml(){
 function entryView(){
   if(openingParty) return `${heroHtml()}
     <div class="card empty-state" role="status" style="padding:24px 20px">
-      <strong style="color:var(--ink)">Abriendo la fiesta del grupo…</strong><br>
+      <strong style="color:var(--ink)">Abriendo el plan del grupo…</strong><br>
       Un momento, que estamos poniendo todo al día.
     </div>`;
   const recent = loadRecentParties();
@@ -3007,22 +3007,22 @@ function entryView(){
       <input type="text" id="linkInput" placeholder="Pega el enlace del grupo" autocomplete="off">
       <button class="btn btn-primary" id="joinLinkButton" type="button">Abrir</button>
     </div>
-    <button class="create-dashed" id="createButton" type="button">+ Crear una fiesta nueva</button>`;
+    <button class="create-dashed" id="createButton" type="button">+ Crear un plan nuevo</button>`;
   if(recent.length){
     return `${heroMiniHtml()}
-      <div class="screen-header"><h1>Tus fiestas</h1><div class="sub">Elige cuál quieres tener activa ahora</div></div>
+      <div class="screen-header"><h1>Tus planes</h1><div class="sub">Elige cuál quieres tener activo ahora</div></div>
       ${recentPartiesHtml(recent,null)}
       ${deletedHtml}
-      <span class="label" style="margin-top:26px">Otra fiesta</span>
+      <span class="label" style="margin-top:26px">Otro plan</span>
       ${openControls}
       <div style="text-align:center;margin-top:18px">
-        <button class="quiet-link" id="demoButton" type="button">Ver una fiesta de ejemplo</button><br>
+        <button class="quiet-link" id="demoButton" type="button">Ver un plan de ejemplo</button><br>
         <button class="quiet-link" id="clearLocalDataButton" type="button">Borrar todos los datos de este móvil</button>
       </div>${footerHtml()}`;
   }
   return `${heroHtml()}${howItWorksHtml()}${openControls}
     <div style="text-align:center;margin-top:22px">
-      <button class="quiet-link" id="demoButton" type="button">Ver una fiesta de ejemplo</button>
+      <button class="quiet-link" id="demoButton" type="button">Ver un plan de ejemplo</button>
       ${hasStoredLocalData ? '<br><button class="quiet-link" id="clearLocalDataButton" type="button">Borrar datos guardados en este móvil</button>' : ''}
     </div>${deletedHtml}${footerHtml()}`;
 }
@@ -3038,6 +3038,7 @@ function partyView(c){
   const f = prettyDate(S.party.date);
   const unownedCount = S.items.filter(isUnownedItem).length;
   const openItems = S.items.filter(i=>i.status!=='bought').length;
+  const boughtCount = S.items.length - openItems;
   const pendingBizumCount = c.bizums.length;
   const myClaimedItems = me && me.active
     ? S.items.filter(item=>item.status==='claimed' && item.claimerId===me.id) : [];
@@ -3046,33 +3047,33 @@ function partyView(c){
   // Current next step: exactly one action based on party state.
   let action;
   if(readOnly){
-    action = {txt:'Estás mirando la fiesta tal como está ahora. Aquí no se guarda ningún cambio.',
+    action = {txt:'Estás mirando el plan tal como está ahora. Aquí no se guarda ningún cambio.',
       btn:'Ver las cuentas',target:'accounts'};
   } else if(!me){
     action = {txt:'Di quién eres y te digo qué te toca.',btn:'Decir quién soy',target:'identity'};
   } else if(!me.active){
     action = {txt:'Ya no sales en gastos nuevos, pero tus cuentas siguen aquí.',btn:'Ver mi cuenta',target:'accounts'};
   } else if(!S.items.length && !c.total){
-    action = {txt:'La lista está vacía. Apunta lo que hace falta para la fiesta.',
-      btn:'Apuntar lo que falta', target:'list'};
+    action = {txt:'¿Hay algo pagado o pendiente? Empieza por aquí.',
+      btn:'Abrir gastos', target:'list'};
   } else if(myClaimedItems.length === 1){
     action = {txt:`Te toca traer ${escapeHtml(myClaimedItems[0].name)}.`,
       btn:'Marcar como comprada',target:'buy',itemId:myClaimedItems[0].id};
   } else if(myClaimedItems.length > 1){
     action = {txt:`Te toca traer ${myClaimedItems.length} cosas.`,btn:'Ver lo tuyo',target:'list'};
   } else if(unownedCount){
-    action = {txt:`Hay ${unownedCount === 1 ? 'una cosa' : unownedCount + ' cosas'} sin responsable en la lista.`,
-      btn:'Ver la lista', target:'list'};
+    action = {txt:`Hay ${unownedCount === 1 ? 'una cosa' : unownedCount + ' cosas'} pendiente${unownedCount===1?'':'s'} sin responsable.`,
+      btn:'Ver gastos', target:'list'};
   } else if(myOutgoingBizums.length){
     action = {txt:myOutgoingBizums.length === 1
       ? 'Te queda un Bizum para quedar en paz.'
       : `Te quedan ${myOutgoingBizums.length} Bizums para quedar en paz.`,
       btn:'Ver mi cuenta',target:'accounts'};
   } else if(openItems === 0 && pendingBizumCount){
-    action = {txt:'Todo comprado. Solo quedan los Bizums pendientes.',
+    action = {txt:'Solo quedan los Bizums pendientes.',
       btn:'A las cuentas', target:'accounts'};
   } else if(openItems === 0 && !pendingBizumCount && c.total){
-    action = {txt:'Todo comprado y todo saldado. Vaya máquinas.',
+    action = {txt:'Todo cuadrado. Vaya máquinas.',
       btn:'Ver las cuentas', target:'accounts'};
   } else {
     action = {txt:'¿Has pagado algo? Apúntalo y a otra cosa.',
@@ -3096,14 +3097,14 @@ function partyView(c){
   const isLive = isLiveSyncing();
   return `<div class="card party-card">
       <span class="brand-mark" aria-hidden="true">${LOGO}</span>
-      <span class="label">Tu fiesta</span>
+      <span class="label">Tu plan</span>
       <h1 class="title">${escapeHtml(S.party.name)}</h1>
-      <div class="meta">${f ? escapeHtml(f) + ' · ' : ''}${participants.length} en la peña · ${S.items.length} cosa${S.items.length===1?'':'s'} en la lista · ${eur(c.total)}</div>
+      <div class="meta">${f ? escapeHtml(f) + ' · ' : ''}${participants.length} en la peña · ${boughtCount} gasto${boughtCount===1?'':'s'} · ${openItems} pendiente${openItems===1?'':'s'} · ${eur(c.total)}</div>
       <span class="read-only-badge">${readOnly ? 'Solo para mirar' : 'Puedes editar'}</span>
-      ${S.localReadOnly ? '<div class="access-note"><strong>Copia guardada.</strong><br>Ya no está conectada a una fiesta que se pueda compartir.</div>' : `<button class="btn btn-white btn-block" id="inviteButton" type="button">${readOnly ? 'Mandar las cuentas' : 'Mandar al grupo'}</button>`}
+      ${S.localReadOnly ? '<div class="access-note"><strong>Copia guardada.</strong><br>Ya no está conectada a un plan que se pueda compartir.</div>' : `<button class="btn btn-white btn-block" id="inviteButton" type="button">${readOnly ? 'Mandar las cuentas' : 'Mandar al grupo'}</button>`}
       ${canGoLive() ? `
         <button class="btn btn-live btn-block" id="enableLiveButton" type="button" style="margin-top:8px">
-          Ponerla en vivo para que todos apunten</button>` : ''}
+          Ponerlo en vivo para que todos apunten</button>` : ''}
       <div class="sync-status${isLive ? ' live' : ''}" id="syncStatus">${escapeHtml(syncText())}</div>
     </div>
     <div class="card">
@@ -3120,8 +3121,8 @@ function partyView(c){
     </div>
     <button class="utility-entry party-options-entry" id="partyOptionsButton" type="button" aria-haspopup="dialog">
       <span class="utility-copy">
-        <span class="utility-title">Gestionar esta fiesta</span>
-        <span class="utility-sub">Actividad y acciones sobre la fiesta actual</span>
+        <span class="utility-title">Gestionar este plan</span>
+        <span class="utility-sub">Actividad y acciones sobre el plan actual</span>
       </span>
       <span class="utility-arrow" aria-hidden="true">›</span>
     </button>`;
@@ -3129,7 +3130,7 @@ function partyView(c){
 
 function boughtItemSheet(itemId){
   const item = itemById(itemId);
-  if(!item || item.status !== 'bought') return abortSheet('Esa compra ya no está en la lista.');
+  if(!item || item.status !== 'bought') return abortSheet('Ese gasto ya no está en el plan.');
   const payer = personById(item.payerId);
   const consumers = consumerIds(item).map(personById).filter(Boolean);
   const canEdit = !isReadOnlyParty() && (isAdmin() || item.payerId === S.me);
@@ -3140,8 +3141,8 @@ function boughtItemSheet(itemId){
     <p style="margin:0;line-height:1.6">${consumers.length
       ? consumers.map(person=>escapeHtml(person.name)).join(', ')
       : 'Nadie'}</p>
-    ${canEdit ? `<div class="sheet-actions"><button class="btn btn-primary" id="editBoughtItemButton" type="button">Corregir compra</button></div>` : ''}
-    ${!canEdit && !isReadOnlyParty() ? '<p class="footnote">Solo quien pagó o quien tenga la llave puede corregir esta compra.</p>' : ''}
+    ${canEdit ? `<div class="sheet-actions"><button class="btn btn-primary" id="editBoughtItemButton" type="button">Corregir gasto</button></div>` : ''}
+    ${!canEdit && !isReadOnlyParty() ? '<p class="footnote">Solo quien pagó o quien tenga la llave puede corregir este gasto.</p>' : ''}
   `);
   const edit = $('#editBoughtItemButton');
   if(edit) edit.onclick = () => expenseSheet(itemId);
@@ -3168,7 +3169,7 @@ async function releaseListItem(itemId, button){
 function confirmRemoveListItem(itemId){
   const item = itemById(itemId);
   if(!item) return abortSheet('Esa cosa ya no está en la lista.');
-  if(item.status === 'bought') return abortSheet('Esa ya está comprada. Abre la compra si necesitas corregirla.');
+  if(item.status === 'bought') return abortSheet('Ya está apuntada como gasto. Ábrela si necesitas corregirla.');
   if(!isAdmin() && item.claimerId) return abortSheet('Solo quien tenga la llave puede quitar una cosa con responsable.');
   confirmSheet(`¿Quitar «${item.name}»?`, 'Se quitará de la lista para toda la peña.', async () => {
     await commitSharedChange(() => {
@@ -3179,7 +3180,7 @@ function confirmRemoveListItem(itemId){
       tombstoneEntity('items',live);
     }, {toast:'Quitada de la lista.'}).catch(error => {
       if(error.message === 'missing_item') render();
-      else if(error.message === 'already_bought') toast('Esa ya está comprada. Abre la compra si necesitas corregirla.');
+      else if(error.message === 'already_bought') toast('Ya está apuntada como gasto. Ábrela si necesitas corregirla.');
       else if(error.message === 'claimed') toast('Ahora tiene responsable: solo quien tenga la llave puede quitarla.');
       else throw error;
     });
@@ -3221,10 +3222,11 @@ function listView(){
   const readOnly = isReadOnlyParty();
   const total = S.items.length;
   const openItems = S.items.filter(i=>i.status!=='bought').length;
-  const sub = !total ? (readOnly ? 'Lista vacía' : 'Apunta lo que haga falta')
-    : openItems === 0 ? 'Todo comprado. Vaya máquinas.'
-    : openItems === 1 ? `1 cosa por resolver de ${total}`
-    : `${openItems} cosas por resolver de ${total}`;
+  let sub;
+  if(!total) sub = readOnly ? 'Aún no hay nada apuntado' : 'Apunta un gasto o algo pendiente';
+  else if(openItems === 0) sub = 'No queda nada pendiente';
+  else if(openItems === 1) sub = '1 cosa pendiente';
+  else sub = `${openItems} cosas pendientes`;
   const admin = !readOnly && isAdmin();
 
   const cardItem = it => {
@@ -3281,23 +3283,28 @@ function listView(){
   const toBuy = S.items.filter(i=>i.status!=='bought');
   const boughtItems = S.items.filter(i=>i.status==='bought');
   const unownedCount = S.items.filter(isUnownedItem).length;
+  const emptyText = readOnly
+    ? 'Todavía no hay gastos ni cosas pendientes.'
+    : 'Empieza apuntando un gasto o algo que falte.';
 
   return `
-    <div class="screen-header"><h1>La lista</h1><div class="sub">${sub}</div></div>
-    ${readOnly ? '<div class="access-note"><strong>Solo lectura.</strong><br>Puedes ver la lista, pero este enlace no guarda cambios.</div>' : `<form class="add-row" id="addItemForm">
-      <label class="visually-hidden" for="itemInput">Qué hace falta</label>
-      <input type="text" id="itemInput" placeholder="Hielo, pan, vasos…" maxlength="40" autocomplete="off">
-      <button class="btn btn-primary" type="submit">Apuntar</button>
-    </form>
-    <button class="create-dashed" id="directExpenseButton" type="button" style="margin-bottom:14px">
-      + Apuntar un gasto ya pagado</button>`}
-    ${!total ? `<div class="empty-state">La lista está vacía.<br>${readOnly ? 'Todavía no hay nada apuntado.' : 'Apunta lo primero que haga falta.'}</div>`
-      : toBuy.map(cardItem).join('')
-        + (!readOnly && unownedCount ? `<div style="text-align:center;margin:2px 0 10px">
-            <button class="quiet-link" id="shareListButton" type="button">Mandar lo que falta al grupo</button>
-          </div>` : '')
-        + (boughtItems.length && toBuy.length ? '<span class="label">Ya compradas</span>' : '')
-        + boughtItems.map(cardItem).join('')}
+    <div class="screen-header"><h1>Los gastos</h1><div class="sub">${sub}</div></div>
+    ${readOnly ? '<div class="access-note"><strong>Solo lectura.</strong><br>Puedes ver los gastos y lo pendiente, pero este enlace no guarda cambios.</div>' : `
+      <button class="btn btn-green btn-block" id="directExpenseButton" type="button" style="margin-bottom:20px">Apuntar un gasto</button>
+      <span class="label">Pendiente por comprar o llevar</span>
+      <form class="add-row" id="addItemForm">
+        <label class="visually-hidden" for="itemInput">Qué falta por comprar o llevar</label>
+        <input type="text" id="itemInput" placeholder="Hielo, pan, entradas…" maxlength="40" autocomplete="off">
+        <button class="btn btn-primary" type="submit">Añadir</button>
+      </form>`}
+    ${!total ? `<div class="empty-state">${emptyText}</div>` : ''}
+    ${readOnly && toBuy.length ? '<span class="label">Pendiente por comprar o llevar</span>' : ''}
+    ${toBuy.map(cardItem).join('')}
+    ${!readOnly && unownedCount ? `<div style="text-align:center;margin:2px 0 10px">
+      <button class="quiet-link" id="shareListButton" type="button">Mandar lo que falta al grupo</button>
+    </div>` : ''}
+    ${boughtItems.length ? '<span class="label">Gastos apuntados</span>' : ''}
+    ${boughtItems.map(cardItem).join('')}
   `;
 }
 
@@ -3310,7 +3317,7 @@ function groupView(c){
     const cls = balanceClass(s);
     const statusText = s>0?'le deben':(s<0?'debe':'en paz');
     const subs = [];
-    if(p.admin) subs.push('Organiza la fiesta');
+    if(p.admin) subs.push('Organiza el plan');
     if(assignedItems) subs.push(`trae ${assignedItems} cosa${assignedItems===1?'':'s'}`);
     return `
     <button class="person-row" data-person="${escapeHtml(p.id)}" type="button">
@@ -3347,7 +3354,7 @@ function accountsView(c){
   if(c.total === 0 && !S.transfers.length){
     return `
       <div class="screen-header"><h1>Las cuentas</h1><div class="sub">Quién paga a quién para quedar en paz</div></div>
-      <div class="empty-state">Aún no hay gastos apuntados.<br>En cuanto la peña compre cosas, aquí salen las cuentas.</div>
+      <div class="empty-state">Aún no hay gastos apuntados.<br>En cuanto la peña apunte alguno, aquí salen las cuentas.</div>
       ${readOnly ? '<div class="access-note"><strong>Solo lectura.</strong><br>Este enlace no permite apuntar gastos.</div>' : '<div style="text-align:center"><button class="btn btn-green" id="directExpenseButton" type="button">Apuntar un gasto</button></div>'}`;
   }
 
@@ -3455,7 +3462,7 @@ function render(){
   if(S){
     const partySwitcher = $('#partySwitcherButton');
     $('#partySwitcherName').textContent = S.party.name;
-    partySwitcher.setAttribute('aria-label', `Abrir tus fiestas. Activa: ${S.party.name}`);
+    partySwitcher.setAttribute('aria-label', `Abrir tus planes. Activo: ${S.party.name}`);
   }
   const v = $('#preview');
   if(!S){
@@ -3503,7 +3510,7 @@ function bindEntry(v){
   };
   const clearLocal = v.querySelector('#clearLocalDataButton');
   if(clearLocal) clearLocal.onclick = () => confirmSheet('¿Borrar los datos de este móvil?',
-    'Perderás las fiestas guardadas, los permisos para editarlas y la posibilidad de recuperar fiestas borradas. Las fiestas compartidas seguirán existiendo para la peña, pero necesitarás sus enlaces para volver.', () => {
+    'Perderás los planes guardados, los permisos para editarlos y la posibilidad de recuperar planes borrados. Los planes compartidos seguirán existiendo para la peña, pero necesitarás sus enlaces para volver.', () => {
       clearAllLocalData(); render(); toast('Datos de este móvil borrados.');
     }, {confirmLabel:'Borrar todos los datos', danger:true});
   const recent = loadRecentParties();
@@ -3545,7 +3552,7 @@ function bindView(v){
     if(!requireActivePerson()) return;
     const n = v.querySelector('#itemInput').value.trim();
     if(!n) return toast('Escribe qué hace falta.');
-    if(S.items.length >= 500) return toast('La lista admite hasta 500 cosas. Quita una antes de añadir otra.');
+    if(S.items.length >= 500) return toast('El plan admite hasta 500 apuntes. Borra uno antes de añadir otro.');
     const button = form.querySelector('button[type="submit"]');
     await withBusyButton(button,'Guardando…',() => commitSharedChange(() => {
       if(!personById(S.me)?.active) throw new Error('inactive_person');
@@ -3598,7 +3605,7 @@ function bindView(v){
     const n = v.querySelector('#personInput').value.trim();
     if(!n) return;
     if(personByName(n)) return toast('Ya hay alguien con ese nombre. Usa otro.');
-    if(S.people.length >= 100) return toast('La fiesta admite hasta 100 personas.');
+    if(S.people.length >= 100) return toast('El plan admite hasta 100 personas.');
     const button = formP.querySelector('button[type="submit"]');
     await withBusyButton(button,'Guardando…',() => commitSharedChange(() => {
       if(!personById(S.me)?.active) throw new Error('inactive_person');
@@ -3689,7 +3696,7 @@ document.getElementById('partySwitcherButton').addEventListener('click', () => {
   const live = editLink || readLink;
   if(live){
     render();
-    if(!S) toast('Abriendo la fiesta del grupo…');
+    if(!S) toast('Abriendo el plan del grupo…');
     // Clear the hash only if the party opens. Without network, reload retries.
     openLiveLink(live[1].toLowerCase(), editLink ? editLink[2].toLowerCase() : null)
       .then(ok => { if(ok) clearHash(); });
@@ -3703,8 +3710,8 @@ document.getElementById('partySwitcherButton').addEventListener('click', () => {
       // An old snapshot link must not silently disconnect a live party.
       if(isRemoteParty()){
         render();
-        confirmSheet('¿Abrir la fiesta del enlace?',
-          'Ese enlace lleva una copia congelada. Tu fiesta en vivo se queda a salvo: vuelves a ella con el enlace del grupo.',
+        confirmSheet('¿Abrir el plan del enlace?',
+          'Ese enlace lleva una copia congelada. Tu plan en vivo se queda a salvo: vuelves a él con el enlace del grupo.',
           () => applyImported(obj), {confirmLabel:'Abrir esta copia'});
         download();
         return;

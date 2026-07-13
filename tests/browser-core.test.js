@@ -128,7 +128,7 @@ test('feedback leaves through a context-free external link without embedded thir
   assert.doesNotMatch(html,
     /reportUsageEvent\('usage\.feedback_opened'\);\s*closeSheet\(\)/);
   assert.match(html, /El tablón lo gestiona Featurebase/);
-  assert.match(html, /No incluyas nombres, importes ni enlaces de la fiesta/);
+  assert.match(html, /No incluyas nombres, importes ni enlaces del plan/);
   assert.doesNotMatch(html, /<script[^>]+src=["'][^"']*featurebase/i);
   assert.doesNotMatch(html, /<iframe[^>]+featurebase/i);
   assert.doesNotMatch(html, /FEEDBACK_URL\s*\+/);
@@ -173,8 +173,8 @@ test('party management is grouped without changing role or owner capabilities', 
     'forgetPartyButton', 'deletePartyButton']) {
     assert.match(editableAdminOwnerOptions, new RegExp(`id="${id}"`));
   }
-  assert.match(editableAdminOwnerOptions, /Gestionar esta fiesta/);
-  assert.doesNotMatch(editableAdminOwnerOptions, /switchPartyButton|Ver tus fiestas/);
+  assert.match(editableAdminOwnerOptions, /Gestionar este plan/);
+  assert.doesNotMatch(editableAdminOwnerOptions, /switchPartyButton|Ver tus planes/);
 
   const readOnlyOptions = context.renderOptions({
     remote: { ownerKey: 'abcdefghjkmnpqrstuvwxy23' },
@@ -265,6 +265,26 @@ test('core copy and controls state money actions literally and expose accessible
   }
 });
 
+test('plan framing makes expenses primary while preserving the pending list', () => {
+  const partySource = extractFunction(scripts[0], 'partyView');
+  const listSource = extractFunction(scripts[0], 'listView');
+  const createSource = extractFunction(scripts[0], 'createPartySheet');
+
+  assert.match(html, /Una fiesta, un viaje o lo que se tercie/);
+  assert.match(html, /data-tab="party"[\s\S]*?Plan<\/button>/);
+  assert.match(html, /data-tab="list"[\s\S]*?Gastos<\/button>/);
+  assert.match(createSource, /Nombre del plan/);
+  assert.match(createSource, /Fecha de inicio \(opcional\)/);
+  assert.match(listSource, /Pendiente por comprar o llevar/);
+  assert.match(listSource, /Gastos apuntados/);
+  assert.ok(listSource.indexOf('id="directExpenseButton"') <
+    listSource.indexOf('Pendiente por comprar o llevar'),
+    'The direct expense action should come before pending planning');
+  assert.doesNotMatch(listSource, /Ya compradas|Todo comprado/);
+  assert.match(partySource, /Todo cuadrado\. Vaya máquinas\./);
+  assert.match(partySource, /\$\{boughtCount\} gasto/);
+});
+
 test('global party switching stays separate from active-party management', () => {
   const partySource = extractFunction(scripts[0], 'partyView');
   const partyOptionsSource = extractFunction(scripts[0], 'partyOptionsHtml');
@@ -284,14 +304,14 @@ test('global party switching stays separate from active-party management', () =>
   assert.doesNotMatch(renderSource, /appHeader\.hidden/);
   assert.match(renderSource, /partySwitcherName.*S\.party\.name/);
   assert.match(html, /getElementById\('partySwitcherButton'\).*partySwitcherSheet/s);
-  assert.match(partySwitcherSource, /Esta fiesta solo está en este móvil/);
+  assert.match(partySwitcherSource, /Este plan solo está en este móvil/);
   assert.match(html, /\.recent-list\{display:grid;grid-template-columns:minmax\(0,1fr\)/);
   assert.match(html, /\.recent-party-row\{[^}]*min-width:0;width:100%/);
   assert.match(partySource, /id="partyOptionsButton"/);
-  assert.match(partySource, /Gestionar esta fiesta/);
+  assert.match(partySource, /Gestionar este plan/);
   assert.match(partySource, /aria-haspopup="dialog"/);
-  assert.match(partyOptionsSource, /Gestionar esta fiesta/);
-  assert.doesNotMatch(partyOptionsSource, /switchPartyButton|Ver tus fiestas|Cambiar de fiesta/);
+  assert.match(partyOptionsSource, /Gestionar este plan/);
+  assert.doesNotMatch(partyOptionsSource, /switchPartyButton|Ver tus planes|Cambiar de plan/);
   assert.doesNotMatch(partySource,
     /id="(?:activity|rename|repeatParty|newParty|forgetParty|deleteParty|demo)Button"/);
   assert.match(entrySource, /id="demoButton"/);

@@ -23,6 +23,8 @@ or recovery changes. Pure refactors and test-only changes need no entry. -->
 
 ### Changed
 
+- Broadened the user-facing frame from one-day parties to shared plans such as
+  trips, and made recorded expenses primary while preserving the pending list.
 - Separated global party switching from active-party management and made
   action-oriented copy more direct.
 - Turned remembered live parties into a persistent one-active-at-a-time switcher

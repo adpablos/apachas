@@ -1136,12 +1136,12 @@ async function api(req, res, url, context) {
   if (req.method === 'POST' && url.pathname === '/api/parties') {
     if (!enforceRateLimit(req, res, createBuckets, CREATE_RATE_MAX, CREATE_RATE_WINDOW_MS)) return;
     if (partyCount() + deletedPartyCount() >= MAX_PARTIES) {
-      return json(res, 503, { error: 'El servidor está hasta arriba de fiestas' });
+      return json(res, 503, { error: 'El servidor está hasta arriba de planes' });
     }
     const body = await parseJsonBody(req, res);
     if (!body) return;
     const state = validState(body.state);
-    if (!state) return json(res, 400, { error: 'Eso no es una fiesta' });
+    if (!state) return json(res, 400, { error: 'Eso no es un plan' });
     const id = randomToken(10);
     const key = randomToken(14);
     const ownerKey = randomToken(24);
@@ -1171,23 +1171,23 @@ async function api(req, res, url, context) {
   if (match) {
     const id = match[1];
     const action = match[2];
-    if (!PARTY_ID_RE.test(id)) return json(res, 404, { error: 'No hay tal fiesta' });
+    if (!PARTY_ID_RE.test(id)) return json(res, 404, { error: 'No hay tal plan' });
 
     if (action === 'restore') {
       if (req.method !== 'POST') return json(res, 405, { error: 'Eso no se hace así' });
       const body = await parseJsonBody(req, res);
       if (!body) return;
       const deleted = findTrashedParty(id);
-      if (!deleted) return json(res, 404, { error: 'No hay tal fiesta' });
+      if (!deleted) return json(res, 404, { error: 'No hay tal plan' });
       if (!deleted.doc.ownerKey || body.ownerKey !== deleted.doc.ownerKey) {
-        return json(res, 403, { error: 'Este móvil no puede recuperar esa fiesta' });
+        return json(res, 403, { error: 'Este móvil no puede recuperar ese plan' });
       }
       if (Date.now() >= deleted.purgeAt) {
         fs.unlinkSync(deleted.file);
-        return json(res, 410, { error: 'Ya no se puede recuperar esa fiesta' });
+        return json(res, 410, { error: 'Ya no se puede recuperar ese plan' });
       }
       if (fs.existsSync(partyFile(id))) {
-        return json(res, 409, { error: 'Esa fiesta ya está en vivo' });
+        return json(res, 409, { error: 'Ese plan ya está en vivo' });
       }
       if (DEVICE_ID_RE.test(body.deviceId || '')) {
         context.deviceRef = privateRef('device', body.deviceId);
@@ -1218,11 +1218,11 @@ async function api(req, res, url, context) {
         const deleted = findTrashedParty(id);
         if (deleted && Date.now() < deleted.purgeAt) {
           return json(res, 410, {
-            error: 'Esta fiesta está borrada',
+            error: 'Este plan está borrado',
             purgeAt: new Date(deleted.purgeAt).toISOString(),
           });
         }
-        return json(res, 404, { error: 'No hay tal fiesta' });
+        return json(res, 404, { error: 'No hay tal plan' });
       }
       if (url.searchParams.get('rev') === String(doc.rev)) return json(res, 204);
       return json(res, 200, stateResponse(doc));
@@ -1232,12 +1232,12 @@ async function api(req, res, url, context) {
       const body = await parseJsonBody(req, res);
       if (!body) return;
       const doc = readParty(id, context);
-      if (!doc) return json(res, 404, { error: 'No hay tal fiesta' });
+      if (!doc) return json(res, 404, { error: 'No hay tal plan' });
       if (!body || body.key !== doc.key) {
         return json(res, 403, { error: 'Ese enlace no puede editar' });
       }
       const state = validState(body.state);
-      if (!state) return json(res, 400, { error: 'Eso no es una fiesta' });
+      if (!state) return json(res, 400, { error: 'Eso no es un plan' });
       if (Number(body.rev) !== doc.rev) {
         return json(res, 409, stateResponse(doc));
       }
@@ -1261,9 +1261,9 @@ async function api(req, res, url, context) {
       const body = await parseJsonBody(req, res);
       if (!body) return;
       const doc = readParty(id, context);
-      if (!doc) return json(res, 404, { error: 'No hay tal fiesta' });
+      if (!doc) return json(res, 404, { error: 'No hay tal plan' });
       if (!doc.ownerKey || body.ownerKey !== doc.ownerKey) {
-        return json(res, 403, { error: 'Este móvil no puede borrar la fiesta' });
+        return json(res, 403, { error: 'Este móvil no puede borrar el plan' });
       }
       if (Number(body.rev) !== doc.rev) return json(res, 409, stateResponse(doc));
       if (body.confirmName !== doc.state.party.name) {
