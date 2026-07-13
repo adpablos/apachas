@@ -2013,7 +2013,7 @@ function assignSheet(itemId){
     personPill(p, 'assign-person', 'pill-primary ' + (it.claimerId===p.id?'on':''))).join('');
   openSheet(`
     <h2 class="sheet-title">¿Quién se encarga de «${escapeHtml(it.name)}»?</h2>
-    <p class="sheet-sub">Le saldrá como responsabilidad suya en la lista.</p>
+    <p class="sheet-sub">Le saldrá como responsabilidad suya entre lo pendiente.</p>
     <fieldset class="choice-group"><legend class="visually-hidden">Elige responsable</legend><div class="pills">
       ${pills}
       <button class="pill text-only ${!it.claimerId?'on':''}" type="button" data-assign-person="" aria-pressed="${!it.claimerId}">Sin responsable</button>
@@ -2026,7 +2026,7 @@ function assignSheet(itemId){
     // must not be confused with that, because it would release the item.
     if(b.dataset.assignPerson && (!who || !who.active)) return abortSheet('Esa persona ya no está en la peña.');
     let live = itemById(itemId);
-    if(!live) return abortSheet('Esa cosa ya no está en la lista.');
+    if(!live) return abortSheet('Esa cosa ya no está pendiente.');
     if(live.status === 'bought') return abortSheet('Ya está apuntada como gasto: no hay nada que asignar.');
     await withBusyButton(b,'Guardando…',() => commitSharedChange(() => {
       if(!isAdmin()) throw new Error('not_admin');
@@ -2037,7 +2037,7 @@ function assignSheet(itemId){
       else { live.status='pending'; delete live.claimerId; }
       touch(live);
     }, {close:true, toast: who ? 'Se encarga ' + who.name + '.' : 'Ahora queda libre.'})).catch(e => {
-      if(e.message === 'missing_item') abortSheet('Esa cosa ya no está en la lista.');
+      if(e.message === 'missing_item') abortSheet('Esa cosa ya no está pendiente.');
       else if(e.message === 'already_bought') abortSheet('Ya está apuntada como gasto: no hay nada que asignar.');
       else if(e.message === 'not_admin') abortSheet('Necesitas tener la llave para hacer eso.');
       else throw e;
@@ -2364,7 +2364,7 @@ async function shareSheet(shareType, pid){
   }
   const txt = shareMessage(shareType, pid);
   const shareTitle = shareType === 'accounts' ? 'Mandar las cuentas al grupo'
-    : shareType === 'list' ? 'Mandar la lista al grupo'
+    : shareType === 'list' ? 'Mandar lo que falta al grupo'
     : shareType === 'person' ? `Mandar recordatorio a ${personById(pid)?.name || 'la peña'}`
     : 'Mandar el plan al grupo';
   openSheet(`
@@ -2573,7 +2573,7 @@ function auditDescription(event){
   }
   if(event.action === 'item.created'){
     return auditValueFor(event,'status') === 'bought'
-      ? `${actor} apuntó el gasto «${label}»` : `${actor} añadió «${label}» a la lista`;
+      ? `${actor} apuntó el gasto «${label}»` : `${actor} añadió «${label}» a lo pendiente`;
   }
   if(event.action === 'item.deleted') return `${actor} borró «${label}»`;
   if(event.action === 'item.updated'){
@@ -3168,23 +3168,23 @@ async function releaseListItem(itemId, button){
 
 function confirmRemoveListItem(itemId){
   const item = itemById(itemId);
-  if(!item) return abortSheet('Esa cosa ya no está en la lista.');
-  if(item.status === 'bought') return abortSheet('Ya está apuntada como gasto. Ábrela si necesitas corregirla.');
+  if(!item) return abortSheet('Esa cosa ya no está pendiente.');
+  if(item.status === 'bought') return abortSheet('Ya está apuntado como gasto. Abre el gasto si necesitas corregirlo.');
   if(!isAdmin() && item.claimerId) return abortSheet('Solo quien tenga la llave puede quitar una cosa con responsable.');
-  confirmSheet(`¿Quitar «${item.name}»?`, 'Se quitará de la lista para toda la peña.', async () => {
+  confirmSheet(`¿Quitar «${item.name}»?`, 'Dejará de estar pendiente para toda la peña.', async () => {
     await commitSharedChange(() => {
       const live = itemById(itemId);
       if(!live) throw new Error('missing_item');
       if(live.status === 'bought') throw new Error('already_bought');
       if(!isAdmin() && live.claimerId) throw new Error('claimed');
       tombstoneEntity('items',live);
-    }, {toast:'Quitada de la lista.'}).catch(error => {
+    }, {toast:'Ya no está pendiente.'}).catch(error => {
       if(error.message === 'missing_item') render();
-      else if(error.message === 'already_bought') toast('Ya está apuntada como gasto. Ábrela si necesitas corregirla.');
+      else if(error.message === 'already_bought') toast('Ya está apuntado como gasto. Abre el gasto si necesitas corregirlo.');
       else if(error.message === 'claimed') toast('Ahora tiene responsable: solo quien tenga la llave puede quitarla.');
       else throw error;
     });
-  }, {confirmLabel:'Quitar de la lista', danger:true});
+  }, {confirmLabel:'Quitar de lo pendiente', danger:true});
 }
 
 function listItemOptionsSheet(itemId){
@@ -3203,7 +3203,7 @@ function listItemOptionsSheet(itemId){
     ${canBuy ? '<button class="menu-option" id="optionBuyItemButton" type="button">Apuntar compra<small>Guarda el precio, quién pagó y el reparto.</small></button>' : ''}
     ${admin ? '<button class="menu-option" id="optionAssignItemButton" type="button">Cambiar responsable<small>Elige quién se encarga o déjala libre.</small></button>' : ''}
     ${canRelease ? '<button class="menu-option" id="optionReleaseItemButton" type="button">Dejar libre<small>Volverá a quedar sin responsable.</small></button>' : ''}
-    ${canRemove ? '<button class="menu-option danger" id="optionRemoveItemButton" type="button">Quitar de la lista<small>Se quitará para toda la peña.</small></button>' : ''}
+    ${canRemove ? '<button class="menu-option danger" id="optionRemoveItemButton" type="button">Quitar de lo pendiente<small>Dejará de estar pendiente para toda la peña.</small></button>' : ''}
   `);
   const buy = $('#optionBuyItemButton');
   if(buy) buy.onclick = () => {

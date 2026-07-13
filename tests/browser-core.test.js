@@ -265,7 +265,7 @@ test('core copy and controls state money actions literally and expose accessible
   }
 });
 
-test('plan framing makes expenses primary while preserving the pending list', () => {
+test('plan framing makes expenses primary while preserving pending planning', () => {
   const partySource = extractFunction(scripts[0], 'partyView');
   const listSource = extractFunction(scripts[0], 'listView');
   const createSource = extractFunction(scripts[0], 'createPartySheet');
@@ -277,6 +277,9 @@ test('plan framing makes expenses primary while preserving the pending list', ()
   assert.match(createSource, /Fecha de inicio \(opcional\)/);
   assert.match(listSource, /Pendiente por comprar o llevar/);
   assert.match(listSource, /Gastos apuntados/);
+  assert.match(html, /Mandar lo que falta al grupo/);
+  assert.doesNotMatch(html,
+    /Mandar la lista|Quitar de la lista|no está en la lista|Quitada de la lista|añadió .* a la lista/);
   assert.ok(listSource.indexOf('id="directExpenseButton"') <
     listSource.indexOf('Pendiente por comprar o llevar'),
     'The direct expense action should come before pending planning');
