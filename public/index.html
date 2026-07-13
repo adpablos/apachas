@@ -2027,7 +2027,7 @@ function assignSheet(itemId){
     if(b.dataset.assignPerson && (!who || !who.active)) return abortSheet('Esa persona ya no está en la peña.');
     let live = itemById(itemId);
     if(!live) return abortSheet('Esa cosa ya no está pendiente.');
-    if(live.status === 'bought') return abortSheet('Ya está apuntada como gasto: no hay nada que asignar.');
+    if(live.status === 'bought') return abortSheet('Ese gasto ya está apuntado: no hay nada que asignar.');
     await withBusyButton(b,'Guardando…',() => commitSharedChange(() => {
       if(!isAdmin()) throw new Error('not_admin');
       live = itemById(itemId);
@@ -2038,7 +2038,7 @@ function assignSheet(itemId){
       touch(live);
     }, {close:true, toast: who ? 'Se encarga ' + who.name + '.' : 'Ahora queda libre.'})).catch(e => {
       if(e.message === 'missing_item') abortSheet('Esa cosa ya no está pendiente.');
-      else if(e.message === 'already_bought') abortSheet('Ya está apuntada como gasto: no hay nada que asignar.');
+      else if(e.message === 'already_bought') abortSheet('Ese gasto ya está apuntado: no hay nada que asignar.');
       else if(e.message === 'not_admin') abortSheet('Necesitas tener la llave para hacer eso.');
       else throw e;
     });

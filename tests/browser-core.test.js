@@ -280,6 +280,7 @@ test('plan framing makes expenses primary while preserving pending planning', ()
   assert.match(html, /Mandar lo que falta al grupo/);
   assert.doesNotMatch(html,
     /Mandar la lista|Quitar de la lista|no está en la lista|Quitada de la lista|añadió .* a la lista/);
+  assert.doesNotMatch(html, /Ya está apuntada como gasto/);
   assert.ok(listSource.indexOf('id="directExpenseButton"') <
     listSource.indexOf('Pendiente por comprar o llevar'),
     'The direct expense action should come before pending planning');
