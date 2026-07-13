@@ -290,7 +290,7 @@ sudoedit /etc/apachas/observability.env
 
 ```dotenv
 BETTER_STACK_SOURCE_TOKEN=<logs-source-token>
-BETTER_STACK_INGESTING_URL=https://in.logs.betterstack.com/
+BETTER_STACK_INGESTING_URL=<source-ingesting-url>
 POSTHOG_API_KEY=<project-api-key>
 POSTHOG_HOST=https://eu.i.posthog.com
 ```
@@ -298,9 +298,9 @@ POSTHOG_HOST=https://eu.i.posthog.com
 Use a Better Stack logs source in the EU region and a PostHog EU project. These
 are ingestion credentials, not personal or management API tokens. Store their
 canonical recovery copy in 1Password vault `Private`, Secure Note
-`A Pachas observability providers`. **Predeployment provisioning marker:** add
-the stable 1Password item ID here before merging the provider-enabled deployment;
-no item or credentials existed when this optional code path was implemented.
+`A Pachas observability providers`, item ID
+`wyqighwbupu3srdzj2myqvancu`. The note also records the provider workspace and
+resource IDs plus their admin URLs.
 Never put tokens in GitHub, Compose, shell history, or this repository.
 
 Set provider retention to no more than 30 days for operational logs and 12
@@ -416,8 +416,9 @@ checkout. Its namespace hides `/etc/apachas`, `/opt/apachas`, and Docker data;
 it can read the encrypted backup directory but cannot read the application data
 volume or any decryption key.
 
-Create a heartbeat monitor in Better Stack with a 36-hour expected interval and
-copy its HTTPS ping URL to a root-only environment file:
+Create a heartbeat monitor in Better Stack with an hourly expected interval and
+a 36-hour grace period, then copy its HTTPS ping URL to a root-only environment
+file:
 
 ```bash
 sudo install -o root -g root -m 0600 /dev/null /etc/apachas/backup-monitor.env
