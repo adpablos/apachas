@@ -231,7 +231,7 @@ test('party lifecycle enforces write and owner credentials', async () => {
 
   const deletedRead = await request('GET', `/api/parties/${id}`);
   assert.equal(deletedRead.status, 410);
-  assert.equal(deletedRead.body.error, 'Esta fiesta está borrada');
+  assert.equal(deletedRead.body.error, 'Este plan está borrado');
 
   const forbiddenRestore = await request('POST', `/api/parties/${id}/restore`, {
     ownerKey: 'aaaaaaaaaaaaaaaaaaaaaaaa',

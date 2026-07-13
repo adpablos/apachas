@@ -10,15 +10,21 @@ analysis was wrong or incomplete.
 ## Thesis
 
 A Pachas does not compete with Tricount on completeness. It competes on a
-narrower and more valuable promise for a village party group:
+narrower and more valuable promise for a small, trusted group with one bounded
+shared plan, whether that plan is a village party, a trip, or a weekend away:
 
 > Send it to the group, everyone records their part, and the final Bizums fall
 > out automatically.
 
-Today the app delivers that promise with live shared parties, explicit
+Today the app delivers that promise with live shared plans, explicit
 consumer splits, real transfer history, minimum pending Bizums, and a low-
 friction entry with no accounts or install. WhatsApp remains the door and
 loudspeaker; A Pachas is the shared source of truth.
+
+The UI calls that shared context a "plan" so the same product promise fits both
+parties and multi-day trips. Code, API endpoints, and persisted data continue to
+use the technical `party` name; this is a positioning change, not a data-model
+migration.
 
 ## Original Diagnosis, Resolved in v2
 
@@ -41,7 +47,7 @@ historical context, not the current product state.
 5. **WhatsApp is generic share.** There are invite and accounts texts, but no
    moment-specific messages: missing items, individual reminder with debt,
    closing message. The text sent to the group is part of the product.
-6. **The Fiesta screen does not say what is next.** It repeats identity and
+6. **The Plan screen does not say what is next.** It repeats identity and
    hero content, but the main action is hidden in another tab.
 7. **Minimal audit trail is missing.** An expense does not say who created it or
    when it was touched. Deleting a purchase is implicit behind edit flow, not an
@@ -150,14 +156,14 @@ send, WhatsApp button, native share, and copy:
    and a read-only link. If settled, closing message.
 4. **Individual reminder**: what the person should bring and/or their Bizum.
 
-### D6. Fiesta Becomes Actionable Home
+### D6. Plan Becomes Actionable Home
 
 Inside a party, the large hero is redundant. The screen becomes: party card with
 sync status and "Mandar al grupo"; "¿Qué toca?" card with exactly one action
 based on state; the current user's balance; identity; and existing links. The
 full hero remains only for the entry state without a party. A shared header
 on all four party tabs shows the active party and opens the global party
-switcher. "Gestionar esta fiesta" contains only actions whose target or source
+switcher. "Gestionar este plan" contains only actions whose target or source
 is the active party.
 
 ### D7. Minimal Server-Derived History, Not Accounting

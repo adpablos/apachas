@@ -80,11 +80,11 @@ empty states. Use "para", never the contraction "pa". Labels, placeholders,
 instructions, and validation must favor immediate understanding over jokes.
 
 - "Los gastos de la peña, a partes iguales. Ni para ti ni para mí."
-- "Hielo, pan, vasos…" · "Me encargo" · "Apuntar compra"
+- "Cena, súper, gasolina…" · "Me encargo" · "Apuntar compra"
 - "¿Entre quiénes se reparte?" · "Sin responsable" · "Se encarga Marta"
 - "Pon un precio mayor que cero." · "El gasto tiene que repartirse entre al menos una persona."
 - "Pon qué fue." · "Apuntado. Las cuentas ya lo saben."
-- "Todo comprado. Vaya máquinas." · "Cuentas claras y el chocolate espeso."
+- "No queda nada pendiente." · "Todo cuadrado. Vaya máquinas."
 - Sync copy must avoid technical language: "En vivo con la peña · al día hace
   un momento" with green dot, "Solo en este móvil", "Sin conexión · no se
   pueden guardar cambios", and "Necesitas internet para guardar este cambio."
@@ -99,33 +99,34 @@ instructions, and validation must favor immediate understanding over jokes.
 
 ## Screens
 
-1. **Fiesta, actionable home**: every party tab has the same in-party header
+1. **Plan, actionable home**: every party tab has the same in-party header
    with oculus + wordmark left, a 44px active-party selector, and theme control
-   right. The selector truncates long names and opens the global "Tus fiestas"
+   right. The selector truncates long names and opens the global "Tus planes"
    sheet; it is never nested inside controls for the active party. The header
    scrolls with the content instead of competing with the offline banner and
    fixed bottom navigation. The home has
    a violet party card with oculus watermark, translucent white label/meta,
-   white "Mandar al grupo" button, translucent "Ponerla en vivo" when local, and
+   white "Mandar al grupo" button, translucent "Ponerlo en vivo" when local, and
    live-status line with green dot; "¿QUÉ TOCA?" card with Bricolage 18px
    statement and exactly one personalized action (own assigned item first,
    missing group items second, own Bizum third); "TU SALDO" card with large colored number
    and "Mis cuentas"; identity row with avatar and violet "Cambiar"; one
-   full-width "Gestionar esta fiesta" control that opens a grouped sheet for
+   full-width "Gestionar este plan" control that opens a grouped sheet for
    recent activity, rename/date when key holder, repeating pending items,
    forgetting this phone's copy, and server deletion on the creator phone.
    The global switcher keeps one active party and any number of remembered live
    party access pointers; it never clears the current party before the target has
-   opened successfully. A returning entry screen puts "Tus fiestas" first and
+   opened successfully. A returning entry screen puts "Tus planes" first and
    keeps create/open-link actions below. A first-time entry keeps the private-beta
    promise, three compact steps, join/create/demo, and deleted-party recovery.
-2. **Lista**: subtitle "{n} cosas por resolver de {total}"; add row with violet
-   button; dashed "+ Apuntar un gasto ya pagado"; cards with state chips ("Se
+2. **Gastos**: primary "Apuntar un gasto" action; "Pendiente por comprar o
+   llevar" add row; cards with state chips ("Se
    encarga X" primarysoft/primary, "Sin responsable" chip/muted) and one primary
    action ("Me encargo" or "Apuntar compra"). Less common actions live under
    "Más opciones" with literal labels: "Cambiar responsable", "Dejar libre",
-   and "Quitar de la lista". Bought cards open readable detail for everyone;
-   only the payer or a key holder sees "Corregir compra".
+   and "Quitar de la lista". "Gastos apuntados" contains every bought or direct
+   expense; cards open readable detail for everyone, and only the payer or a key
+   holder sees "Corregir gasto".
 3. **Peña**: avatar rows with violet initials, name, optional key, and balance
    ("le deben" green, "debe" coral, "en paz"); "Mandar al grupo"; manual add.
    Person sheet on tap, with breakdown and shareable reminder. Leaving the group
