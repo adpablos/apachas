@@ -3452,8 +3452,8 @@ function activateTab(tabName){
 function render(){
   sync.renderLater = false; // Any render path clears the deferred-render debt.
   document.body.classList.toggle('no-party', !S);
-  const partySwitcher = $('#partySwitcherButton');
   if(S){
+    const partySwitcher = $('#partySwitcherButton');
     $('#partySwitcherName').textContent = S.party.name;
     partySwitcher.setAttribute('aria-label', `Abrir tus fiestas. Activa: ${S.party.name}`);
   }
