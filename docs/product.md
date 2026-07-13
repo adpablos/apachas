@@ -136,8 +136,8 @@ shared expense should take four actions: button, concept, price, save.
 The top of Accounts shows the current user's status: "Estás en paz", "Debes
 12,40 EUR", or "Te deben 8,10 EUR", with the explanatory breakdown and concrete
 action. "Per head" appears only when every purchase is consumed by everyone; if
-there are partial consumptions, replace it with "repartido según quién cata cada
-cosa". Total, everyone's Bizums, and share remain below.
+there are partial consumptions, replace it with "repartido según quién participa
+en cada gasto". Total, everyone's Bizums, and share remain below.
 
 ### D5. Moment-Specific WhatsApp Kit
 
@@ -185,18 +185,23 @@ balances remain intact. Permanent deletion is available only with no history.
 
 ### D10. Progressive Expense Details
 
-Payer and consumers use compact summaries by default. "Cambiar" reveals the
-full pills, with Todos and Solo yo shortcuts. A discreet suggestion identifies
-the active person with the lowest balance as the best next payer, without
-changing the real payer automatically.
+Payer and consumers use compact summaries by default. Explicitly labelled
+"Cambiar" controls reveal the full pills, with Todos and Solo yo shortcuts.
+Payer means the person who actually paid; the form never suggests changing that
+historical fact to balance future accounts.
 
 ### D11. Continuity Without Accounts
 
-Each phone remembers up to five live party links and can reopen them from the
-entry screen without weakening a write capability already stored on that
-phone. Opening an explicit `#R:` link remains read-only for that session. Key
-holders can start a new party from the current pending list; prices,
-assignments, transfers, and balances never carry over.
+Each phone remembers every live party link the user has opened until that access
+is explicitly forgotten, the party no longer exists, or all local A Pachas data
+is cleared. One party is active at a time, but the entry screen and party
+switcher expose the remembered set directly. A switch fetches the target before
+replacing the current party, so failure or lack of connectivity leaves the
+current party intact. Each pointer remembers the locally chosen person and last
+tab without weakening a write capability already stored on that phone. Opening
+an explicit `#R:` link remains read-only for that session. Key holders can start
+a new party from the current pending list; prices, assignments, transfers, and
+balances never carry over.
 
 ### D12. Family-and-Friends Beta Boundaries
 
@@ -254,8 +259,10 @@ The localStorage key remains `a-pachas-v2`. `AP2:` links are generated as
 local-mode backups. Stored v5 parties migrate to v6 on read: null consumer lists
 freeze to the people present at migration and completed settlement marks become
 transfers. The API rejects new v5 writes so a stale browser cannot erase v6
-history. The app does not accept Spanish payload aliases. Current and recent
-phone data expire locally after 90 days without use; the one-step recovery copy
+history. The app does not accept Spanish payload aliases. The complete active
+party snapshot expires locally after 90 days without use; lightweight recent
+access pointers remain until the user forgets them, the server reports the party
+missing or deleted, or all local data is cleared. The one-step recovery copy
 expires after seven days. Users can forget one party or clear all A Pachas data
 and write capabilities stored on that phone.
 
@@ -308,7 +315,7 @@ and write capabilities stored on that phone.
    saved locally.
 7. **Local to live**: an imported local party can go live in one tap; the demo
    never uploads.
-8. **Transfers**: after a suggested Bizum is marked complete, later expenses
+8. **Transfers**: after a calculated Bizum is marked complete, later expenses
    calculate from the remaining balance rather than charging that transfer
    again. Undoing the transfer recalculates the recommendations.
 9. **Membership**: adding or deactivating a person never changes consumers or
@@ -317,8 +324,10 @@ and write capabilities stored on that phone.
 10. **Safe interaction**: money and membership writes disable their initiating
     control while saving; destructive actions confirm; sheets support close,
     Escape, focus trapping, focus return, and hidden closed state.
-11. **Continuity**: the entry screen can reopen up to five recent live parties,
-    and repeating a pending list creates a clean party with no old money state.
+11. **Continuity**: the entry screen and in-party switcher can reopen all recent
+    live parties, retain local identity/tab context per party, and keep the active
+    party when another cannot be opened. Repeating a pending list creates a clean
+    party with no old money state.
 12. **Capabilities**: `#F:` can edit; `#R:` adopts server truth and exposes no
     shared mutation controls. Accounts sharing always uses `#R:`. Explicitly
     opening `#R:` never silently upgrades the current session to edit access.

@@ -170,7 +170,7 @@ test('party management is grouped without changing role or owner capabilities', 
     items: [{ status: 'pending' }],
   }, false, true);
   for(const id of ['activityButton', 'renameButton', 'repeatPartyButton',
-    'newPartyButton', 'forgetPartyButton', 'deletePartyButton']) {
+    'switchPartyButton', 'forgetPartyButton', 'deletePartyButton']) {
     assert.match(editableAdminOwnerOptions, new RegExp(`id="${id}"`));
   }
 
@@ -179,7 +179,7 @@ test('party management is grouped without changing role or owner capabilities', 
     items: [{ status: 'pending' }],
   }, true, true);
   assert.match(readOnlyOptions, /id="activityButton"/);
-  assert.match(readOnlyOptions, /id="newPartyButton"/);
+  assert.match(readOnlyOptions, /id="switchPartyButton"/);
   assert.match(readOnlyOptions, /id="forgetPartyButton"/);
   assert.doesNotMatch(readOnlyOptions, /id="(?:rename|repeatParty|deleteParty)Button"/);
 
@@ -194,6 +194,70 @@ test('party management is grouped without changing role or owner capabilities', 
   const localNonAdminOptions = context.renderOptions({ remote: null, items: [] }, false, false);
   assert.doesNotMatch(localNonAdminOptions, /Actividad y organización/,
     'Empty option groups should not render');
+});
+
+test('recent live parties keep access and per-party context until explicitly forgotten', () => {
+  const context = vm.createContext({});
+  vm.runInContext(`
+    const RECENT_PARTIES_KEY = 'recent';
+    const PARTY_ID_RE = /^[abcdefghjkmnpqrstuvwxyz23456789]{10}$/i;
+    const WRITE_KEY_RE = /^[abcdefghjkmnpqrstuvwxyz23456789]{14}$/i;
+    const OWNER_KEY_RE = /^[abcdefghjkmnpqrstuvwxyz23456789]{24}$/i;
+    const ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
+    const DATE_RE = /^\\d{4}-\\d{2}-\\d{2}$/;
+    const PARTY_TABS = ['party','list','group','accounts'];
+    const data = new Map();
+    const localStorage = {
+      getItem: key => data.has(key) ? data.get(key) : null,
+      setItem: (key,value) => data.set(key,String(value)),
+    };
+    const now = () => 9999999999999;
+    var S = null;
+    ${extractFunction(scripts[0], 'loadRecentParties')}
+    ${extractFunction(scripts[0], 'rememberCurrentParty')}
+    this.testExports = { data, loadRecentParties, rememberCurrentParty, setState:value => { S=value; } };
+  `, context, { filename: 'public/index.html#recent-parties' });
+
+  const parties = ['2','3','4','5','6','7'].map((suffix,index) => ({
+    id: `abcdefghj${suffix}`,
+    key: 'abcdefghjkmnpq',
+    readOnly: false,
+    name: `Fiesta ${index + 1}`,
+    date: null,
+    lastOpenedAt: 1,
+  }));
+  context.testExports.data.set('recent', JSON.stringify(parties));
+
+  assert.equal(context.testExports.loadRecentParties().length, 6,
+    'Old access pointers and the sixth party must not disappear silently');
+
+  context.testExports.setState({
+    remote: { id: 'abcdefghj2', key: 'abcdefghjkmnpq', ownerKey: 'abcdefghjkmnpqrstuvwxy23' },
+    party: { name: 'Fiesta 1', date: '2026-07-13', demo: false },
+    me: 'p1',
+    tab: 'accounts',
+  });
+  context.testExports.rememberCurrentParty();
+  const remembered = context.testExports.loadRecentParties();
+  assert.equal(remembered.length, 6);
+  assert.deepEqual(plain({ id:remembered[0].id, me:remembered[0].me, tab:remembered[0].tab }),
+    { id:'abcdefghj2', me:'p1', tab:'accounts' });
+});
+
+test('core copy and controls state money actions literally and expose accessible names', () => {
+  assert.doesNotMatch(html, /catar|catan|Sí, adelante|Solo quiero mirar/);
+  assert.match(html, /¿Entre quiénes se reparte\?/);
+  assert.match(html, /Quién paga a quién para quedar en paz/);
+  assert.match(html, /id="offlineBanner" role="status"/);
+  assert.match(extractFunction(scripts[0], 'refreshSync'), /banner\.textContent !== message/);
+  assert.match(extractFunction(scripts[0], 'partyView'),
+    /<h1 class="title">\$\{escapeHtml\(S\.party\.name\)\}<\/h1>/);
+  assert.match(html, /aria-label="Cambiar quién pagó"/);
+  assert.match(html, /aria-label="Cambiar el reparto"/);
+  assert.match(html, /aria-pressed="\$\{classes\.split/);
+  for(const inputId of ['linkInput', 'codeInput', 'itemInput', 'personInput']) {
+    assert.match(html, new RegExp(`for="${inputId}"`));
+  }
 });
 
 test('the active party exposes one options trigger and keeps the demo at entry only', () => {

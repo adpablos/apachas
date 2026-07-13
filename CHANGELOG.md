@@ -23,6 +23,8 @@ or recovery changes. Pure refactors and test-only changes need no entry. -->
 
 ### Changed
 
+- Turned remembered live parties into a persistent one-active-at-a-time switcher
+  and clarified money actions, permissions, offline state, help, and confirmations.
 - Grouped occasional party actions behind one options sheet and made feedback
   directly available from every stable screen.
 
