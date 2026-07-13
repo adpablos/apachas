@@ -38,4 +38,31 @@ jobs:
           additional_permissions: |
             actions: read
           claude_args: |
-            --model claude-fable-5
+            --model claude-opus-4-8
+
+      - name: Verify Claude completed successfully
+        if: always()
+        env:
+          CLAUDE_EXECUTION_FILE: ${{ steps.claude.outputs.execution_file }}
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+
+          const executionFile = process.env.CLAUDE_EXECUTION_FILE;
+          if (!executionFile || !fs.existsSync(executionFile)) {
+            console.error("Claude did not produce an execution result.");
+            process.exit(1);
+          }
+
+          const turns = JSON.parse(fs.readFileSync(executionFile, "utf8"));
+          const result = [...turns]
+            .reverse()
+            .find((turn) => turn?.type === "result");
+          if (!result || result.subtype !== "success" || result.is_error) {
+            console.error(
+              `Claude review failed: subtype=${result?.subtype ?? "missing"}, ` +
+                `is_error=${result?.is_error ?? "missing"}`,
+            );
+            process.exit(1);
+          }
+          NODE
