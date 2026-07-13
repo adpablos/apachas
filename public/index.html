@@ -1221,9 +1221,10 @@ function refreshSync(){
   if(banner){
     const show = !!(S && S.remote && sync.markOffline);
     banner.hidden = !show;
-    banner.textContent = isReadOnlyParty()
+    const message = isReadOnlyParty()
       ? 'Sin conexión · estás viendo la última copia guardada.'
       : 'Sin conexión · puedes consultar, pero no guardar cambios.';
+    if(banner.textContent !== message) banner.textContent = message;
   }
 }
 
@@ -3029,7 +3030,7 @@ function partyView(c){
     <div class="card party-card">
       <span class="brand-mark" aria-hidden="true">${LOGO}</span>
       <span class="label">Tu fiesta</span>
-      <div class="title">${escapeHtml(S.party.name)}</div>
+      <h1 class="title">${escapeHtml(S.party.name)}</h1>
       <div class="meta">${f ? escapeHtml(f) + ' · ' : ''}${participants.length} en la peña · ${S.items.length} cosa${S.items.length===1?'':'s'} en la lista · ${eur(c.total)}</div>
       <span class="read-only-badge">${readOnly ? 'Solo para mirar' : 'Puedes editar'}</span>
       ${S.localReadOnly ? '<div class="access-note"><strong>Copia guardada.</strong><br>Ya no está conectada a una fiesta que se pueda compartir.</div>' : `<button class="btn btn-white btn-block" id="inviteButton" type="button">${readOnly ? 'Mandar las cuentas' : 'Mandar al grupo'}</button>`}

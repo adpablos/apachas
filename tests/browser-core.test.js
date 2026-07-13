@@ -249,6 +249,9 @@ test('core copy and controls state money actions literally and expose accessible
   assert.match(html, /¿Entre quiénes se reparte\?/);
   assert.match(html, /Quién paga a quién para quedar en paz/);
   assert.match(html, /id="offlineBanner" role="status"/);
+  assert.match(extractFunction(scripts[0], 'refreshSync'), /banner\.textContent !== message/);
+  assert.match(extractFunction(scripts[0], 'partyView'),
+    /<h1 class="title">\$\{escapeHtml\(S\.party\.name\)\}<\/h1>/);
   assert.match(html, /aria-label="Cambiar quién pagó"/);
   assert.match(html, /aria-label="Cambiar el reparto"/);
   assert.match(html, /aria-pressed="\$\{classes\.split/);
