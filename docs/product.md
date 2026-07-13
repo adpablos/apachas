@@ -335,10 +335,12 @@ and write capabilities stored on that phone.
     embedded scripts, widgets, or cookies in A Pachas. The browser reports only
     the allowlisted first-party `usage.feedback_opened` event.
 
-Featurebase board categories (`Problemas` and `Ideas`), moderation, and seed
-posts are provider-side configuration, not application state. Votes and
-comments are prioritization evidence, never an automatic delivery queue:
-security, data loss, incorrect balances, and the number of real parties
+The single public Featurebase board (`Ideas y problemas`), guest posting and
+upvoting, automatic spam protection, and seed posts are provider-side
+configuration, not application state. Separate boards and full post/comment
+moderation require Growth and are intentionally not enabled for the Free beta.
+Votes and comments are prioritization evidence, never an automatic delivery
+queue: security, data loss, incorrect balances, and the number of real parties
 affected take precedence over vote count.
 
 ## P1, Next Batch

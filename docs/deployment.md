@@ -364,8 +364,10 @@ the visible provider name, every provider reference in `docs/product.md`,
 
 The Featurebase workspace is provisioned separately from deployment. Before
 enabling the CTA for a release, verify that `FEEDBACK_URL` resolves and configure
-the public categories `Problemas` and `Ideas`, guest posting/voting, moderation,
-and Spanish copy in Featurebase. Votes inform product prioritization; they do not
+the single public `Ideas y problemas` board, guest posting and upvoting, a
+Spanish board title and seed-post copy, and automatic spam protection. Separate
+boards and full post/comment moderation require Growth and are intentionally not
+enabled for the Free beta. Votes inform product prioritization; they do not
 automatically reorder work or override security, correctness, or data-loss
 issues.
 
