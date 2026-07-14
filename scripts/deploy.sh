@@ -76,7 +76,7 @@ grep -Eq '^[-*] ' "$NOTES" \
 grep -Fq "[${VERSION_NUMBER}]:" CHANGELOG.md \
   || fail "CHANGELOG.md has no comparison link for $VERSION_NUMBER." 65
 
-EXISTING_TAG_SHA="$(git rev-parse "${VERSION}^{commit}" 2>/dev/null || true)"
+EXISTING_TAG_SHA="$(git rev-parse --verify "${VERSION}^{commit}" 2>/dev/null || true)"
 if [[ -n "$EXISTING_TAG_SHA" && "$EXISTING_TAG_SHA" != "$LOCAL_SHA" ]]; then
   fail "$VERSION already points to '$EXISTING_TAG_SHA', not '$LOCAL_SHA'." 65
 fi
