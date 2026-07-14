@@ -37,6 +37,8 @@ const TRASH_DIR = path.join(DATA_DIR, '.trash');
 const STATIC_DIR = process.env.STATIC_DIR || path.join(__dirname, '..', 'public');
 const APP_RELEASE = /^[A-Za-z0-9._-]{1,64}$/.test(process.env.APP_RELEASE || '')
   ? process.env.APP_RELEASE : 'dev';
+const APP_VERSION = /^v0\.[1-9][0-9]*\.0-beta\.[1-9][0-9]*$/.test(process.env.APP_VERSION || '')
+  ? process.env.APP_VERSION : 'dev';
 const REMOTE_QUEUE_MAX = integerEnv('REMOTE_QUEUE_MAX', 100);
 const REMOTE_TIMEOUT_MS = integerEnv('REMOTE_TIMEOUT_MS', 2000);
 const REMOTE_WARNING_INTERVAL_MS = integerEnv('REMOTE_WARNING_INTERVAL_MS', 60 * 1000);
@@ -144,7 +146,7 @@ function remoteQueue(name, url, headers, maxAttempts = 1) {
   function diagnostic(level, event, fields) {
     console.error(JSON.stringify({
       timestamp: new Date().toISOString(), level,
-      event, release: APP_RELEASE, sink: name, ...fields,
+      event, version: APP_VERSION, release: APP_RELEASE, sink: name, ...fields,
     }));
   }
 
@@ -236,7 +238,7 @@ const forwardRemoteLog = remoteQueue('better_stack', BETTER_STACK_URL,
 const forwardServerProductEvent = remoteQueue('posthog_server', POSTHOG_URL, {}, 3);
 const forwardClientProductEvent = remoteQueue('posthog_client', POSTHOG_URL, {}, 2);
 const REMOTE_LOG_FIELDS = new Set([
-  'timestamp', 'level', 'event', 'release', 'requestId', 'method', 'route', 'status',
+  'timestamp', 'level', 'event', 'version', 'release', 'requestId', 'method', 'route', 'status',
   'durationMs', 'partyRef', 'deviceRef', 'auditEvents', 'errorName', 'errorCode',
   'stackRef', 'windowMs', 'requests', 'routes', 'statuses', 'errors', 'auditActions',
   'clientEvents', 'activeParties', 'activeDevices', 'averageDurationMs', 'maxDurationMs',
@@ -249,7 +251,10 @@ function remoteLogPayload(entry) {
 }
 
 function logEvent(level, event, fields = {}) {
-  const entry = { timestamp: new Date().toISOString(), level, event, release: APP_RELEASE, ...fields };
+  const entry = {
+    timestamp: new Date().toISOString(), level, event,
+    version: APP_VERSION, release: APP_RELEASE, ...fields,
+  };
   console.log(JSON.stringify(entry));
   if (BETTER_STACK_URL) forwardRemoteLog(remoteLogPayload(entry));
 }
@@ -283,6 +288,7 @@ function captureProductEvent(event, partyRef, source) {
       $insert_id: source === 'server'
         ? privateRef('product-event', `${partyRef}:${event}`) : crypto.randomUUID(),
       $process_person_profile: false,
+      version: APP_VERSION,
       release: APP_RELEASE,
       source,
     },
@@ -1114,13 +1120,15 @@ async function api(req, res, url, context) {
   if (!enforceRateLimit(req, res, requestBuckets, RATE_MAX, RATE_WINDOW_MS, generalCost)) return;
 
   if (req.method === 'GET' && url.pathname === '/api/live') {
-    return json(res, 200, { ok: true, release: APP_RELEASE });
+    return json(res, 200, { ok: true, version: APP_VERSION, release: APP_RELEASE });
   }
 
   if (req.method === 'GET' && url.pathname === '/api/health') {
     const storage = storageStatus();
-    if (!storage.ok) return json(res, 503, { ok: false, release: APP_RELEASE });
-    return json(res, 200, { ok: true, release: APP_RELEASE });
+    if (!storage.ok) {
+      return json(res, 503, { ok: false, version: APP_VERSION, release: APP_RELEASE });
+    }
+    return json(res, 200, { ok: true, version: APP_VERSION, release: APP_RELEASE });
   }
 
   if (req.method === 'POST' && url.pathname === '/api/events') {

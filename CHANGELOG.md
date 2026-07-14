@@ -14,6 +14,8 @@ stable, publicly supported product contract.
 <!-- Add concise bullets here for product, data, security, privacy, deployment,
 or recovery changes. Pure refactors and test-only changes need no entry. -->
 
+## [0.1.0-beta.2] - 2026-07-14
+
 ### Added
 
 - Added optional privacy-safe remote logs and server-side product analytics,
@@ -23,6 +25,9 @@ or recovery changes. Pure refactors and test-only changes need no entry. -->
 
 ### Changed
 
+- Required every new production SHA to carry a product version, exposed that
+  version alongside the exact release SHA, and made deployment record the tag
+  and GitHub prerelease through one guarded workflow.
 - Broadened the user-facing frame from one-day parties to shared plans such as
   trips, and made recorded expenses primary while preserving the pending list.
 - Separated global party switching from active-party management and made
@@ -62,5 +67,6 @@ First family-and-friends beta.
 - Shared edits require a live server acknowledgement instead of implying that
   offline changes will synchronize later.
 
-[Unreleased]: https://github.com/adpablos/apachas/compare/v0.1.0-beta.1...HEAD
+[Unreleased]: https://github.com/adpablos/apachas/compare/v0.1.0-beta.2...HEAD
+[0.1.0-beta.2]: https://github.com/adpablos/apachas/compare/v0.1.0-beta.1...v0.1.0-beta.2
 [0.1.0-beta.1]: https://github.com/adpablos/apachas/releases/tag/v0.1.0-beta.1

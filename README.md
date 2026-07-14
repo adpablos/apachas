@@ -51,6 +51,9 @@ product version, while `APP_RELEASE` remains the exact deployed Git SHA and
 Every product, data, security, privacy, deployment, or recovery change is added
 under `Unreleased` in [CHANGELOG.md](CHANGELOG.md). The short release procedure
 is documented in [docs/deployment.md](docs/deployment.md#versioning-and-release-recording).
+Merging does not deploy automatically. Small changes can accumulate under
+`Unreleased`, but every distinct Git SHA that reaches production must receive a
+new product version through the guarded release command.
 
 ## Language Policy
 
@@ -81,7 +84,7 @@ python3 -m http.server -d public
 ## Deployment
 
 ```sh
-scripts/deploy.sh
+scripts/deploy.sh v0.MINOR.0-beta.N
 ```
 
 The full infrastructure runbook is in [docs/deployment.md](docs/deployment.md).

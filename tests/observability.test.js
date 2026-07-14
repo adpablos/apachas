@@ -81,6 +81,7 @@ test('remote observability is allowlisted, pseudonymous, and server-derived', as
       RATE_MAX: '1000',
       CREATE_RATE_MAX: '1000',
       EVENT_RATE_MAX: '1000',
+      APP_VERSION: 'v0.9.0-beta.3',
       APP_RELEASE: 'test-release',
       ALLOW_INSECURE_OBSERVABILITY_FOR_TESTS: '1',
       BETTER_STACK_SOURCE_TOKEN: 'better-stack-test-token',
@@ -212,11 +213,12 @@ test('remote observability is allowlisted, pseudonymous, and server-derived', as
   for (const record of productRecords) {
     assert.deepEqual(Object.keys(record.body).sort(), ['api_key', 'event', 'properties']);
     assert.deepEqual(Object.keys(record.body.properties).sort(),
-      ['$insert_id', '$process_person_profile', 'distinct_id', 'release', 'source']);
+      ['$insert_id', '$process_person_profile', 'distinct_id', 'release', 'source', 'version']);
     assert.equal(record.body.api_key, 'posthog-test-key');
     assert.equal(record.body.properties.$process_person_profile, false);
     assert.match(record.body.properties.distinct_id, /^[a-f0-9]{16}$/);
     assert.equal(record.body.properties.release, 'test-release');
+    assert.equal(record.body.properties.version, 'v0.9.0-beta.3');
     assert.ok(['server', 'client'].includes(record.body.properties.source));
     assert.match(record.body.properties.$insert_id,
       /^(?:[a-f0-9]{16}|[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12})$/);
@@ -230,7 +232,7 @@ test('remote observability is allowlisted, pseudonymous, and server-derived', as
   const logRecords = records.filter((record) => record.path === '/logs');
   assert.ok(logRecords.every((record) => record.authorization === 'Bearer better-stack-test-token'));
   const allowedLogFields = new Set([
-    'timestamp', 'level', 'event', 'release', 'requestId', 'method', 'route', 'status',
+    'timestamp', 'level', 'event', 'version', 'release', 'requestId', 'method', 'route', 'status',
     'durationMs', 'partyRef', 'deviceRef', 'auditEvents', 'errorName', 'errorCode',
     'stackRef', 'windowMs', 'requests', 'routes', 'statuses', 'errors', 'auditActions',
     'clientEvents', 'activeParties', 'activeDevices', 'averageDurationMs', 'maxDurationMs',

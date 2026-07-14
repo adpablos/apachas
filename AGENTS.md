@@ -59,13 +59,26 @@ the whole frontend lives in `public/index.html` and the whole backend lives in
    product behavior, persisted data, security, privacy, deployment, or
    recovery. Pure refactors and test-only changes do not need an entry unless
    they affect those contracts. Never rewrite a released section.
-7. Verify before declaring work done. Run `scripts/check.sh`, then run the local
+7. Treat merge and production release as separate decisions. Do not deploy only
+   because a PR merged. By default, leave isolated copy polish, refactors,
+   tests, and other small improvements on `main` under `Unreleased`; tell the
+   user production is unchanged and offer a release if they need it now.
+   Release when the user explicitly asks, an urgent security/privacy/data/
+   recovery/availability fix must ship, or accumulated changes form a coherent
+   material user outcome. Every distinct SHA deployed normally must use
+   `scripts/deploy.sh v0.MINOR.0-beta.N`; never bypass its version, changelog,
+   clean-main, health, tag, or GitHub Release guards. Increment `beta.N` for
+   compatible refinements; increment `MINOR` and reset to `beta.1` for a
+   substantial capability or data-contract evolution. A same-SHA operational
+   restart may retain its existing version.
+8. Verify before declaring work done. Run `scripts/check.sh`, then run the local
    app with `node server/api.js` and test the full mobile flow: create, join by
    edit and read-only links, list,
    quick expense, bought item with price and consumers, Bizums, a later expense
    after a completed Bizum, inactive participants, recent-party reopening, and
    share messages. After deployment, confirm `https://apachas.alexdepablos.es`
-   responds; `scripts/deploy.sh` already checks web and API health.
+   responds; `scripts/deploy.sh <version>` already checks the product version,
+   release SHA, web, and API health.
 
 ## Testing
 

@@ -291,8 +291,8 @@ and write capabilities stored on that phone.
 - `POST /api/parties/:id/restore` requires the same `ownerKey` and restores the
   document before `purgeAt`.
 - `POST /api/events` accepts only fixed, content-free technical and usage codes.
-- `GET /api/live` checks the process. `GET /api/health` checks storage readiness
-  and returns the deployed release SHA.
+- `GET /api/live` checks the process. `GET /api/health` checks storage readiness;
+  both return the product version and exact deployed release SHA.
 - Guardrails: JSON <= 256 KB, strict shape validation, crypto IDs, atomic
   tmp+rename writes, best-effort rate limit by IP, global party cap on disk, and
   no party content or IDs in logs. The party ID alone grants read access.
@@ -416,8 +416,8 @@ affected take precedence over vote count.
 - Remote logs are optional projections through a bounded, non-blocking Better
   Stack queue. An explicit field allowlist prevents future log additions from
   being exported automatically; raw stack traces remain local.
-- Logs contain route templates, status, latency, release, request IDs, and
-  HMAC-based party/device references. They never contain party IDs, write keys,
+- Logs contain route templates, status, latency, product version, release SHA,
+  request IDs, and HMAC-based party/device references. They never contain party IDs, write keys,
   names, item content, amounts, IPs, user agents, request bodies, full URLs, or
   URL fragments.
 - nginx uses a separate URI-free JSON access log for upstream status and latency
@@ -429,7 +429,8 @@ affected take precedence over vote count.
   events (`party_created`, `collaboration_started`, `first_expense_recorded`,
   and `first_transfer_completed`) plus the fixed client usage codes. PostHog
   receives the HMAC party reference as `distinct_id`, no person profile, and
-  only `release`, `source`, and a content-free deduplication ID as properties.
+  only `version`, `release`, `source`, and a content-free deduplication ID as
+  properties.
   Each product event remains in local logs even when remote analytics is
   disabled or unavailable. Server-owned
   boolean milestones in each party document prevent first-use lifecycle events

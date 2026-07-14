@@ -8,8 +8,6 @@ services:
   web:
     image: nginx:1.28-alpine
     restart: unless-stopped
-    environment:
-      APP_RELEASE: ${APP_RELEASE:-dev}
     ports:
       # Loopback only: public access enters through the tunnel, not this port.
       - "127.0.0.1:3200:80"
@@ -44,6 +42,7 @@ services:
         required: false
     environment:
       DATA_DIR: /data
+      APP_VERSION: ${APP_VERSION:-dev}
       APP_RELEASE: ${APP_RELEASE:-dev}
     volumes:
       - ./server/api.js:/srv/api.js:ro

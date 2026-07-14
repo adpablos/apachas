@@ -57,19 +57,31 @@ These are the canonical deployment paths for A Pachas. Changing them is a server
 | Local smoke port           | `127.0.0.1:3200`                   |
 | Compose project            | `apachas`                          |
 
-## Normal Deployment
+## Normal Production Release
 
-Commit and push to `main`, then run from the Mac:
+Merging and releasing are separate decisions. A merge makes reviewed work part
+of `main`; it does not automatically make it production. Every distinct Git SHA
+that is deployed to production must receive a distinct product version.
+
+After preparing and merging a dated changelog section, run from the Mac:
 
 ```bash
-scripts/deploy.sh
+scripts/deploy.sh v0.1.0-beta.2
 ```
 
-The script runs `git pull --ff-only`, injects the exact git SHA as
-`APP_RELEASE`, and runs `docker compose up -d --wait`. The release change
-recreates `api` and `web`, which is required for mounted API/nginx changes. It
-then verifies the public web and checks that `/api/health` reports the exact
-deployed SHA. Docker Compose 2.24 or newer is required for the optional
+The command refuses to run without a valid version. It also refuses a dirty or
+stale `main`, a non-empty `Unreleased` section, a missing dated version section,
+an out-of-sequence version, or a version tag that points elsewhere. From an
+existing beta it accepts only the next `beta.N` or the next `MINOR` at
+`beta.1`. It runs the full quality gate, pulls the exact `origin/main` SHA on
+the server, injects `APP_VERSION` and `APP_RELEASE`, runs
+`docker compose up -d --wait`, and verifies both identifiers through the public
+health endpoint. Only after production confirms them does it push the tag and
+create the prerelease on GitHub. A failed final recording step is safe to retry
+with the same version and SHA.
+
+The release recreates `api` and `web`, which is required for mounted API/nginx
+changes. Docker Compose 2.24 or newer is required for the optional
 `env_file.required` syntax; production was verified on 2.40.3 on 2026-07-12.
 
 ## Versioning and Release Recording
@@ -78,71 +90,77 @@ A Pachas keeps three deliberately separate identifiers:
 
 | Identifier | Source | Changes when |
 | --- | --- | --- |
-| Product version | Git tag such as `v0.1.0-beta.1` | A release is recorded |
+| Product version | `APP_VERSION` and the matching Git tag | New code reaches production |
 | Deployed release | `APP_RELEASE`, always the full Git SHA | Production is deployed |
 | Data contract | `STATE_VERSION` in frontend and API | Persisted state changes |
 
 The first family-and-friends beta is `v0.1.0-beta.1`. While the product remains
 in beta, versions use `0.MINOR.0-beta.N`: small fixes and improvements increment
 `N`, while a substantial new capability increments `MINOR` and resets the
-suffix to `beta.1`. Do not add a second version file or replace `APP_RELEASE`
-with SemVer: the tag is the human version and the SHA remains the precise
-diagnostic and rollback identity.
+suffix to `beta.1`. `APP_VERSION` is injected by the release command rather than
+stored in a second version file. The tag is the human version and the SHA remains
+the precise diagnostic and rollback identity.
+
+### Merge or release decision
+
+Use semantic value, not a mechanical commit or bullet count:
+
+1. **Release now** when the user explicitly asks for production; when the change
+   fixes security, privacy, data integrity, recovery, availability, or a serious
+   production defect; or when the accumulated entries form one coherent,
+   complete user outcome that is worth communicating as a release.
+2. **Merge and wait** when the change is isolated copy polish, a refactor, test
+   coverage, or another low-risk improvement that does not complete a material
+   user outcome. Keep it under `Unreleased`, state that production is unchanged,
+   and offer an explicit release if the user needs it immediately.
+3. Several unrelated small changes do not become release-worthy merely because
+   there are many of them. Conversely, one urgent correctness fix is enough.
+4. A same-SHA container restart or recovery may retain its existing version. A
+   different SHA, including a revert release, requires a new version through the
+   normal command.
+
+Version selection during beta:
+
+- Increment `beta.N` for compatible fixes, copy/UX improvements, operational
+  hardening, and coherent refinements to existing workflows.
+- Increment `MINOR` and reset to `beta.1` for a substantial new capability,
+  persisted-data contract evolution, or a materially different core workflow.
+- Version numbers only move forward. Never move or reuse a published tag, fill
+  a burned beta number, or skip an available beta number within the selected
+  track.
 
 For every pull request, add one concise bullet under `Unreleased` in
 `CHANGELOG.md` when behavior, persisted data, security, privacy, deployment, or
 recovery changes. Pure refactors and test-only changes need no entry unless they
 alter one of those contracts.
 
-To record a release:
+To prepare and record a release:
 
 1. Move the `Unreleased` bullets into a dated version section and restore an
    empty `Unreleased` section.
-2. Merge only after review and CI are green, then deploy with `scripts/deploy.sh`.
-3. Read the exact deployed SHA from `/api/health` and tag that commit, never an
-   unverified local commit.
-4. Push the tag and create a GitHub Release marked as a prerelease, using the
-   matching changelog section as its notes.
+2. Update the comparison links at the bottom of `CHANGELOG.md`.
+3. Merge the release-preparation PR only after review and CI are green.
+4. Run `scripts/deploy.sh <version>`. It performs deployment, verification, tag
+   publication, and GitHub prerelease creation as one guarded workflow.
 
 ```bash
-set -euo pipefail
-scripts/check.sh
-version="v0.1.0-beta.1"
-git fetch origin main --tags
-expected_sha="$(git rev-parse origin/main)"
-
-scripts/deploy.sh
-health="$(curl -fsS https://apachas.alexdepablos.es/api/health)"
-deployed_sha="$(printf '%s' "$health" | sed -n 's/.*"release":"\([^"]*\)".*/\1/p')"
-test "$deployed_sha" = "$expected_sha"
-git cat-file -e "${deployed_sha}^{commit}"
-
-notes="$(mktemp)"
-awk -v heading="## [${version#v}]" '
-  index($0, heading " - ") == 1 { copy = 1; next }
-  copy && /^## \[/ { exit }
-  copy { print }
-' CHANGELOG.md > "$notes"
-test -s "$notes"
-
-git tag "$version" "$deployed_sha"
-git push origin "$version"
-gh release create "$version" --verify-tag --prerelease \
-  --title "A Pachas $version" --notes-file "$notes"
-rm -f "$notes"
+scripts/deploy.sh v0.1.0-beta.2
 ```
 
 A version section may be corrected until its tag and GitHub Release are
 published. From that point it is frozen: never move or reuse the tag, and
 correct the release with a new SemVer version and changelog entry.
 
-Equivalent manual flow on the server:
+Direct Compose commands are break-glass operations, not an alternative release
+path. They may restart the exact same tagged SHA during recovery, but must not
+introduce new code into production. For a same-SHA restart:
 
 ```bash
 cd /opt/apachas
-git pull --ff-only
 release="$(git rev-parse HEAD)"
-sudo APP_RELEASE="$release" docker compose up -d --wait
+version="$(git tag --points-at "$release" --list 'v*' | head -n 1)"
+test -n "$version"
+sudo APP_VERSION="$version" APP_RELEASE="$release" docker compose up -d --wait
 curl -fsS http://127.0.0.1:3200/ >/dev/null && echo OK
 curl -fsS http://127.0.0.1:3200/api/health >/dev/null && echo API OK
 ```
@@ -201,8 +219,9 @@ This is the same pattern used by the World Cup pool tunnels.
 
    ```bash
    cd /opt/apachas
+   version="v0.1.0-beta.1"
    release="$(git rev-parse HEAD)"
-   sudo APP_RELEASE="$release" docker compose up -d --wait
+   sudo APP_VERSION="$version" APP_RELEASE="$release" docker compose up -d --wait
    curl -fsS https://apachas.alexdepablos.es >/dev/null && echo OK
    ```
 
@@ -235,9 +254,11 @@ sudo docker compose -p apachas logs --no-log-prefix web \
 ```
 
 `GET /api/live` is liveness. `GET /api/health` is readiness: it checks that the
-data volume is readable/writable and has working capacity, then reports the
-release SHA. The scheduled `.github/workflows/uptime.yml` check calls the public
-web and readiness endpoint every 15 minutes; a failed run is the external alert.
+data volume is readable/writable and has working capacity. Both endpoints report
+the product version and exact release SHA. The scheduled
+`.github/workflows/uptime.yml` check calls the public web and both endpoints
+every 15 minutes, validates both identifiers, confirms that the public version
+tag resolves to the reported SHA, and treats a failed run as the external alert.
 GitHub notification delivery still depends on the repository owner's Actions
 notification settings.
 
@@ -508,14 +529,16 @@ the current volume, stop only the `apachas` API, restore the verified
 `apachas-data/data/` tree, restart that API, and run local plus public health
 checks. Never touch `current` or `staging`.
 
-Rollback. Content is the repo, so rollback is git:
+Rollback. Prefer reverting on `main` and cutting a new beta version through the
+normal release command. A direct rollback is only for an active incident and
+may return to an already tagged, known-good release:
 
 ```bash
 cd /opt/apachas
-git log --oneline -5          # pick the known-good commit
-git reset --hard <commit>     # or revert + push from the Mac, preferred
+version="v0.1.0-beta.1"       # pick the known-good published version
+git reset --hard "$version"
 release="$(git rev-parse HEAD)"
-sudo APP_RELEASE="$release" docker compose up -d --wait
+sudo APP_VERSION="$version" APP_RELEASE="$release" docker compose up -d --wait
 ```
 
 Shutdown without deleting the tunnel or DNS:

@@ -91,6 +91,8 @@ before(async () => {
       CREATE_RATE_MAX: '2',
       EVENT_RATE_MAX: '2',
       DELETION_RETENTION_MS: '60000',
+      APP_VERSION: 'v0.9.0-beta.3',
+      APP_RELEASE: 'test-release-sha',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -111,6 +113,14 @@ after(async () => {
     ]);
   }
   if (dataDir) fs.rmSync(dataDir, { recursive: true, force: true });
+});
+
+test('health endpoints expose the product version and exact release', async () => {
+  const live = await request('GET', '/api/live');
+  const health = await request('GET', '/api/health');
+  const expected = { ok: true, version: 'v0.9.0-beta.3', release: 'test-release-sha' };
+  assert.deepEqual(live.body, expected);
+  assert.deepEqual(health.body, expected);
 });
 
 test('party lifecycle enforces write and owner credentials', async () => {
