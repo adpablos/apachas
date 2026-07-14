@@ -125,7 +125,9 @@ Version selection during beta:
   hardening, and coherent refinements to existing workflows.
 - Increment `MINOR` and reset to `beta.1` for a substantial new capability,
   persisted-data contract evolution, or a materially different core workflow.
-- Never move or reuse a published tag.
+- Version numbers only move forward. Never move or reuse a published tag, fill
+  a burned beta number, or skip an available beta number within the selected
+  track.
 
 For every pull request, add one concise bullet under `Unreleased` in
 `CHANGELOG.md` when behavior, persisted data, security, privacy, deployment, or
@@ -255,8 +257,8 @@ sudo docker compose -p apachas logs --no-log-prefix web \
 data volume is readable/writable and has working capacity. Both endpoints report
 the product version and exact release SHA. The scheduled
 `.github/workflows/uptime.yml` check calls the public web and both endpoints
-every 15 minutes, validates both identifiers, and treats a failed run as the
-external alert.
+every 15 minutes, validates both identifiers, confirms that the public version
+tag resolves to the reported SHA, and treats a failed run as the external alert.
 GitHub notification delivery still depends on the repository owner's Actions
 notification settings.
 

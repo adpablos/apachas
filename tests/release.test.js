@@ -9,6 +9,7 @@ const { test } = require('node:test');
 const ROOT = path.resolve(__dirname, '..');
 const DEPLOY = path.join(ROOT, 'scripts', 'deploy.sh');
 const SCRIPT = fs.readFileSync(DEPLOY, 'utf8');
+const UPTIME = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'uptime.yml'), 'utf8');
 
 test('production release requires a valid beta version before any remote action', () => {
   const missing = spawnSync('bash', [DEPLOY], { cwd: ROOT, encoding: 'utf8' });
@@ -32,6 +33,10 @@ test('production release is guarded by repository, changelog, runtime, and recor
   assert.match(SCRIPT, /APP_VERSION='\$\{VERSION\}' APP_RELEASE/);
   assert.match(SCRIPT, /HEALTH_VERSION/);
   assert.match(SCRIPT, /HEALTH_RELEASE/);
+  assert.match(SCRIPT, /JSON\.parse/);
   assert.match(SCRIPT, /git tag "\$VERSION" "\$DEPLOYED_SHA"/);
+  assert.match(SCRIPT, /REMOTE_TAG_SHA/);
   assert.match(SCRIPT, /gh release create "\$VERSION"/);
+  assert.match(UPTIME, /refs\/tags\/\$\{health_version\}/);
+  assert.match(UPTIME, /tag_release/);
 });

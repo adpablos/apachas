@@ -36,7 +36,7 @@ DEPLOY_SSH_KEY="${DEPLOY_SSH_KEY:-$HOME/.ssh/treasure_map_prod_github_actions_ed
 APP_DIR="/opt/apachas"
 PUBLIC_URL="https://apachas.alexdepablos.es"
 
-for command in git gh ssh curl awk grep sed mktemp head; do
+for command in git gh ssh curl awk grep mktemp head node; do
   command -v "$command" >/dev/null || fail "Required command '$command' is unavailable." 69
 done
 [[ -r "$DEPLOY_SSH_KEY" ]] || fail "Deployment SSH key is unavailable: $DEPLOY_SSH_KEY" 66
@@ -112,8 +112,14 @@ DEPLOYED_SHA="$(ssh -i "$DEPLOY_SSH_KEY" -o IdentitiesOnly=yes \
 echo "→ Checking ${PUBLIC_URL}"
 curl -fsS -o /dev/null --retry 3 --retry-delay 2 "$PUBLIC_URL"
 HEALTH="$(curl -fsS --retry 3 --retry-delay 2 "${PUBLIC_URL}/api/health")"
-HEALTH_RELEASE="$(printf '%s' "$HEALTH" | sed -n 's/.*"release":"\([^"]*\)".*/\1/p')"
-HEALTH_VERSION="$(printf '%s' "$HEALTH" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')"
+IFS=$'\t' read -r HEALTH_VERSION HEALTH_RELEASE < <(
+  printf '%s' "$HEALTH" | node -e '
+    const input = require("node:fs").readFileSync(0, "utf8");
+    const health = JSON.parse(input);
+    process.stdout.write(String(health.version || "") + "\t" +
+      String(health.release || "") + "\n");
+  '
+)
 [[ "$HEALTH_RELEASE" == "$DEPLOYED_SHA" ]] \
   || fail "Health reports release '$HEALTH_RELEASE', expected '$DEPLOYED_SHA'."
 [[ "$HEALTH_VERSION" == "$VERSION" ]] \
@@ -125,9 +131,17 @@ fi
 if ! git ls-remote --exit-code --tags origin "refs/tags/${VERSION}" >/dev/null 2>&1; then
   git push origin "$VERSION"
 fi
-if ! gh release view "$VERSION" >/dev/null 2>&1; then
+REMOTE_TAG_SHA="$(git ls-remote --tags --refs origin "refs/tags/${VERSION}" | awk '{print $1}')"
+[[ "$REMOTE_TAG_SHA" == "$DEPLOYED_SHA" ]] \
+  || fail "Remote tag $VERSION points to '$REMOTE_TAG_SHA', expected '$DEPLOYED_SHA'."
+
+RELEASE_TAG="$(gh release view "$VERSION" --json tagName --jq .tagName 2>/dev/null || true)"
+if [[ -z "$RELEASE_TAG" ]]; then
   gh release create "$VERSION" --verify-tag --prerelease \
     --title "A Pachas $VERSION" --notes-file "$NOTES"
 fi
+RELEASE_TAG="$(gh release view "$VERSION" --json tagName --jq .tagName)"
+[[ "$RELEASE_TAG" == "$VERSION" ]] \
+  || fail "GitHub Release uses tag '$RELEASE_TAG', expected '$VERSION'."
 
 echo "✔ ${PUBLIC_URL} runs ${VERSION} on release ${DEPLOYED_SHA}"

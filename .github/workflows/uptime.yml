@@ -52,3 +52,12 @@ jobs:
             <<<"${health}")"
           [[ "${live_version}" == "${health_version}" ]]
           [[ "${live_release}" == "${health_release}" ]]
+
+          tag_refs="$(git ls-remote --tags https://github.com/adpablos/apachas.git \
+            "refs/tags/${health_version}" "refs/tags/${health_version}^{}")"
+          tag_release="$(awk '
+            /\^\{\}$/ { dereferenced = $1 }
+            NR == 1 { direct = $1 }
+            END { print dereferenced ? dereferenced : direct }
+          ' <<<"${tag_refs}")"
+          [[ "${tag_release}" == "${health_release}" ]]
