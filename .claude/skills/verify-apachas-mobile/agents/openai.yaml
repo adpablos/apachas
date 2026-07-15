@@ -1,0 +1,4 @@
+interface:
+  display_name: "Verify A Pachas Mobile"
+  short_description: "Run the complete mobile product smoke flow"
+  default_prompt: "Use $verify-apachas-mobile to verify the A Pachas mobile flow and report evidence."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Release A Pachas"
+  short_description: "Close the guarded A Pachas release loop"
+  default_prompt: "Use $release-apachas to prepare and complete an authorized A Pachas release."

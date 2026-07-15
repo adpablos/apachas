@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review A Pachas Change"
+  short_description: "Evidence-backed A Pachas change review"
+  default_prompt: "Use $review-apachas-change to review this A Pachas change against the repository contract."
