@@ -6,6 +6,6 @@ credentials-file: /etc/cloudflared/<tunnel-id>.json
 protocol: quic
 
 ingress:
-  - hostname: apachas.alexdepablos.es
+  - hostname: apachas.alexdepablos.com
     service: http://web:80
   - service: http_status:404

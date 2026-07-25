@@ -13,11 +13,14 @@ One isolated Docker Compose project, `apachas`, with three containers:
 ```txt
 Internet ── Cloudflare ── tunnel "apachas" ── cloudflared ── nginx (web)
                                                                ├─ serves public/
-https://apachas.alexdepablos.es                               └─ /api/ → api
+https://apachas.alexdepablos.com                              └─ /api/ → api
                                                                   (node,
                                                                    shared
                                                                    parties)
 ```
+
+`apachas.alexdepablos.com` is the canonical application host. The legacy
+`.es` hostname redirects to it and is not an application-health endpoint.
 
 - `web`: nginx serves `public/` read-only and proxies `/api/` to the `api`
   container. Config lives in `deployment/nginx/default.conf`. It is also
@@ -180,7 +183,7 @@ This is the same pattern used by the World Cup pool tunnels.
 
    ```bash
    cloudflared tunnel create apachas
-   cloudflared tunnel route dns apachas apachas.alexdepablos.es
+   cloudflared tunnel route dns apachas apachas.alexdepablos.com
    ```
 
    `create` prints the tunnel id and stores credentials at
@@ -222,7 +225,7 @@ This is the same pattern used by the World Cup pool tunnels.
    version="v0.1.0-beta.1"
    release="$(git rev-parse HEAD)"
    sudo APP_VERSION="$version" APP_RELEASE="$release" docker compose up -d --wait
-   curl -fsS https://apachas.alexdepablos.es >/dev/null && echo OK
+   curl -fsS https://apachas.alexdepablos.com >/dev/null && echo OK
    ```
 
 ## Operations
