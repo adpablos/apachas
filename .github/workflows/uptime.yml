@@ -28,7 +28,7 @@ jobs:
       - name: Check complete public service
         run: |
           set -euo pipefail
-          base_url="https://apachas.alexdepablos.es"
+          base_url="https://apachas.alexdepablos.com"
           if [[ "${SIMULATE_FAILURE}" == "true" ]]; then
             base_url="https://apachas.invalid"
           fi

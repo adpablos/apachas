@@ -11,6 +11,15 @@ stable, publicly supported product contract.
 
 ## [Unreleased]
 
+### Fixed
+
+- Point the production uptime check at `apachas.alexdepablos.com`. It still
+  checked the `.es` host, which has redirected to `.com` since the domain
+  consolidation, so the monitor was asserting page content against a 301 body
+  and had been failing every 15 minutes since 2026-07-24 while the service
+  itself was healthy.
+
+
 <!-- Add concise bullets here for product, data, security, privacy, deployment,
 or recovery changes. Pure refactors and test-only changes need no entry. -->
 
