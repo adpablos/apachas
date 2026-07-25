@@ -11,6 +11,11 @@ stable, publicly supported product contract.
 
 ## [Unreleased]
 
+### Fixed
+
+- Point production monitoring, release verification, and tunnel recovery at
+  `apachas.alexdepablos.com`; the legacy `.es` host now only redirects there.
+
 <!-- Add concise bullets here for product, data, security, privacy, deployment,
 or recovery changes. Pure refactors and test-only changes need no entry. -->
 

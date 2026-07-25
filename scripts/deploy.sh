@@ -34,7 +34,7 @@ DEPLOY_HOST="${DEPLOY_HOST:-100.83.154.97}" # treasure-map-prod-01 (tailnet)
 DEPLOY_USER="${DEPLOY_USER:-adpablos}"
 DEPLOY_SSH_KEY="${DEPLOY_SSH_KEY:-$HOME/.ssh/treasure_map_prod_github_actions_ed25519}"
 APP_DIR="/opt/apachas"
-PUBLIC_URL="https://apachas.alexdepablos.es"
+PUBLIC_URL="https://apachas.alexdepablos.com"
 
 for command in git gh ssh curl awk grep mktemp head node; do
   command -v "$command" >/dev/null || fail "Required command '$command' is unavailable." 69

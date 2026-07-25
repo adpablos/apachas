@@ -1,5 +1,6 @@
 # Server stack: nginx serves public/ and proxies /api/ to the api container for
-# shared parties; cloudflared exposes it at https://apachas.alexdepablos.es.
+# shared parties; cloudflared exposes it at https://apachas.alexdepablos.com
+# (the .es hostname still resolves, but only to 301 there).
 # Intended for the Hetzner server. For local development, `node server/api.js`
 # is enough. See docs/deployment.md.
 name: apachas

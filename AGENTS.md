@@ -81,7 +81,7 @@ the whole frontend lives in `public/index.html` and the whole backend lives in
    edit and read-only links, list,
    quick expense, bought item with price and consumers, Bizums, a later expense
    after a completed Bizum, inactive participants, recent-party reopening, and
-   share messages. After deployment, confirm `https://apachas.alexdepablos.es`
+   share messages. After deployment, confirm `https://apachas.alexdepablos.com`
    responds; `scripts/deploy.sh <version>` already checks the product version,
    release SHA, web, and API health.
 9. Read `REVIEW.md` before reviewing a pull request. Review the changed behavior,

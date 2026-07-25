@@ -10,6 +10,14 @@ const ROOT = path.resolve(__dirname, '..');
 const DEPLOY = path.join(ROOT, 'scripts', 'deploy.sh');
 const SCRIPT = fs.readFileSync(DEPLOY, 'utf8');
 const UPTIME = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'uptime.yml'), 'utf8');
+const TUNNEL = fs.readFileSync(
+  path.join(ROOT, 'deployment', 'cloudflare', 'config.yml.example'), 'utf8');
+
+test('production checks and tunnel recovery use the canonical host', () => {
+  assert.match(SCRIPT, /PUBLIC_URL="https:\/\/apachas\.alexdepablos\.com"/);
+  assert.match(UPTIME, /base_url="https:\/\/apachas\.alexdepablos\.com"/);
+  assert.match(TUNNEL, /hostname: apachas\.alexdepablos\.com/);
+});
 
 test('production release requires a valid beta version before any remote action', () => {
   const missing = spawnSync('bash', [DEPLOY], { cwd: ROOT, encoding: 'utf8' });
