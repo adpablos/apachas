@@ -1,68 +1,26 @@
-name: Claude Code
+name: Claude final review
 
 on:
-  issue_comment:
-    types: [created]
-  pull_request_review_comment:
-    types: [created]
-  issues:
-    types: [opened, assigned]
-  pull_request_review:
-    types: [submitted]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number
+        required: true
+        type: string
+      head_sha:
+        description: Exact pull request head to review
+        required: true
+        type: string
 
 jobs:
-  claude:
-    if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
-    runs-on: ubuntu-latest
+  review:
     permissions:
       contents: read
-      pull-requests: read
-      issues: read
+      pull-requests: write
       id-token: write
-      actions: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 1
-
-      - name: Run Claude Code
-        id: claude
-        uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          additional_permissions: |
-            actions: read
-          claude_args: |
-            --model claude-opus-4-8
-
-      - name: Verify Claude completed successfully
-        if: always()
-        env:
-          CLAUDE_EXECUTION_FILE: ${{ steps.claude.outputs.execution_file }}
-        run: |
-          node <<'NODE'
-          const fs = require("node:fs");
-
-          const executionFile = process.env.CLAUDE_EXECUTION_FILE;
-          if (!executionFile || !fs.existsSync(executionFile)) {
-            console.error("Claude did not produce an execution result.");
-            process.exit(1);
-          }
-
-          const turns = JSON.parse(fs.readFileSync(executionFile, "utf8"));
-          const result = [...turns]
-            .reverse()
-            .find((turn) => turn?.type === "result");
-          if (!result || result.subtype !== "success" || result.is_error) {
-            console.error(
-              `Claude review failed: subtype=${result?.subtype ?? "missing"}, ` +
-                `is_error=${result?.is_error ?? "missing"}`,
-            );
-            process.exit(1);
-          }
-          NODE
+    uses: adpablos/agent-system/.github/workflows/reusable-claude-final-review.yml@a9a3f44bce7c099b6fe82fd4b3cf4307cfe5c94f
+    with:
+      pr_number: ${{ inputs.pr_number }}
+      head_sha: ${{ inputs.head_sha }}
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
