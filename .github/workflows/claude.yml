@@ -18,7 +18,7 @@ jobs:
       contents: read
       pull-requests: write
       id-token: write
-    uses: adpablos/agent-system/.github/workflows/reusable-claude-final-review.yml@a9a3f44bce7c099b6fe82fd4b3cf4307cfe5c94f
+    uses: adpablos/agent-system/.github/workflows/reusable-claude-final-review.yml@d210f307378897035887538f8ca424f1aa8a991f
     with:
       pr_number: ${{ inputs.pr_number }}
       head_sha: ${{ inputs.head_sha }}
