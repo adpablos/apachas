@@ -11,6 +11,11 @@ stable, publicly supported product contract.
 
 ## [Unreleased]
 
+### Security
+
+- Remove OIDC write permission from the shared Claude review caller and add its
+  explicit authorization input for extraordinary review passes.
+
 ### Fixed
 
 - Point production monitoring, release verification, and tunnel recovery at
