@@ -11,16 +11,20 @@ on:
         description: Exact pull request head to review
         required: true
         type: string
+      extra_pass_authorization:
+        required: false
+        default: ""
+        type: string
 
 jobs:
   review:
     permissions:
       contents: read
       pull-requests: write
-      id-token: write
-    uses: adpablos/agent-system/.github/workflows/reusable-claude-final-review.yml@d210f307378897035887538f8ca424f1aa8a991f
+    uses: adpablos/agent-system/.github/workflows/reusable-claude-final-review.yml@691ea1cc06056db2713c580105f3b70d52878cb9
     with:
       pr_number: ${{ inputs.pr_number }}
       head_sha: ${{ inputs.head_sha }}
+      extra_pass_authorization: ${{ inputs.extra_pass_authorization }}
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
