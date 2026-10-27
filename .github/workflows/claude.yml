@@ -11,6 +11,16 @@ on:
         description: Exact pull request head to review
         required: true
         type: string
+      runner_profile:
+        description: Runner for this review only
+        type: choice
+        options: [economy, standard]
+        default: economy
+      fallback_run_id:
+        description: Failed economy run for one verified timeout recovery
+        required: false
+        default: ""
+        type: string
       extra_pass_authorization:
         required: false
         default: ""
@@ -19,12 +29,15 @@ on:
 jobs:
   review:
     permissions:
+      actions: read
       contents: read
       pull-requests: write
-    uses: adpablos/agent-system/.github/workflows/reusable-claude-final-review.yml@691ea1cc06056db2713c580105f3b70d52878cb9
+    uses: adpablos/agent-system/.github/workflows/reusable-claude-final-review.yml@56fce5a602411dfc875316b34ccfcaef9f6f57eb
     with:
       pr_number: ${{ inputs.pr_number }}
       head_sha: ${{ inputs.head_sha }}
+      runner_profile: ${{ inputs.runner_profile }}
+      fallback_run_id: ${{ inputs.fallback_run_id }}
       extra_pass_authorization: ${{ inputs.extra_pass_authorization }}
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
