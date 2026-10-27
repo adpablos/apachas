@@ -61,7 +61,7 @@ services:
         max-file: "5"
 
   cloudflared:
-    image: cloudflare/cloudflared:2025.11.1
+    image: cloudflare/cloudflared:2026.10.4
     restart: unless-stopped
     user: "0:0"
     command: tunnel --config /etc/cloudflared/config.yml run

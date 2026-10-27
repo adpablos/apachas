@@ -13,6 +13,7 @@ stable, publicly supported product contract.
 
 ### Security
 
+- Update cloudflared to 2026.10.4 to apply the eMudhra certificate-compromise fix.
 - Remove OIDC write permission from the shared Claude review caller and add its
   explicit authorization input for extraordinary review passes.
 
