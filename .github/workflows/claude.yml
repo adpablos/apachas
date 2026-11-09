@@ -19,9 +19,10 @@ on:
 jobs:
   review:
     permissions:
+      actions: read
       contents: read
       pull-requests: write
-    uses: adpablos/agent-system/.github/workflows/reusable-claude-final-review.yml@691ea1cc06056db2713c580105f3b70d52878cb9
+    uses: adpablos/agent-system/.github/workflows/reusable-claude-final-review.yml@a567e7a5b1a6f50eb6a26fa1cce758e29936a8eb
     with:
       pr_number: ${{ inputs.pr_number }}
       head_sha: ${{ inputs.head_sha }}
